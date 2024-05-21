@@ -281,7 +281,9 @@ defmodule OnestackWeb.ProductCostComparisonLive do
            },
            acc ->
           closed_source_cost = Decimal.mult(closed_source_price, Decimal.new(num_users))
-          open_source_cost = open_source_price
+          # Calculate the number of steps (every 10 users)
+          steps = div(num_users - 1, 10) + 1
+          open_source_cost = Decimal.mult(open_source_price, Decimal.new(steps))
 
           %{
             closed_source: Decimal.add(acc.closed_source, closed_source_cost),

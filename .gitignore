@@ -39,3 +39,10 @@ npm-debug.log
 *.db
 *.db-*
 
+node_modules
+.yarn
+.husky
+example-apps
+apps
+packages
+.env*
