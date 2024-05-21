@@ -1,0 +1,17 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* This file is for your main application CSS */
+/* @font-face {
+	font-family: "PublicPixel";
+	src: url("PublicPixel-E447g.ttf");
+} */
+
+/* @layer base {
+	@font-face {
+		font-family: PublicPixel;
+		font-weight: 400;
+		src: url(./PublicPixel-E447g.ttf) format("ttf");
+	}
+} */

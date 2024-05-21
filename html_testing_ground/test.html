@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Product Cost Comparison</title>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+
+<body>
+	<h1>Product Cost Comparison</h1>
+	<div>
+		<label for="product-category">Product Categories</label>
+		<input type="text" id="product-category" placeholder="Enter categories (comma-separated)">
+	</div>
+	<div>
+		<label for="num-users">Number of Users:</label>
+		<input type="number" id="num-users" placeholder="Enter number of users">
+	</div>
+	<button onclick="generateChart()">Generate Chart</button>
+	<div class="chart-container">
+		<canvas id="chart"></canvas>
+	</div>
+	<div class="card-container">
+		<div class="card">
+			<h3>Total Cost (Closed Source)</h3>
+			<p id="closed-source-cost"></p>
+		</div>
+		<div class="card">
+			<h3>Total Cost (Open Source)</h3>
+			<p id="open-source-cost"></p>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="script.js"></script>
+</body>
+
+</html>
