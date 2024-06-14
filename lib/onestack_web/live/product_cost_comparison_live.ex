@@ -10,33 +10,34 @@ defmodule OnestackWeb.ProductCostComparisonLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="container mx-auto m-4 mx-auto max-w-2xl flex justify-center">
-      <div class="flex flex-col md:flex-row items-center">
-        <div class="md:w-1/2 mb-8 md:mb-0 text-center md:text-left">
-          <h1 class="text-4xl font-bold mb-4 font-pixel_title text-white">
-            All your software tools in a single subscription
-          </h1>
-          <p class="text-lg">
-            Hosting the the best software tools at a fraction of the price.
-          </p>
-          <div class="flex justify-center md:justify-start mt-10">
-            <button class="btn btn-outline text-base">
-              <a href="https://app.formbricks.com/s/clvf58ifk09j614804k6tk7jz" target="blank">
-                Sign up for early access
-              </a>
-            </button>
+    <div class="max-w-full">
+      <div class="container m-4 mx-auto flex justify-center">
+        <div class="flex flex-col md:flex-row items-center">
+          <div class="md:w-1/2 mb-8 md:mb-0 text-center md:text-left">
+            <h1 class="text-4xl font-bold mb-4 font-pixel_title text-white">
+              All your software tools in a single subscription
+            </h1>
+            <p class="text-lg">
+              Hosting the the best software tools at a fraction of the price.
+            </p>
+            <div class="flex justify-center md:justify-start mt-10">
+              <button class="btn btn-outline text-base">
+                <a href="https://app.formbricks.com/s/clvf58ifk09j614804k6tk7jz" target="blank">
+                  Sign up for early access
+                </a>
+              </button>
+            </div>
+          </div>
+          <div class="md:ml-10 md:w-2/3">
+            <img src={~p"/images/group.svg"} alt="Logo" class="h-15 w-full object-cover" />
           </div>
         </div>
-        <div class="md:ml-10 md:w-2/3">
-          <img src={~p"/images/group.svg"} alt="Logo" class="h-15 w-full object-cover" />
-        </div>
       </div>
-    </div>
-    <h1 class="text-4xl font-bold my-12 text-center max-w-2xl mx-auto font-pixel_title">
-      See how much you can save
-    </h1>
+      <h1 class="text-4xl font-bold my-12 text-center mx-auto font-pixel_title">
+        See how much you can save
+      </h1>
 
-    <%!-- <div class="mockup-code max-w-2xl object-contain">
+      <%!-- <div class="mockup-code object-contain">
       <pre class="bg-secondary text-info-content"><code>Enter your team size and select your software needs \</code></pre>
       <pre class="bg-secondary text-info-content"><code>to see two key figures:</code></pre>
 
@@ -44,90 +45,91 @@ defmodule OnestackWeb.ProductCostComparisonLive do
       <pre data-prefix="2."><code>Monthly Savings (dollars and percentage saved compared to \</code></pre>
       <pre data-prefix="2."><code>closed-source software)</code></pre>
     </div> --%>
-    <div class="flex items-center max-w-2xl gap-6 p-6 bg-base-200 rounded border-t-4 border-bg-primary">
-      <i class="fa-solid fa-circle-info text-2xl text-info"></i>
+      <div class="flex items-center gap-6 p-6 bg-base-200 rounded border-t-4 border-bg-primary">
+        <i class="fa-solid fa-circle-info text-2xl text-info"></i>
 
-      <div class="flex flex-col">
-        <h3 class="font-bold">
-          Enter your team size and select your software needs to see two key figures
-        </h3>
-        <ul class="list-disc">
-          <li>Our Price ($10 per product for every 10 users)</li>
-          <li>Monthly Savings (dollars and percentage saved compared to closed-source software)</li>
-        </ul>
+        <div class="flex flex-col">
+          <h3 class="font-bold">
+            Enter your team size and select your software needs to see two key figures
+          </h3>
+          <ul class="list-disc">
+            <li>Our Price ($10 per product for every 10 users)</li>
+            <li>Monthly Savings (dollars and percentage saved compared to closed-source software)</li>
+          </ul>
+        </div>
       </div>
-    </div>
 
-    <div class="my-12 max-w-2xl mx-auto px-4">
-      <h2 class="card-title">How big is your team?</h2>
-      <form phx-change="change" id="form">
-        <div class="flex items-center justify-between">
-          <input
-            id="slider"
-            type="range"
-            min="1"
-            max="20"
-            value={@num_users}
-            class="range w-full"
-            name="num_users"
-          />
-          <h2 class="ml-4"><%= @num_users %></h2>
-        </div>
-      </form>
-    </div>
-    <%!-- <h3 class="card-title text-center">Search by</h3> --%>
+      <div class="my-12 mx-auto px-4">
+        <h2 class="card-title">How big is your team?</h2>
+        <form phx-change="change" id="form">
+          <div class="flex items-center justify-between">
+            <input
+              id="slider"
+              type="range"
+              min="1"
+              max="20"
+              value={@num_users}
+              class="range w-full"
+              name="num_users"
+            />
+            <h2 class="ml-4"><%= @num_users %></h2>
+          </div>
+        </form>
+      </div>
+      <%!-- <h3 class="card-title text-center">Search by</h3> --%>
 
-    <div class="join mx-auto max-w-2xl flex justify-center">
-      <input
-        class="join-item btn text-base"
-        type="radio"
-        name="search_selection"
-        aria-label="Products"
-        phx-click="select_search"
-        value="products"
-        checked={@product_category_search == "products"}
-      />
-      <input
-        class="join-item btn text-base"
-        type="radio"
-        name="search_selection"
-        aria-label="Categories"
-        phx-click="select_search"
-        value="categories"
-        checked={@product_category_search == "categories"}
-      />
-    </div>
-    <div class="mt-6 max-w-2xl mx-auto flex flex-wrap justify-center">
-      <%= for product_or_category <- @products_or_categories do %>
+      <div class="join mx-auto flex justify-center">
         <input
-          type="checkbox"
-          class="btn btn-outline my-0.5 mx-1 text-base"
-          phx-click="select_product_or_category"
-          phx-value-product_or_category={product_or_category}
-          aria-label={product_or_category}
-          checked={product_or_category in @selected_products_or_categories}
+          class="join-item btn text-base"
+          type="radio"
+          name="search_selection"
+          aria-label="Products"
+          phx-click="select_search"
+          value="products"
+          checked={@product_category_search == "products"}
         />
-      <% end %>
-    </div>
-    <div class="my-12 mx-auto max-w-2xl flex justify-center">
-      <div class="stats stats-vertical md:stats-horizontal">
-        <div class="stat">
-          <div class="stat-title">Monthly savings</div>
-          <div class="stat-value">$<%= @savings %></div>
-          <div class="stat-desc">
-            <%= @savings_percent %>% saved compared to closed source
+        <input
+          class="join-item btn text-base"
+          type="radio"
+          name="search_selection"
+          aria-label="Categories"
+          phx-click="select_search"
+          value="categories"
+          checked={@product_category_search == "categories"}
+        />
+      </div>
+      <div class="mt-6 mx-auto flex flex-wrap justify-center">
+        <%= for product_or_category <- @products_or_categories do %>
+          <input
+            type="checkbox"
+            class="btn btn-outline my-0.5 mx-1 text-base"
+            phx-click="select_product_or_category"
+            phx-value-product_or_category={product_or_category}
+            aria-label={product_or_category}
+            checked={product_or_category in @selected_products_or_categories}
+          />
+        <% end %>
+      </div>
+      <div class="my-12 mx-auto flex justify-center">
+        <div class="stats stats-vertical md:stats-horizontal">
+          <div class="stat">
+            <div class="stat-title">Monthly savings</div>
+            <div class="stat-value">$<%= @savings %></div>
+            <div class="stat-desc">
+              <%= @savings_percent %>% saved compared to closed source
+            </div>
+            <div class="stat-actions">
+              <button class="btn btn-outline btn-sm">
+                <a href="https://app.formbricks.com/s/clvf58ifk09j614804k6tk7jz" target="blank">
+                  Sign up for early access
+                </a>
+              </button>
+            </div>
           </div>
-          <div class="stat-actions">
-            <button class="btn btn-outline btn-sm">
-              <a href="https://app.formbricks.com/s/clvf58ifk09j614804k6tk7jz" target="blank">
-                Sign up for early access
-              </a>
-            </button>
+          <div class="stat">
+            <div class="stat-title">Our price</div>
+            <div class="stat-value p mb-16">$<%= @total_costs[:open_source] %></div>
           </div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Our price</div>
-          <div class="stat-value p mb-16">$<%= @total_costs[:open_source] %></div>
         </div>
       </div>
     </div>
@@ -296,7 +298,7 @@ defmodule OnestackWeb.ProductCostComparisonLive do
 
     savings_percent =
       if Decimal.eq?(total_costs.closed_source, 0) do
-        "0.00%"
+        "0"
       else
         savings_percent_decimal =
           savings

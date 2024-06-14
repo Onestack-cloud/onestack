@@ -6,19 +6,43 @@
     </.link>
   </:actions>
 </.header>
+<div class="mt-6 mx-auto flex flex-wrap justify-center">
+  <%= for product_category <- @product_categories do %>
+    <input
+      type="checkbox"
+      class="btn btn-outline my-0.5 mx-1 text-base"
+      phx-click="selected_product_category"
+      phx-value-product_category={product_category}
+      aria-label={product_category}
+      checked={product_category in @selected_product_categories}
+    />
+  <% end %>
+</div>
 <.table
   id="products"
   rows={@streams.products}
   row_click={fn {_id, product} -> JS.navigate(~p"/products/#{product}") end}
 >
   <:col :let={{_id, product}} label="Category"><%= product.category %></:col>
-  <:col :let={{_id, product}} label="Closed source name"><%= product.closed_source_name %></:col>
+  <%!-- <:col :let={{_id, product}} label="Closed source name"><%= product.closed_source_name %></:col> --%>
   <:col :let={{_id, product}} label="Open source name"><%= product.open_source_name %></:col>
-  <:col :let={{_id, product}} label="Closed source userprice"><%= product.closed_source_user_price %></:col>
-  <:col :let={{_id, product}} label="Open source fixed price"><%= product.open_source_fixed_price %></:col>
-  <:col :let={{_id, product}} label="Usd to aud"><%= product.usd_to_aud %></:col>
-  <:col :let={{_id, product}} label="Closed source currency"><%= product.closed_source_currency %></:col>
-  <:col :let={{_id, product}} label="Open source currency"><%= product.open_source_currency %></:col>
+  <%!-- <:col :let={{_id, product}} label="Closed source userprice">
+    <%= product.closed_source_user_price %>
+  </:col> --%>
+  <:col :let={{_id, product}} label="Price">
+    <%!-- <%= Decimal.to_integer(product.open_source_fixed_price) %> --%>
+
+    <%= Money.to_string(
+      Money.new(Decimal.to_integer(product.open_source_fixed_price) * 100, :AUD)
+    ) %>
+  </:col>
+  <%!-- <:col :let={{_id, product}} label="Usd to aud"><%= product.usd_to_aud %></:col>
+  <:col :let={{_id, product}} label="Closed source currency">
+    <%= product.closed_source_currency %>
+  </:col>
+  <:col :let={{_id, product}} label="Open source currency">
+    <%= product.open_source_currency %>
+  </:col> --%>
   <:action :let={{_id, product}}>
     <div class="sr-only">
       <.link navigate={~p"/products/#{product}"}>Show</.link>
@@ -35,7 +59,12 @@
   </:action>
 </.table>
 
-<.modal :if={@live_action in [:new, :edit]} id="product-modal" show on_cancel={JS.patch(~p"/products")}>
+<.modal
+  :if={@live_action in [:new, :edit]}
+  id="product-modal"
+  show
+  on_cancel={JS.patch(~p"/products")}
+>
   <.live_component
     module={OnestackWeb.ProductLive.FormComponent}
     id={@product.id || :new}

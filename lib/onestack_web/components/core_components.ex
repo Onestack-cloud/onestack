@@ -570,6 +570,52 @@ defmodule OnestackWeb.CoreComponents do
     """
   end
 
+  # def navbar(assigns) do
+  #   ~H"""
+  #   <div class="navbar mb-20">
+  #     <div class="navbar-start">
+  #       <a href="/">
+  #         <img src="/images/logo_white_text.png" alt="Logo" class="h-8" />
+  #         <p class="text-xs flex justify-end">Powered by open source</p>
+  #       </a>
+  #     </div>
+  #     <div class="navbar-end">
+  #       <div class="dropdown dropdown-end">
+  #         <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+  #           <svg
+  #             xmlns="http://www.w3.org/2000/svg"
+  #             class="h-5 w-5"
+  #             fill="none"
+  #             viewBox="0 0 24 24"
+  #             stroke="currentColor"
+  #           >
+  #             <path
+  #               stroke-linecap="round"
+  #               stroke-linejoin="round"
+  #               stroke-width="2"
+  #               d="M4 6h16M4 12h8m-8 6h16"
+  #             />
+  #           </svg>
+  #         </div>
+  #         <ul
+  #           tabindex="0"
+  #           class="menu menu-sm dropdown-content mt-3 z-[1] shadow bg-base-100 rounded-box w-52 right-0"
+  #         >
+  #           <li><a href="/products" class="text-xl font-pixel_title">Products</a></li>
+  #           <li><a href="/pricing" class="text-xl font-pixel_title">Pricing</a></li>
+  #         </ul>
+  #       </div>
+  #     </div>
+  #     <div class="navbar-center hidden lg:flex">
+  #       <ul class="menu menu-horizontal">
+  #         <li><a href="/products" class="text-xl font-pixel_title">Products</a></li>
+  #         <li><a href="/pricing" class="text-xl font-pixel_title">Pricing</a></li>
+  #       </ul>
+  #     </div>
+  #   </div>
+  #   """
+  # end
+
   @doc """
   Renders a [Heroicon](https://heroicons.com).
 

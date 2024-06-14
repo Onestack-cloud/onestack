@@ -6,7 +6,18 @@ defmodule OnestackWeb.ProductLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :products, CatalogMonthly.list_products())}
+    products = CatalogMonthly.list_products()
+
+    product_categories =
+      products
+      |> Enum.map(& &1.category)
+      |> Enum.uniq()
+
+    {:ok,
+     socket
+     |> assign(:product_categories, product_categories)
+     |> assign(:selected_product_categories, [])
+     |> stream(:products, products)}
   end
 
   @impl true
@@ -43,5 +54,33 @@ defmodule OnestackWeb.ProductLive.Index do
     {:ok, _} = CatalogMonthly.delete_product(product)
 
     {:noreply, stream_delete(socket, :products, product)}
+  end
+
+  def handle_event(
+        "selected_product_category",
+        %{"product_category" => product_category},
+        socket
+      ) do
+    selected_product_categories = socket.assigns.selected_product_categories
+
+    selected_product_categories =
+      if product_category in selected_product_categories do
+        selected_product_categories -- [product_category]
+      else
+        [product_category | selected_product_categories]
+      end
+
+    products = CatalogMonthly.list_products()
+
+    filtered_products =
+      products
+      |> Enum.filter(fn product -> product.category in selected_product_categories end)
+
+    # Reset the stream with the filtered products
+    socket = socket |> stream(:products, filtered_products, reset: true)
+
+    {:noreply,
+     socket
+     |> assign(:selected_product_categories, selected_product_categories)}
   end
 end

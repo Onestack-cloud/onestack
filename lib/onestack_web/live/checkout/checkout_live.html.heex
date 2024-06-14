@@ -1,0 +1,17 @@
+<%= for product <- @products do %>
+  <div class="tooltip" data-tip={product.description}>
+    <button
+      class={"btn btn-outline my-0.5 mx-1 text-base toggle-btn " <> if Enum.member?(@selected_products, product.name), do: "btn-active", else: ""}
+      phx-click="select_product"
+      phx-value-product={product.name}
+      aria-label={product.name}
+    >
+      <%= product.name %> <img src={Enum.at(product.images, 0)} class="h-8 mask mask-squircle" />
+    </button>
+  </div>
+
+  <%!-- <button class="btn" phx-click="checkout" phx-value-id={product.id}>
+    <img src={Enum.at(product.images, 0)} class="h-8 mask mask-squircle" />
+    <%= product.name %>
+  </button> --%>
+<% end %>

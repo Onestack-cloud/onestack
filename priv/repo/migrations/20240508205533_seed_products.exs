@@ -59,6 +59,15 @@ defmodule Onestack.Repo.Migrations.SeedProducts do
         open_source_fixed_price: Decimal.new("10"),
         closed_source_currency: "USD",
         open_source_currency: "AUD"
+      },
+      %{
+        category: "Customer Survey",
+        closed_source_name: "typeform.com",
+        open_source_name: "formbricks.com",
+        closed_source_user_price: Decimal.new("25"),
+        open_source_fixed_price: Decimal.new("10"),
+        closed_source_currency: "USD",
+        open_source_currency: "AUD"
       }
     ]
 

@@ -1,28 +1,15 @@
-<header>
-  <%!-- <div class="navbar bg-primary text-primary-content">
-    <a href="/">
-      <span class="text-4xl font-pixel text-primary-content">onestack</span>
-    </a>
-  </div> --%>
-  <%!-- <div class="pt-4 px-4 mx-auto max-w-5xl flex items-center justify-between">
-    <a href="/">
-      <img src={~p"/images/onestack_logo_text_white.svg"} alt="Logo" class="h-8 my-4" />
-    </a>
-  </div> --%>
-</header>
-
-<main class="mx-4 flex justify-center items-center">
-  <div class="mx-auto max-w-fit">
-    <div class="navbar mb-20">
-      <div class="navbar-start">
+<div class="mx-auto flex flex-col min-h-svh max-w-fit">
+  <header>
+    <div class="navbar mb-20 flex justify-between">
+      <div class="navbar-start flex items-center">
         <a href="/">
-          <img src={~p"/images/logo_white_text.png"} alt="Logo" class="h-8" />
+          <img src="/images/logo_white_text.png" alt="Logo" class="h-8" />
           <p class="text-xs flex justify-end">Powered by open source</p>
         </a>
       </div>
-      <%!-- <div class="navbar-end">
-        <div class="dropdown dropdown-end">
-          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+      <div class="navbar-end flex items-center">
+        <div class="dropdown lg:hidden">
+          <div tabindex="0" role="button" class="btn btn-ghost">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-5 w-5"
@@ -40,21 +27,48 @@
           </div>
           <ul
             tabindex="0"
-            class="menu menu-sm dropdown-content mt-3 z-[1] shadow bg-base-100 rounded-box w-52 right-0"
+            class="menu menu-sm dropdown-content right-0 mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
           >
-            <li><a href="/products" class="text-xl font-pixel_title">Products</a></li>
-            <li><a href="/pricing" class="text-xl font-pixel_title">Pricing</a></li>
+            <li>
+              <details>
+                <summary>Products</summary>
+                <ul class="p-2">
+                  <li><a href="/products">Build your stack</a></li>
+                  <li><a href="/packages">Best sellers</a></li>
+                </ul>
+              </details>
+            </li>
+            <li><a>Pricing</a></li>
+            <li><a>Security</a></li>
+          </ul>
+        </div>
+        <div class="hidden lg:flex">
+          <ul class="menu menu-horizontal px-1">
+            <li>
+              <details>
+                <summary>Products</summary>
+                <ul class="p-2">
+                  <li><a href="/products">Build your stack</a></li>
+                  <li><a href="/packages">Best sellers</a></li>
+                </ul>
+              </details>
+            </li>
+            <li><a>Pricing</a></li>
+            <li><a>Security</a></li>
           </ul>
         </div>
       </div>
-      <div class="navbar-center hidden lg:flex">
-        <ul class="menu menu-horizontal">
-          <li><a href="/products" class="text-xl font-pixel_title">Products</a></li>
-          <li><a href="/pricing" class="text-xl font-pixel_title">Pricing</a></li>
-        </ul>
-      </div> --%>
     </div>
-    <.flash_group flash={@flash} />
-    <%= @inner_content %>
-  </div>
-</main>
+  </header>
+  <main class="mb-auto mx-4 flex justify-center items-center">
+    <div class="mx-auto">
+      <.flash_group flash={@flash} />
+      <%= @inner_content %>
+    </div>
+  </main>
+  <footer class="footer footer-center p-4 text-base-content bottom-0">
+    <aside>
+      <p>Copyright © 2024 - onestack.cloud</p>
+    </aside>
+  </footer>
+</div>

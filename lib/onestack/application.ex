@@ -21,7 +21,8 @@ defmodule Onestack.Application do
       # Start a worker by calling: Onestack.Worker.start_link(arg)
       # {Onestack.Worker, arg},
       # Start to serve requests, typically the last entry
-      OnestackWeb.Endpoint
+      OnestackWeb.Endpoint,
+      Onestack.StripeCache
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
