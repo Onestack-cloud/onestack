@@ -1,6 +1,6 @@
 defmodule OnestackWeb.CheckoutLive do
   use OnestackWeb, :live_view
-
+  require Logger
   alias Onestack.{Payments, StripeCache}
 
   @impl true
@@ -9,6 +9,7 @@ defmodule OnestackWeb.CheckoutLive do
       socket
       |> assign(products: StripeCache.list_products())
       |> assign(selected_products: [])
+      |> assign(num_users: 1)
 
     {:ok, socket}
   end
@@ -20,8 +21,7 @@ defmodule OnestackWeb.CheckoutLive do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Stripe Checkout example")
-    |> assign(:items, ["Alpha", "Bravo", "Charlie"])
+    |> assign(:page_title, "Onestack Checkout")
   end
 
   @impl true
@@ -31,49 +31,65 @@ defmodule OnestackWeb.CheckoutLive do
     {:noreply, socket}
   end
 
-  def handle_event("select_product", %{"product" => product_name}, socket) do
-    selected_products = Map.get(socket.assigns, :selected_products, [])
+  def handle_event("select_product", %{"product" => product_id}, socket) do
+    selected_products = socket.assigns.selected_products
 
-    new_selected_products =
-      if Enum.member?(selected_products, product_name) do
-        List.delete(selected_products, product_name)
+    updated_products =
+      if product_id in selected_products do
+        List.delete(selected_products, product_id)
       else
-        [product_name | selected_products]
+        [product_id | selected_products]
       end
 
-    {:noreply, assign(socket, :selected_products, new_selected_products)}
+    {:noreply, assign(socket, selected_products: updated_products)}
   end
 
-  @impl true
-  def handle_info({:create_payment_intent, id: id}, socket) do
-    # replace with your price ID
-    {:ok, price_id} = StripeCache.get_price_id("cal_monthly")
-    # replace with your tax rate ID
-    {:ok, tax_id} = StripeCache.get_tax_rate_id("AU")
-    url = OnestackWeb.Endpoint.url()
+  def handle_event("change", %{"_target" => ["num_users"], "num_users" => value}, socket) do
+    {:noreply, assign(socket, num_users: String.to_integer(value))}
+  end
 
-    create_params = %{
-      cancel_url: url,
-      success_url: url,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      metadata: [name: id],
-      line_items: [
-        %{
-          price: price_id,
-          quantity: 1,
-          tax_rates: [tax_id]
-        }
-      ]
-    }
-
-    case Stripe.Checkout.Session.create(create_params) do
+  def handle_event("subscribe", _params, socket) do
+    case create_checkout_session(socket.assigns) do
       {:ok, session} ->
-        {:noreply, redirect(socket, external: session.url)}
+        {:noreply, redirect(socket, external: to_string(session.url))}
 
-      {:error, error} ->
-        IO.inspect(error)
-        {:noreply, socket}
+      {:error, %Stripe.Error{} = error} ->
+        Logger.error("Stripe error: #{inspect(error)}")
+
+        {:noreply,
+         put_flash(socket, :error, "Failed to create checkout session: #{error.message}")}
+
+      {:error, reason} ->
+        Logger.error("Unknown error: #{inspect(reason)}")
+        {:noreply, put_flash(socket, :error, "An unexpected error occurred")}
+    end
+  end
+
+  defp create_checkout_session(assigns) do
+    if Enum.empty?(assigns.selected_products) do
+      {:error, "No products selected"}
+    else
+      line_items =
+        Enum.map(assigns.selected_products, fn price_id ->
+          quantity = if assigns.num_users > 10, do: 2, else: 1
+
+          %{
+            price: price_id,
+            quantity: quantity
+          }
+        end)
+
+      Stripe.Checkout.Session.create(%{
+        payment_method_types: [:card],
+        line_items: line_items,
+        mode: :subscription,
+        success_url:
+          "#{OnestackWeb.Endpoint.url()}/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url: "https://onestack.cloud/checkout",
+        allow_promotion_codes: true,
+        billing_address_collection: :required,
+        payment_method_collection: :always
+      })
     end
   end
 end

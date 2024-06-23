@@ -1,4 +1,4 @@
-<div class="mx-auto flex flex-col min-h-svh max-w-fit">
+<div class="mx-auto flex flex-col min-h-svh max-w-5xl">
   <header>
     <div class="navbar mb-20 flex justify-between">
       <div class="navbar-start flex items-center">
@@ -29,7 +29,7 @@
             tabindex="0"
             class="menu menu-sm dropdown-content right-0 mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
           >
-            <li>
+            <%!-- <li>
               <details>
                 <summary>Products</summary>
                 <ul class="p-2">
@@ -37,14 +37,15 @@
                   <li><a href="/packages">Best sellers</a></li>
                 </ul>
               </details>
-            </li>
+            </li> --%>
             <li><a>Pricing</a></li>
-            <li><a>Security</a></li>
+            <li><a href={~p"/security"}>Security</a></li>
+            <li><a href={~p"/checkout"}>Products</a></li>
           </ul>
         </div>
         <div class="hidden lg:flex">
           <ul class="menu menu-horizontal px-1">
-            <li>
+            <%!-- <li>
               <details>
                 <summary>Products</summary>
                 <ul class="p-2">
@@ -52,23 +53,51 @@
                   <li><a href="/packages">Best sellers</a></li>
                 </ul>
               </details>
-            </li>
+            </li> --%>
             <li><a>Pricing</a></li>
-            <li><a>Security</a></li>
+            <li><a href={~p"/security"}>Security</a></li>
+            <li><a href={~p"/checkout"}>Products</a></li>
           </ul>
         </div>
       </div>
     </div>
   </header>
   <main class="mb-auto mx-4 flex justify-center items-center">
-    <div class="mx-auto">
+    <div class="">
       <.flash_group flash={@flash} />
       <%= @inner_content %>
     </div>
   </main>
-  <footer class="footer footer-center p-4 text-base-content bottom-0">
+</div>
+<footer class="footer p-4 bg-base-200 text-base-content w-full">
+  <div class="container mx-auto flex justify-between items-center max-w-5xl">
     <aside>
+      <img src="/images/logo_white_text.png" alt="Logo" class="h-8" />
       <p>Copyright © 2024 - onestack.cloud</p>
     </aside>
-  </footer>
-</div>
+    <%!-- <nav>
+      <h6 class="footer-title">Services</h6>
+      <a class="link link-hover">Branding</a>
+      <a class="link link-hover">Design</a>
+      <a class="link link-hover">Marketing</a>
+      <a class="link link-hover">Advertisement</a>
+    </nav> --%>
+    <%!-- <nav>
+      <h6 class="footer-title">Company</h6>
+      <a class="link link-hover">About us</a>
+      <a class="link link-hover">Contact</a>
+      <a class="link link-hover">Jobs</a>
+      <a class="link link-hover">Press kit</a>
+    </nav> --%>
+    <nav class="flex flex-col">
+      <h6 class="footer-title">Legal</h6>
+      <%!-- <a class="link link-hover">Terms of use</a> --%>
+      <a class="link link-hover" href={~p"/privacy"}>Privacy policy</a>
+    </nav>
+    <nav class="flex flex-col">
+      <h6 class="footer-title">Company</h6>
+      <a class="link link-hover" href="mailto:contact@onestack.cloud">Contact Us</a>
+      <a class="link link-hover" href={~p"/about"}>About</a>
+    </nav>
+  </div>
+</footer>

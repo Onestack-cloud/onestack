@@ -131,7 +131,7 @@ defmodule Onestack.StripeCache do
       {:noreply, %__MODULE__{prices: prices, tax_rates: tax_rates, products: products}}
     else
       {:error, reason} ->
-        Logger.warn("Failed to refresh StripeCache: #{reason}. Using old state")
+        Logger.warning("Failed to refresh StripeCache: #{reason}. Using old state")
         {:noreply, state}
     end
   end

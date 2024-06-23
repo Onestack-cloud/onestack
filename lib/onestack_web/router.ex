@@ -23,7 +23,11 @@ defmodule OnestackWeb.Router do
     # get "/", PageController, :home
 
     live "/", ProductCostComparisonLive
-    live "/test-checkout", CheckoutLive, :index
+    live "/checkout", CheckoutLive, :index
+    get "/privacy", PageController, :privacy_policy
+    get "/security", PageController, :security
+    live "/checkout/success", SuccessLive
+
     # live "/product-cost-comparison", ProductCostComparisonLive
   end
 

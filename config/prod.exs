@@ -19,5 +19,9 @@ config :logger, level: :info
 config :bread_machine, BreadMachine.Repo,
   database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file))
 
+config :stripity_stripe,
+  api_key:
+    "REDACTED_STRIPE_LIVE_SECRET_KEY"
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

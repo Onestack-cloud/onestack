@@ -15,7 +15,7 @@ defmodule OnestackWeb.ProductCostComparisonLive do
         <div class="flex flex-col md:flex-row items-center">
           <div class="md:w-1/2 mb-8 md:mb-0 text-center md:text-left">
             <h1 class="text-4xl font-bold mb-4 font-pixel_title text-white">
-              All your software tools in a single subscription
+              All your software tools in one platform
             </h1>
             <p class="text-lg">
               Hosting the the best software tools at a fraction of the price.
@@ -33,7 +33,7 @@ defmodule OnestackWeb.ProductCostComparisonLive do
           </div>
         </div>
       </div>
-      <h1 class="text-4xl font-bold my-12 text-center mx-auto font-pixel_title">
+      <h1 class="text-4xl font-bold my-12 text-center mx-auto font-pixel_title" id="calculator">
         See how much you can save
       </h1>
 

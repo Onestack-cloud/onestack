@@ -67,6 +67,19 @@ config :stripity_stripe,
     "REDACTED_STRIPE_PUBLISHABLE_KEY",
   stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
+config :money,
+  default_currency: :AUD,
+  separator: ".",
+  delimiter: ".",
+  symbol: true,
+  symbol_on_right: false,
+  symbol_space: false,
+  fractional_unit: true,
+  strip_insignificant_zeros: false,
+  code: false,
+  minus_sign_first: true,
+  strip_insignificant_fractional_unit: false
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
