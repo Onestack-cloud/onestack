@@ -4,12 +4,15 @@ defmodule OnestackWeb.CheckoutLive do
   alias Onestack.{Payments, StripeCache}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    current_user = Onestack.Accounts.get_user_by_session_token(session["user_token"])
+
     socket =
       socket
       |> assign(products: StripeCache.list_products())
       |> assign(selected_products: [])
       |> assign(num_users: 1)
+      |> assign(current_user: current_user)
 
     {:ok, socket}
   end
@@ -57,7 +60,11 @@ defmodule OnestackWeb.CheckoutLive do
         Logger.error("Stripe error: #{inspect(error)}")
 
         {:noreply,
-         put_flash(socket, :error, "Failed to create checkout session: #{error.message}")}
+         put_flash(socket, :warning, "Failed to create checkout session: #{error.message}")}
+
+      {:error, "No products selected"} ->
+        {:noreply,
+         put_flash(socket, :error, "Please select at least one product before subscribing")}
 
       {:error, reason} ->
         Logger.error("Unknown error: #{inspect(reason)}")
@@ -83,8 +90,7 @@ defmodule OnestackWeb.CheckoutLive do
         payment_method_types: [:card],
         line_items: line_items,
         mode: :subscription,
-        success_url:
-          "#{OnestackWeb.Endpoint.url()}/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+        success_url: "https://onestack.cloud/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: "https://onestack.cloud/checkout",
         allow_promotion_codes: true,
         billing_address_collection: :required,

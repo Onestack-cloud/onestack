@@ -6,6 +6,7 @@ defmodule Onestack.Repo.Migrations.CreateUsersAuthTables do
       add :email, :string, null: false, collate: :nocase
       add :hashed_password, :string, null: false
       add :confirmed_at, :naive_datetime
+      add :role, :string, default: "user", null: false
       timestamps(type: :utc_datetime)
     end
 
