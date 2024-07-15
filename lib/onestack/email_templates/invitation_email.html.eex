@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to OneStack</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inconsolata&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body style="font-family: 'Inconsolata', monospace; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+    <div style="background-color: white; padding: 30px; border-radius: 5px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img
+          src="https://media.discordapp.net/attachments/1262319493150019645/1262320236745461800/logo_black.png?ex=66962ad5&is=6694d955&hm=0d037e778b9ab74ce65bf4ba8b7d63102f39fbca5760f25bfb18f9b0190e6faa&=&format=webp&quality=lossless"
+          alt="OneStack Logo"
+          style="width: 150px;"
+        />
+      </div>
+
+      <h1 style="font-family: 'VT323', monospace; font-size: 28px; text-align: center; margin-bottom: 20px;">
+        Welcome
+        to Onestack!
+      </h1>
+
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+        You've been invited to join the ultimate platform for leading open-source alternatives to popular
+        proprietary software. Discover a world of powerful, cost-effective solutions at your fingertips.
+      </p>
+
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+        Ready to revolutionise your tech stack? Click below to securely access your credentials and start your
+        Onestack journey today!
+      </p>
+
+      <div style="text-align: center; margin-bottom: 20px;">
+        <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>" style="display: inline-block; text-decoration: none;">
+          <img
+            src="https://media.discordapp.net/attachments/1262319493150019645/1262319751632257075/copy_credentials_button.png?ex=66962a61&is=6694d8e1&hm=6c53adefa419bb85666f0ad900cef95f5ab38898b0343e629bea5ea311b57b6c&=&format=webp&quality=lossless"
+            alt="Copy credentials"
+            style="width: 200px;"
+          />
+        </a>
+      </div>
+
+      <p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666;">
+        Remember, these credentials will be wiped from our systems as soon as you click, so make sure to save them
+        in your preferred password manager.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #888;">
+      Onestack - Empowering the world with open-source solutions
+    </div>
+  </body>
+</html>

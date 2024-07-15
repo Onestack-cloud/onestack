@@ -21,7 +21,8 @@ config :bread_machine, BreadMachine.Repo,
 
 config :stripity_stripe,
   api_key:
-    "REDACTED_STRIPE_LIVE_SECRET_KEY"
+    "REDACTED_STRIPE_LIVE_SECRET_KEY",
+  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

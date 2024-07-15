@@ -7,6 +7,7 @@ defmodule Onestack.Accounts do
   alias Onestack.Repo
 
   alias Onestack.Accounts.{User, UserToken, UserNotifier}
+  alias Onestack.Subscriptions.Invitation
 
   ## Database getters
 
@@ -349,5 +350,49 @@ defmodule Onestack.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  def create_invitation(inviter, invitee_email, job_id) do
+    %Invitation{}
+    |> Invitation.changeset(%{
+      # Use job_id as the token
+      token: job_id,
+      expires_at: DateTime.utc_now() |> DateTime.add(24 * 60 * 60, :second),
+      invitee_email: invitee_email,
+      inviter_id: inviter.id
+    })
+    |> Repo.insert()
+  end
+
+  def get_valid_invitation(token) do
+    now = DateTime.utc_now()
+
+    invitation = Repo.get_by(Invitation, token: token)
+
+    cond do
+      is_nil(invitation) ->
+        {:error, :not_found}
+
+      DateTime.compare(invitation.expires_at, now) == :lt ->
+        {:error, :expired}
+
+      not is_nil(invitation.used_at) ->
+        {:error, :already_used}
+
+      true ->
+        # Mark the invitation as used
+        {:ok, updated_invitation} = Repo.update(Ecto.Changeset.change(invitation, used_at: now))
+        {:ok, updated_invitation}
+    end
+  end
+
+  defp generate_unique_token do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+  end
+
+  # Add this function to get accounts for the invitation (you'll need to implement the logic)
+  def get_accounts_for_invitation(invitation) do
+    # Implement your logic to get the accounts based on the invitation
+    # This might involve querying your database or generating new accounts
   end
 end

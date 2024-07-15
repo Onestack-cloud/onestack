@@ -38,6 +38,11 @@ config :onestack, OnestackWeb.Endpoint,
     ]
   ]
 
+config :stripity_stripe,
+  api_key:
+    "REDACTED_STRIPE_TEST_SECRET_KEY",
+  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed
@@ -88,6 +93,4 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view, :debug_heex_annotations, true
 
 # Disable swoosh api client as it is only required for production adapters.
-config :swoosh, :api_client, false
-
-import_config "dev.secret.exs"
+# config :swoosh, :api_client, false

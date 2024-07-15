@@ -65,7 +65,13 @@ defmodule Onestack.MixProject do
       {:httpoison, "~> 2.0"},
       {:stripity_stripe,
        git: "https://github.com/beam-community/stripity_stripe",
-       ref: "017d7ecdb5aeadccc03986c02396791079178ba2"}
+       ref: "017d7ecdb5aeadccc03986c02396791079178ba2"},
+      {:postgrex, "~> 0.17.0"},
+      {:myxql, "~> 0.6.0"},
+      {:cuid2, "~> 0.0.1"},
+      {:uuid, "~> 1.1"},
+      {:hackney, "~> 1.20"},
+      {:phoenix_swoosh, "~> 1.0"}
     ]
   end
 

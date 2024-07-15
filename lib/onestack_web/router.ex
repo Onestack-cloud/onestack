@@ -22,11 +22,12 @@ defmodule OnestackWeb.Router do
 
     # get "/", PageController, :home
 
-    live "/", ProductCostComparisonLive
-    live "/checkout", CheckoutLive, :index
+    live "/", LandingLive, :index
+    live "/subscribe", SubscribeLive, :index
     get "/privacy", PageController, :privacy_policy
     get "/security", PageController, :security
-    live "/checkout/success", SuccessLive
+    live "/subscribe/success", SuccessLive
+    live "/invitations/:token", InvitationLive
 
     # live "/product-cost-comparison", ProductCostComparisonLive
   end
@@ -60,7 +61,7 @@ defmodule OnestackWeb.Router do
 
     live_session :redirect_if_user_is_authenticated,
       on_mount: [{OnestackWeb.UserAuth, :redirect_if_user_is_authenticated}] do
-      live "/users/register", UserRegistrationLive, :new
+      # live "/users/register", UserRegistrationLive, :new
       live "/users/log_in", UserLoginLive, :new
       live "/users/reset_password", UserForgotPasswordLive, :new
       live "/users/reset_password/:token", UserResetPasswordLive, :edit
@@ -76,11 +77,11 @@ defmodule OnestackWeb.Router do
       on_mount: [{OnestackWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
-      live "/products/:id", ProductLive.Show, :show
-      live "/products/:id/show/edit", ProductLive.Show, :edit
-      live "/products", ProductLive.Index, :index
-      live "/products/new", ProductLive.Index, :new
-      live "/products/:id/edit", ProductLive.Index, :edit
+      # live "/products/:id", ProductLive.Show, :show
+      # live "/products/:id/show/edit", ProductLive.Show, :edit
+      # live "/products", ProductLive.Index, :index
+      # live "/products/new", ProductLive.Index, :new
+      # live "/products/:id/edit", ProductLive.Index, :edit
     end
   end
 

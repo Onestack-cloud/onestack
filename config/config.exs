@@ -30,7 +30,15 @@ config :onestack, OnestackWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :onestack, Onestack.Mailer, adapter: Swoosh.Adapters.Local
+# config :onestack, Onestack.Mailer, adapter: Swoosh.Adapters.Local
+
+# api_client: Swoosh.ApiClient.Hackney
+
+config :onestack, Onestack.Mailer,
+  adapter: Swoosh.Adapters.AmazonSES,
+  region: "ap-southeast-2",
+  access_key: "REDACTED_AWS_ACCESS_KEY",
+  secret: "REDACTED_AWS_SECRET_KEY"
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -62,11 +70,6 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :stripity_stripe,
-  api_key:
-    "REDACTED_STRIPE_PUBLISHABLE_KEY",
-  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
-
 config :money,
   default_currency: :AUD,
   separator: ".",
@@ -79,6 +82,70 @@ config :money,
   code: false,
   minus_sign_first: true,
   strip_insignificant_fractional_unit: false
+
+config :onestack,
+  products: [
+    %{
+      name: "formbricks",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "formbricks"
+      ]
+    },
+    %{
+      name: "cal",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "onestack-cal"
+      ]
+    },
+    %{
+      name: "castopod",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5332,
+        username: "root",
+        password: "REDACTED_MARIADB_PASSWORD",
+        database: "castopod"
+      ]
+    },
+    %{
+      name: "n8n",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "n8n"
+      ]
+    },
+    %{
+      name: "documenso",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "documenso"
+      ]
+    },
+    %{
+      name: "nocodb",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "nocodb"
+      ]
+    }
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

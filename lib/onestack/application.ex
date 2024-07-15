@@ -22,7 +22,8 @@ defmodule Onestack.Application do
       # {Onestack.Worker, arg},
       # Start to serve requests, typically the last entry
       OnestackWeb.Endpoint,
-      Onestack.StripeCache
+      Onestack.StripeCache,
+      Onestack.MemberManager
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

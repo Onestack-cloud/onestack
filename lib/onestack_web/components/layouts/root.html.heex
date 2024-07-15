@@ -24,52 +24,89 @@
       href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap"
       rel="stylesheet"
     />
+    <script
+      defer
+      data-domain="onestack.cloud"
+      src="https://plausible.digitalnachos.com.au/js/script.js"
+    >
+    </script>
   </head>
 
-  <body>
-    <div class="max-w-5xl">
-      <%!-- <ul class="relative flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end bg-primary">
-        <%= if @current_user do %>
-          <li class="text-xs text-primary-content">
-            <%= @current_user.email %>
-          </li>
-          <li>
-            <.link
-              href={~p"/users/settings"}
-              class="text-xs text-primary-content font-semibold link-hover"
+  <div class="mx-auto flex flex-col min-h-svh max-w-5xl">
+    <header>
+      <div class="navbar mb-20 flex justify-between items-center">
+        <div class="navbar-start">
+          <a href="/">
+            <img src="/images/logo_white_text.png" alt="Logo" class="h-8" />
+            <p class="text-xs flex justify-end">Powered by open source</p>
+          </a>
+        </div>
+        <div class="navbar-center hidden lg:flex">
+          <ul class="menu menu-horizontal px-1">
+            <li><a href={~p"/security"}>Security</a></li>
+            <li><a href={~p"/subscribe"}>Subscribe</a></li>
+          </ul>
+        </div>
+        <div class="navbar-end hidden lg:flex items-center">
+          <%= if @current_user do %>
+            <a href={~p"/subscribe"} class="btn btn-primary hidden lg:flex">My Stack</a>
+          <% else %>
+            <a href={~p"/users/log_in"} class="btn btn-primary hidden lg:flex">Login</a>
+          <% end %>
+        </div>
+        <div class="dropdown dropdown-end lg:hidden">
+          <label tabindex="0" class="btn btn-ghost lg:hidden">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              Settings
-            </.link>
-          </li>
-          <li>
-            <.link
-              href={~p"/users/log_out"}
-              method="delete"
-              class="text-xs leading-6 text-primary-content font-semibold link-hover"
-            >
-              Log out
-            </.link>
-          </li>
-        <% else %>
-          <li>
-            <.link
-              href={~p"/users/register"}
-              class="text-xs leading-6 text-primary-content font-semibold link-hover"
-            >
-              Register
-            </.link>
-          </li>
-          <li>
-            <.link
-              href={~p"/users/log_in"}
-              class="text-xs leading-6 text-primary-content font-semibold link-hover"
-            >
-              Log in
-            </.link>
-          </li>
-        <% end %>
-      </ul> --%>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h8m-8 6h16"
+              />
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a href={~p"/security"}>Security</a></li>
+            <li><a href={~p"/subscribe"}>Subscribe</a></li>
+            <%= if @current_user do %>
+              <li><a href={~p"/subscribe"} class="btn btn-primary btn-sm">My Stack</a></li>
+            <% else %>
+              <li><a href={~p"/users/log_in"} class="btn btn-primary btn-sm">Login</a></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </header>
+    <main class="mb-auto mx-4 flex justify-center items-center">
+      <div class="">
+        <.flash_group flash={@flash} />
+        <%= @inner_content %>
+      </div>
+    </main>
+  </div>
+  <footer class="footer p-4 bg-base-200 text-base-content w-full">
+    <div class="container mx-auto flex justify-between items-center max-w-5xl">
+      <aside>
+        <img src="/images/logo_white_text.png" alt="Logo" class="h-8" />
+        <p>Copyright © 2024 - onestack.cloud</p>
+      </aside>
+      <nav class="flex flex-col">
+        <h6 class="footer-title">Legal</h6>
+        <a class="link link-hover" href={~p"/privacy"}>Privacy policy</a>
+      </nav>
+      <nav class="flex flex-col">
+        <h6 class="footer-title">Company</h6>
+        <a class="link link-hover" href="mailto:contact@onestack.cloud">Contact Us</a>
+      </nav>
     </div>
-    <%= @inner_content %>
-  </body>
+  </footer>
 </html>

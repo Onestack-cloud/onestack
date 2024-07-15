@@ -1,0 +1,148 @@
+<div class="prose my-10">
+  <h2>
+    <%= if @current_user == nil, do: "Choose your products", else: "Modify your subscription" %>
+  </h2>
+</div>
+<div class="flex flex-wrap justify-center">
+  <%= if @current_user do %>
+    <%= for product <- @products do %>
+      <div class="tooltip m-1" data-tip={product.description}>
+        <button
+          class={"btn btn-outline text-base toggle-btn " <> if Enum.member?(@selected_products, product.id), do: "btn-active", else: ""}
+          phx-click="open_modal"
+          phx-value-product={product.id}
+          phx-value-action={
+            if Enum.member?(@selected_products, product.id), do: "remove", else: "add"
+          }
+          aria-label={product.name}
+        >
+          <%= product.name %>
+          <img
+            src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+            class="h-8 mask mask-squircle ml-2"
+            alt={product.name}
+          />
+        </button>
+      </div>
+    <% end %>
+  <% else %>
+    <%= for product <- @products do %>
+      <div class="tooltip m-1" data-tip={product.description}>
+        <button
+          class={"btn btn-outline text-base toggle-btn " <> if Enum.member?(@selected_products, product.id), do: "btn-active", else: ""}
+          phx-click="select_product"
+          phx-value-product={product.id}
+          aria-label={product.name}
+        >
+          <%= product.name %>
+          <img
+            src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+            class="h-8 mask mask-squircle ml-2"
+            alt={product.name}
+          />
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+</div>
+<div class="my-12 mx-auto px-4">
+  <%= if @current_user do %>
+    <h2 class="card-title mb-4">Your team</h2>
+    <div class="mb-4">
+      <form phx-submit="add_member" class="flex items-center">
+        <input
+          type="email"
+          name="email"
+          placeholder="Enter email address"
+          class="input input-bordered w-full max-w-xs mr-2"
+          required
+        />
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+    </div>
+    <div class="mb-4">
+      <%= for email <- @team_members do %>
+        <div class="flex items-center justify-between bg-base-200 p-2 rounded-lg mb-2">
+          <span><%= email %></span>
+          <%= if email == @current_user.email do %>
+            <div>
+              <div class="badge badge-warning">Admin</div>
+              <button disabled="true" class="btn btn-sm btn-error">
+                Remove
+              </button>
+            </div>
+
+            <%!-- <button class="btn btn-sm btn-warning">
+              Admin
+            </button> --%>
+          <% else %>
+            <button phx-click="remove_member" phx-value-email={email} class="btn btn-sm btn-error">
+              Remove
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    <div class="flex items-center justify-between">
+      <progress id="slider" value={@num_users} max="20" class="progress w-full" name="num_users">
+      </progress>
+      <h2 class="ml-4"><%= @num_users %></h2>
+    </div>
+  <% end %>
+  <%!-- <form phx-change="change" id="form">
+    <div class="flex items-center justify-between">
+      <input
+        id="slider"
+        type="range"
+        min="1"
+        max="20"
+        value={@num_users}
+        class="range w-full"
+        disabled={if @current_user, do: true, else: false}
+        name="num_users"
+      />
+      <h2 class="ml-4"><%= @num_users %></h2>
+    </div>
+  </form> --%>
+</div>
+
+<%= if !@current_user do %>
+  <button
+    class="btn btn-primary btn-block text-lg"
+    phx-click="subscribe"
+    phx-disable-with="Creating session..."
+  >
+    Subscribe
+  </button>
+<% end %>
+
+<dialog id="subscription_modal" class="modal" open={@show_modal}>
+  <%= if @show_modal and @modal_product do %>
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">
+        <%= if @modal_action == "add", do: "Add", else: "Remove" %> <%= @modal_product.name %>
+      </h3>
+      <p class="py-4">
+        Are you sure you want to <%= @modal_action %> <%= @modal_product.name %>
+        <%= if @modal_action == "add", do: "to", else: "from" %> your subscription?
+      </p>
+      <div class="modal-action">
+        <button
+          class="btn btn-primary"
+          phx-click="update_subscription"
+          phx-value-action={@modal_action}
+          phx-value-product={@modal_product.id}
+          disabled={@updating}
+        >
+          <%= if @updating do %>
+            <span class="loading loading-spinner"></span>
+            <%= if @modal_action == "add", do: "Adding...", else: "Removing..." %>
+          <% else %>
+            Confirm
+          <% end %>
+        </button>
+        <button class="btn" phx-click="close_modal" disabled={@updating}>Cancel</button>
+      </div>
+    </div>
+  <% end %>
+</dialog>
