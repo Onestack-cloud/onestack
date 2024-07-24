@@ -385,14 +385,4 @@ defmodule Onestack.Accounts do
         {:ok, updated_invitation}
     end
   end
-
-  defp generate_unique_token do
-    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-  end
-
-  # Add this function to get accounts for the invitation (you'll need to implement the logic)
-  def get_accounts_for_invitation(invitation) do
-    # Implement your logic to get the accounts based on the invitation
-    # This might involve querying your database or generating new accounts
-  end
 end

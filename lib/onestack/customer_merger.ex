@@ -22,6 +22,7 @@ defmodule Onestack.CustomerCombiner do
         subscription_id: subscription_info.subscription_id
       }
     end)
+    |> Enum.filter(fn customer -> customer.subscription_id != nil end)
   end
 
   defp extract_products(subscription) do

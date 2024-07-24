@@ -160,14 +160,18 @@ defmodule Onestack.Teams do
 
   # Private helper functions
 
-  defp get_or_create_team(user) do
+  def get_or_create_team(user) do
     case get_team_by_admin(user) do
-      nil -> create_team(%{members: [user.email], products: [], admin_email: user.email})
-      team -> team
+      nil ->
+        {:ok, team} = create_team(%{members: [user.email], products: [], admin_email: user.email})
+        team
+
+      team ->
+        team
     end
   end
 
-  defp get_team_by_admin(user) do
+  def get_team_by_admin(user) do
     Repo.get_by(Team, admin_email: user.email)
   end
 

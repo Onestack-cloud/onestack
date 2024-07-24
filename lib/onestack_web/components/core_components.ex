@@ -354,8 +354,8 @@ defmodule OnestackWeb.CoreComponents do
         name={@name}
         class={[
           "mt-2 block w-full rounded-lg focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "min-h-[6rem]",
+          @errors != [] && "input-error"
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -366,6 +366,9 @@ defmodule OnestackWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
+    extra_classes = assigns[:class] || ""
+    assigns = assign(assigns, :class, "default-input-class #{extra_classes}")
+
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
@@ -376,9 +379,10 @@ defmodule OnestackWeb.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           "grow",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "input input-bordered w-full max-w-xs mt-2",
+          @errors == [] && "",
+          @errors != [] && "input-error",
+          @class
         ]}
         {@rest}
       />

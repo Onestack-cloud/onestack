@@ -23,9 +23,6 @@ defmodule OnestackWeb.LandingLive do
       |> Enum.map(fn product -> product.category end)
       |> Enum.uniq()
 
-    IO.puts("session")
-    IO.inspect(session)
-
     {:ok,
      assign(socket,
        selected_products_or_categories: [],
@@ -210,11 +207,6 @@ defmodule OnestackWeb.LandingLive do
       savings: savings,
       savings_percent: savings_percent
     }
-  end
-
-  defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:page_title, "Onestack")
   end
 
   def get_average_prices(categories) do

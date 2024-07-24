@@ -14,7 +14,7 @@ defmodule Onestack.Teams.Team do
   def changeset(team, attrs) do
     team
     |> cast(attrs, [:members, :products, :admin_email])
-    |> validate_required([:members, :products, :admin_email])
+    |> validate_required([:members, :admin_email])
     |> validate_no_duplicates(:members)
     |> validate_no_duplicates(:products)
   end

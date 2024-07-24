@@ -18,7 +18,13 @@ defmodule OnestackWeb.UserSettingsLive do
           phx-submit="update_email"
           phx-change="validate_email"
         >
-          <.input field={@email_form[:email]} type="email" label="Email" required />
+          <.input
+            class="input input-bordered"
+            field={@email_form[:email]}
+            type="email"
+            label="Email"
+            required
+          />
           <.input
             field={@email_form[:current_password]}
             name="current_password"
@@ -27,6 +33,7 @@ defmodule OnestackWeb.UserSettingsLive do
             label="Current password"
             value={@email_form_current_password}
             required
+            class="input input-bordered"
           />
           <:actions>
             <.button phx-disable-with="Changing...">Change Email</.button>

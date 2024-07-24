@@ -10,8 +10,8 @@ kill_signal = 'SIGTERM'
 [build]
 
 [env]
-DATABASE_PATH = '/mnt/name/name.db'
-PHX_HOST = 'onestack-ancient-smoke-257.fly.dev'
+DATABASE_PATH = '/mnt/name/prod.db'
+PHX_HOST = 'onestack.cloud'
 PORT = '8080'
 
 [[mounts]]

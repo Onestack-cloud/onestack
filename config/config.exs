@@ -144,6 +144,26 @@ config :onestack,
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "nocodb"
       ]
+    },
+    %{
+      name: "chatwoot",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "chatwoot"
+      ]
+    },
+    %{
+      name: "penpot",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "penpot"
+      ]
     }
   ]
 

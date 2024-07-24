@@ -16,7 +16,7 @@ defmodule Onestack.InvitationEmail do
   defp invitation_email(email, invitation_link) do
     base_email()
     |> to({email, email})
-    |> subject("Welcome to Onestack!")
+    |> subject("Your Onestack Credentials")
     |> render_body("invitation_email.html", %{copy_credentials_url: invitation_link})
   end
 

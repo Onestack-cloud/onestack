@@ -7,6 +7,16 @@ config :onestack, Onestack.Repo,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true
 
+# config :onestack, Onestack.Repo,
+# username: "onestack-cal",
+# password: "REDACTED_POSTGRES_PASSWORD",
+# hostname: "5.78.111.23",
+# database: "onestack_dev",
+# port: 5433,
+# pool_size: 10,
+# stacktrace: true,
+# show_sensitive_data_on_connection_error: true
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

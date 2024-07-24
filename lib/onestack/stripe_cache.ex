@@ -83,6 +83,14 @@ defmodule Onestack.StripeCache do
     GenServer.call(__MODULE__, :list_tax_rates)
   end
 
+  def update_cache_for_new_customer(customer_id) do
+    GenServer.call(__MODULE__, {:update_customer, customer_id})
+  end
+
+  def delete_subscription_from_cache(subscription_id) do
+    GenServer.call(__MODULE__, {:delete_subscription, subscription_id})
+  end
+
   @doc """
   Returns a Stripe Price ID.
 
@@ -137,7 +145,7 @@ defmodule Onestack.StripeCache do
   end
 
   def update_cache_for_subscription(subscription_id) do
-    GenServer.cast(__MODULE__, {:update_subscription, subscription_id})
+    GenServer.call(__MODULE__, {:update_subscription, subscription_id})
   end
 
   # Server callbacks
@@ -229,35 +237,138 @@ defmodule Onestack.StripeCache do
     {:reply, combined_customers, state}
   end
 
-  def handle_cast({:update_subscription, subscription_id}, state) do
-    with {:ok, updated_subscription} <- Stripe.Subscription.retrieve(subscription_id),
-         {:ok, %{data: customers}} <- Stripe.Customer.list(),
-         {:ok, %{data: subscriptions}} <- Stripe.Subscription.list() do
-      # Update the subscriptions list
-      updated_subscriptions =
-        Enum.map(state.subscriptions, fn sub ->
-          if sub.id == subscription_id, do: updated_subscription, else: sub
-        end)
+  def handle_call({:update_subscription, subscription_id}, from, state) do
+    try do
+      Logger.info("Updating subscription: #{subscription_id}")
 
-      # Recalculate combined customers
-      combined_customers =
-        Onestack.CustomerCombiner.combine_customers(customers, updated_subscriptions)
+      case Stripe.Subscription.retrieve(subscription_id, %{}, timeout: 10_000) do
+        {:ok, updated_subscription} when not is_nil(updated_subscription) ->
+          Logger.info("Retrieved subscription from Stripe: #{inspect(updated_subscription)}")
 
-      {:noreply,
-       %{
-         state
-         | subscriptions: updated_subscriptions,
-           customers: customers,
-           combined_customers: combined_customers
-       }}
+          if updated_subscription.status == "canceled" do
+            Logger.info("Subscription #{subscription_id} is canceled. Deleting from cache.")
+            {:ok, new_state} = handle_call({:delete_subscription, subscription_id}, from, state)
+            {:reply, :ok, new_state}
+          else
+            updated_subscriptions = update_list(state.subscriptions, updated_subscription)
+            Logger.info("Updated subscriptions list. New count: #{length(updated_subscriptions)}")
+
+            updated_combined_customers =
+              recalculate_combined_customers(state.customers, updated_subscriptions)
+
+            Logger.info(
+              "Recalculated combined customers. New count: #{length(updated_combined_customers)}"
+            )
+
+            new_state = %{
+              state
+              | subscriptions: updated_subscriptions,
+                combined_customers: updated_combined_customers
+            }
+
+            Logger.info(
+              "State updated. New subscription count: #{length(new_state.subscriptions)}"
+            )
+
+            {:reply, :ok, new_state}
+          end
+
+        {:ok, nil} ->
+          Logger.error("Retrieved nil subscription from Stripe for ID: #{subscription_id}")
+          {:reply, {:error, :subscription_not_found}, state}
+
+        {:error, reason} ->
+          Logger.error(
+            "Failed to update StripeCache for subscription #{subscription_id}: #{inspect(reason)}"
+          )
+
+          {:reply, {:error, reason}, state}
+      end
+    rescue
+      e ->
+        Logger.error("Unexpected error in update_subscription: #{inspect(e)}")
+        {:reply, {:error, :unexpected_error}, state}
+    end
+  end
+
+  def handle_call({:delete_subscription, subscription_id}, _from, state) do
+    Logger.info("Deleting subscription: #{subscription_id}")
+
+    updated_subscriptions = Enum.reject(state.subscriptions, &(&1.id == subscription_id))
+    Logger.info("Updated subscriptions list. New count: #{length(updated_subscriptions)}")
+
+    updated_combined_customers =
+      recalculate_combined_customers(state.customers, updated_subscriptions)
+
+    Logger.info(
+      "Recalculated combined customers. New count: #{length(updated_combined_customers)}"
+    )
+
+    new_state = %{
+      state
+      | subscriptions: updated_subscriptions,
+        combined_customers: updated_combined_customers
+    }
+
+    Logger.info("State updated. New subscription count: #{length(new_state.subscriptions)}")
+
+    if length(state.subscriptions) == length(updated_subscriptions) do
+      Logger.warning("Subscription #{subscription_id} was not found in the cache")
+      {:reply, {:error, :not_found}, state}
+    else
+      {:reply, :ok, new_state}
+    end
+  end
+
+  def handle_call({:update_customer, customer_id}, _from, state) do
+    Logger.info("Updating customer: #{customer_id}")
+
+    with {:ok, updated_customer} <- Stripe.Customer.retrieve(customer_id) do
+      Logger.info("Retrieved customer from Stripe: #{inspect(updated_customer)}")
+
+      updated_customers = update_list(state.customers, updated_customer)
+      Logger.info("Updated customers list. New count: #{length(updated_customers)}")
+
+      updated_combined_customers =
+        recalculate_combined_customers(updated_customers, state.subscriptions)
+
+      Logger.info(
+        "Recalculated combined customers. New count: #{length(updated_combined_customers)}"
+      )
+
+      new_state = %{
+        state
+        | customers: updated_customers,
+          combined_customers: updated_combined_customers
+      }
+
+      Logger.info("State updated. New customer count: #{length(new_state.customers)}")
+
+      # Changed from {:noreply, new_state}
+      {:reply, :ok, new_state}
     else
       {:error, reason} ->
         Logger.warning(
-          "Failed to update StripeCache for subscription #{subscription_id}: #{inspect(reason)}"
+          "Failed to update StripeCache for customer #{customer_id}: #{inspect(reason)}"
         )
 
-        {:noreply, state}
+        # Changed from {:noreply, state}
+        {:reply, {:error, reason}, state}
     end
+  end
+
+  defp update_list(list, updated_item) do
+    if Enum.any?(list, fn item -> item.id == updated_item.id end) do
+      Enum.map(list, fn item ->
+        if item.id == updated_item.id, do: updated_item, else: item
+      end)
+    else
+      [updated_item | list]
+    end
+  end
+
+  defp recalculate_combined_customers(customers, subscriptions) do
+    Onestack.CustomerCombiner.combine_customers(customers, subscriptions)
   end
 
   @doc false

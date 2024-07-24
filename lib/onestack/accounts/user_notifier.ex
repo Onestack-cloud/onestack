@@ -8,7 +8,7 @@ defmodule Onestack.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Onestack", "contact@example.com"})
+      |> from({"Onestack", "support@onestack.cloud"})
       |> subject(subject)
       |> text_body(body)
 

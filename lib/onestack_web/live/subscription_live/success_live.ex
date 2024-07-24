@@ -1,6 +1,8 @@
 defmodule OnestackWeb.SuccessLive do
   use OnestackWeb, :live_view
   require Logger
+  alias Onestack.{Teams, StripeCache}
+  alias OnestackWeb.SubscribeLive
 
   def mount(%{"session_id" => "test_session"}, _session, socket) do
     mock_session = %{
@@ -21,12 +23,46 @@ defmodule OnestackWeb.SuccessLive do
   end
 
   def mount(%{"session_id" => session_id}, _session, socket) do
+    # current_user = get_current_user(session)
+
     case fetch_checkout_session(session_id) do
       {:ok, checkout_session} ->
-        {:ok,
-         socket
-         |> assign(:page_title, "Checkout Successful")
-         |> assign(:checkout_session, checkout_session)}
+        update_stripe_cache(checkout_session.customer, checkout_session.subscription)
+        customer_email = checkout_session.customer_details.email
+
+        case Teams.get_team_by_admin(%{email: customer_email}) do
+          nil ->
+            combined_customer =
+              StripeCache.list_combined_customers()
+              |> Enum.find(fn customer -> customer.email == customer_email end)
+
+            # Remember to update cache?
+            Teams.get_or_create_team(%{email: customer_email})
+
+            product_names =
+              SubscribeLive.get_product_names(
+                combined_customer.products,
+                StripeCache.list_products()
+              )
+
+            Onestack.MemberManager.add_member(
+              customer_email,
+              product_names
+            )
+
+            {:ok,
+             socket
+             |> assign(:page_title, "Checkout Successful")
+             |> assign(:checkout_session, checkout_session)}
+
+          _existing_member ->
+            # User already exists, just assign the checkout session
+            {:ok,
+             socket
+             |> assign(:page_title, "Checkout Successful")
+             |> assign(:checkout_session, checkout_session)
+             |> assign(:user_status, :existing)}
+        end
 
       {:error, reason} ->
         Logger.error("Failed to fetch checkout session: #{inspect(reason)}")
@@ -42,7 +78,12 @@ defmodule OnestackWeb.SuccessLive do
     Stripe.Checkout.Session.retrieve(session_id, expand: ["line_items"])
   end
 
-  def render(%{checkout_session: checkout_session} = assigns) do
+  defp update_stripe_cache(customer_id, subscription_id) do
+    Onestack.StripeCache.update_cache_for_new_customer(customer_id)
+    Onestack.StripeCache.update_cache_for_subscription(subscription_id)
+  end
+
+  def render(assigns) do
     ~H"""
     <div class="container mx-auto px-4 py-8">
       <h1 class="text-3xl font-bold mb-6">Thank You for Your Purchase!</h1>
@@ -73,12 +114,12 @@ defmodule OnestackWeb.SuccessLive do
               <tbody>
                 <tr>
                   <td class="font-bold">Order ID</td>
-                  <td><%= checkout_session.id %></td>
+                  <td><%= @checkout_session.id %></td>
                 </tr>
                 <tr>
                   <td class="font-bold">Total Amount</td>
                   <td>
-                    <%= Money.to_string(Money.new(checkout_session.amount_total)) %>
+                    <%= Money.to_string(Money.new(@checkout_session.amount_total)) %>
                   </td>
                 </tr>
               </tbody>
@@ -94,7 +135,7 @@ defmodule OnestackWeb.SuccessLive do
                 </tr>
               </thead>
               <tbody>
-                <%= for item <- checkout_session.line_items.data do %>
+                <%= for item <- @checkout_session.line_items.data do %>
                   <tr>
                     <td><%= item.description %></td>
                     <td>
@@ -105,36 +146,6 @@ defmodule OnestackWeb.SuccessLive do
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-      <div class="mt-8">
-        <a href="/" class="btn btn-primary">Return to Home</a>
-      </div>
-    </div>
-    """
-  end
-
-  def render(%{error: error_message} = assigns) do
-    ~H"""
-    <div class="container mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-6">Checkout Error</h1>
-      <div class="alert alert-error">
-        <div class="flex-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            class="w-6 h-6 mx-2 stroke-current"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-            >
-            </path>
-          </svg>
-          <label><%= error_message %></label>
         </div>
       </div>
       <div class="mt-8">

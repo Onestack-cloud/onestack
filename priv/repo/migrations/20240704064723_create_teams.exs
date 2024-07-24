@@ -5,8 +5,10 @@ defmodule Onestack.Repo.Migrations.CreateTeams do
     create table(:teams) do
       add :members, {:array, :string}, null: false
       add :products, {:array, :string}, null: false
-      add :admin_email, references(:users, column: :email, type: :string), null: false
+      # Assuming this should be a string
+      add :admin_email, :string, null: false
 
+      # This should be a separate line
       timestamps(type: :utc_datetime)
     end
 

@@ -16,8 +16,8 @@ config :swoosh, local: false
 # Do not print debug messages in production
 config :logger, level: :info
 
-config :bread_machine, BreadMachine.Repo,
-  database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file))
+config :onestack, BreadMachine.Repo,
+  database: Path.expand("../onestack_prod.db", Path.dirname(__ENV__.file))
 
 config :stripity_stripe,
   api_key:

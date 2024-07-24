@@ -4,7 +4,7 @@ defmodule OnestackWeb.InvitationLive do
 
   def mount(%{"token" => token}, _session, socket) do
     # Fetch and clear the results
-    results = MemberManager.get_job_results(token, true)
+    results = MemberManager.get_job_results(token, false)
 
     if Enum.empty?(results) do
       {:ok,
@@ -150,11 +150,6 @@ defmodule OnestackWeb.InvitationLive do
     """
   end
 
-  def handle_event("toggle_format", _, socket) do
-    new_format = if socket.assigns.format == :json, do: :csv, else: :json
-    {:noreply, assign(socket, format: new_format)}
-  end
-
   defp format_accounts(accounts, :csv) do
     headers =
       "folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\n"
@@ -178,20 +173,6 @@ defmodule OnestackWeb.InvitationLive do
       end)
 
     headers <> Enum.join(rows, "\n")
-  end
-
-  def handle_event("set_format", %{"format" => format}, socket) do
-    {:noreply, assign(socket, format: String.to_atom(format))}
-  end
-
-  def handle_event("toggle_full_view", _, socket) do
-    {:noreply, assign(socket, full_view: !socket.assigns.full_view)}
-  end
-
-  defp format_preview(results, format) do
-    results
-    |> Enum.take(3)
-    |> format_accounts(format)
   end
 
   defp format_accounts(accounts, :json) do
@@ -239,6 +220,25 @@ defmodule OnestackWeb.InvitationLive do
     Jason.encode!(json_data, pretty: true)
   end
 
+  def handle_event("set_format", %{"format" => format}, socket) do
+    {:noreply, assign(socket, format: String.to_atom(format))}
+  end
+
+  def handle_event("toggle_full_view", _, socket) do
+    {:noreply, assign(socket, full_view: !socket.assigns.full_view)}
+  end
+
+  def handle_event("toggle_format", _, socket) do
+    new_format = if socket.assigns.format == :json, do: :csv, else: :json
+    {:noreply, assign(socket, format: new_format)}
+  end
+
+  defp format_preview(results, format) do
+    results
+    |> Enum.take(3)
+    |> format_accounts(format)
+  end
+
   defp escape_csv(field) do
     field = to_string(field)
 
@@ -249,7 +249,7 @@ defmodule OnestackWeb.InvitationLive do
     end
   end
 
-  defp error_message(:not_found), do: "Invalid invitation link."
-  defp error_message(:expired), do: "This invitation has expired."
-  defp error_message(:already_used), do: "This invitation has already been used."
+  # defp error_message(:not_found), do: "Invalid invitation link."
+  # defp error_message(:expired), do: "This invitation has expired."
+  # defp error_message(:already_used), do: "This invitation has already been used."
 end
