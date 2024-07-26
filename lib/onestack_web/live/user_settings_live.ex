@@ -5,13 +5,13 @@ defmodule OnestackWeb.UserSettingsLive do
 
   def render(assigns) do
     ~H"""
-    <.header class="text-center">
+    <.header class="text-center my-12">
       Account Settings
       <:subtitle>Manage your account email address and password settings</:subtitle>
     </.header>
 
-    <div class="space-y-12 divide-y">
-      <div>
+    <div class="mx-auto max-w-sm min-h-screen text-center mt-3 gap-3 space-y-12 divide-y">
+      <div class="flex justify-center w-full">
         <.simple_form
           for={@email_form}
           id="email_form"
@@ -36,11 +36,13 @@ defmodule OnestackWeb.UserSettingsLive do
             class="input input-bordered"
           />
           <:actions>
-            <.button phx-disable-with="Changing...">Change Email</.button>
+            <div class="flex justify-center w-full">
+              <.button phx-disable-with="Changing...">Change Email</.button>
+            </div>
           </:actions>
         </.simple_form>
       </div>
-      <div>
+      <div class=" my-16">
         <.simple_form
           for={@password_form}
           id="password_form"
@@ -72,7 +74,9 @@ defmodule OnestackWeb.UserSettingsLive do
             required
           />
           <:actions>
-            <.button phx-disable-with="Changing...">Change Password</.button>
+            <div class="flex justify-center w-full">
+              <.button phx-disable-with="Changing...">Change Password</.button>
+            </div>
           </:actions>
         </.simple_form>
       </div>

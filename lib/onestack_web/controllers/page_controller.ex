@@ -14,4 +14,8 @@ defmodule OnestackWeb.PageController do
   def security(conn, _params) do
     render(conn, :security)
   end
+
+  def test_land(conn, _params) do
+    render(conn, :test_land)
+  end
 end

@@ -13,26 +13,25 @@ module.exports = {
   ],
   theme: {
     extend: {
-      colors: {
-        brand: "#FD4F00",
-      },
+      // colors: {
+      //   brand: "#FD4F00",
+      // },
       fontFamily: {
         pixel_title: ["VT323", "sans-serif"],
-        sans: ["Inconsolata", "sans-serif"]
+        sans: ["DM Sans", "sans-serif"],
+        body: ["'DM Sans'", "sans-serif"]
       },
     },
-    // fontSize: {
-    //   'xs': '10rem',
-    //   'sm': '10rem',
-    //   'base': '10rem',
-    //   'lg': '1.125rem',
-    //   'xl': '1.25rem',
-    //   '2xl': '1.5rem',
-    //   '3xl': '1.875rem',
-    //   '4xl': '2.25rem',
-    //   '5xl': '3rem',
-    //   '6xl': '4rem',
-    // },
+    container: {
+      center: true,
+      padding: {
+        "DEFAULT": "1rem",
+        "sm": "2rem",
+        "lg": "4rem",
+        "xl": "6rem",
+        "2xl": "8rem",
+      },
+    }
   },
   plugins: [
     // require("@tailwindcss/forms"),
@@ -96,22 +95,58 @@ module.exports = {
   //   styled: true, // include daisyUI colors and design decisions for all components
   //   utils: true, // adds responsive and modifier utility classes
   //   logs: true, // Shows info about daisyUI version and used config in the console when building your CSS
-  //   // themeRoot: ":root", // 
+  //   // themeRoot: ":root", //
   // }
+  // daisyui: {
+  //   themes: [
+  //     {
+  //       business: {
+  //         ...require("daisyui/src/theming/themes")["lofi"],
+  //         // primary: "#d1d5db",
+  //         // secondary: "#ffffff",
+  //       },
+  //     },
+  //   ],
+  //   base: true, // applies background color and foreground color for root element by default
+  //   styled: true, // include daisyUI colors and design decisions for all components
+  //   utils: true, // adds responsive and modifier utility classes
+  //   logs: true, // Shows info about daisyUI version and used config in the console when building your CSS
+  // },
   daisyui: {
     themes: [
       {
-        business: {
-          ...require("daisyui/src/theming/themes")["business"],
-          primary: "#d1d5db",
-          // secondary: "#ffffff",
+        light: {
+          ...require("daisyui/src/theming/themes").light,
+          "primary": "#1b77ff",
+          "primary-content": "#ffffff",
+          "secondary": "#494949",
+          "neutral": "#03131a",
+          "info": "#00e1ff",
+          "success": "#90ca27",
+          "warning": "#ff8800",
+          "error": "#ff7f7f",
+          "--rounded-box": "0.25rem",
+          "--rounded-btn": "0.25rem",
+        },
+        dark: {
+          ...require("daisyui/src/theming/themes").dark,
+          "primary": "#1b77ff",
+          "primary-content": "#ffffff",
+          "secondary": "#494949",
+          "neutral": "#03131a",
+          "info": "#00e1ff",
+          "success": "#90ca27",
+          "warning": "#ff8800",
+          "error": "#ff7f7f",
+          "base-100": "#14181c",
+          "base-200": "#1e2328",
+          "base-300": "#28323c",
+          "base-content": "#dcebfa",
+          "--rounded-box": "0.25rem",
+          "--rounded-btn": "0.25rem",
         },
       },
     ],
-    base: true, // applies background color and foreground color for root element by default
-    styled: true, // include daisyUI colors and design decisions for all components
-    utils: true, // adds responsive and modifier utility classes
-    logs: true, // Shows info about daisyUI version and used config in the console when building your CSS
   },
   // daisyui: {
   //   themes: [

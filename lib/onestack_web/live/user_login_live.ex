@@ -3,7 +3,7 @@ defmodule OnestackWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="mx-auto max-w-sm my-16 min-h-screen">
       <.header class="text-center">
         Log in to account
         <:subtitle>
@@ -15,8 +15,14 @@ defmodule OnestackWeb.UserLoginLive do
         </:subtitle>
       </.header>
 
-      <.simple_form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
-        <.input field={@form[:email]} type="email" label="Email" required />
+      <.simple_form
+        for={@form}
+        id="login_form"
+        action={~p"/users/log_in"}
+        phx-update="ignore"
+        class="flex justify-center"
+      >
+        <.input field={@form[:email]} type="email" label="Email" required class="w-full:!important" />
         <.input field={@form[:password]} type="password" label="Password" required />
 
         <:actions>

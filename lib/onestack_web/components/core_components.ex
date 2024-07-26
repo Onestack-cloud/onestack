@@ -112,24 +112,42 @@ defmodule OnestackWeb.CoreComponents do
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
-      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
+      phx-hook="AutoDismissFlash"
+      phx-click="lv:clear-flash"
+      phx-value-key={@kind}
       role="alert"
       class={[
-        "fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        "fixed top-2 right-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-md",
+        "border-l-4 transition-all duration-500 ease-in-out",
+        "bg-white dark:bg-gray-800",
+        @kind == :info && "border-blue-500",
+        @kind == :error && "border-red-500"
       ]}
       {@rest}
     >
-      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
-        <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
-        <%= @title %>
-      </p>
-      <p class="mt-2 text-sm leading-5"><%= msg %></p>
-      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
-      </button>
+      <div class="flex items-center space-x-3">
+        <div class={[
+          "p-1.5 rounded-full",
+          @kind == :info && "bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-300",
+          @kind == :error && "bg-red-100 text-red-500 dark:bg-red-900 dark:text-red-300"
+        ]}>
+          <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
+          <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
+        </div>
+        <div class="flex-grow">
+          <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">
+            <%= @title || "Success!" %>
+          </p>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"><%= msg %></p>
+        </div>
+        <button
+          type="button"
+          class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200"
+          aria-label={gettext("close")}
+        >
+          <.icon name="hero-x-mark" class="h-4 w-4" />
+        </button>
+      </div>
     </div>
     """
   end
@@ -379,7 +397,7 @@ defmodule OnestackWeb.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           "grow",
-          "input input-bordered w-full max-w-xs mt-2",
+          "input input-bordered w-full mt-2",
           @errors == [] && "",
           @errors != [] && "input-error",
           @class

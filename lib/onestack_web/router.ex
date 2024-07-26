@@ -26,6 +26,7 @@ defmodule OnestackWeb.Router do
     live "/subscribe", SubscribeLive, :index
     get "/privacy", PageController, :privacy_policy
     get "/security", PageController, :security
+    get "/test_land", PageController, :test_land
     live "/subscribe/success", SuccessLive
     live "/invitations/:token", InvitationLive
 
