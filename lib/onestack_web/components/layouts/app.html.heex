@@ -1,5 +1,26 @@
-<!doctype html>
 <html lang="en">
+  <link rel="apple-touch-icon" sizes="180x180" href={~p"/images/apple-touch-icon.png"} />
+  <link rel="icon" type="image/png" sizes="32x32" href={~p"/images/favicon-32x32.png"} />
+  <link rel="icon" type="image/png" sizes="16x16" href={~p"/images/favicon-16x16.png"} />
+  <link rel="manifest" href={~p"/site.webmanifest"} />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content={get_csrf_token()} />
+
+  <meta property="og:type" content="Subscription Infrastructure" />
+  <meta property="og:title" content="Onestack" />
+  <meta
+    property="og:description"
+    content="Manage all your SaaS in one place with Onestack, for 90% less."
+  />
+
+  <meta property="og:url" content="https://onestack.cloud/" />
+  <meta property="og:image" content="https://onestack.cloud/images/test_og_preview.png" />
+  <meta
+    property="og:image:secure_url"
+    content="https://onestack.cloud/images/test_og_preview.png"
+  />
+
   <body>
     <div>
       <.flash_group flash={@flash} />
