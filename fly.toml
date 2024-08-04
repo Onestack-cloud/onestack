@@ -10,7 +10,7 @@ kill_signal = 'SIGTERM'
 [build]
 
 [env]
-DATABASE_PATH = '/mnt/name/prod.db'
+DATABASE_PATH = '/mnt/name/prod_20240802.db'
 PHX_HOST = 'onestack.cloud'
 PORT = '8080'
 

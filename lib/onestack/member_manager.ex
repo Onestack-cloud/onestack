@@ -723,6 +723,49 @@ defmodule Onestack.MemberManager do
     %{email: email, password: password}
   end
 
+  def remove_member_from_product(email, "cal" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+
+    # First, get the user ID
+    user_query = "SELECT id FROM users WHERE email = $1"
+    user_params = [email]
+
+    case Postgrex.query(pid, user_query, user_params) do
+      {:ok, %Postgrex.Result{rows: [[user_id]]}} ->
+        # Delete from UserPassword table
+        password_query = "DELETE FROM \"UserPassword\" WHERE \"userId\" = $1"
+        password_params = [user_id]
+
+        case Postgrex.query(pid, password_query, password_params) do
+          {:ok, _result} ->
+            IO.puts("Password removed for cal user")
+
+            # Delete from users table
+            delete_query = "DELETE FROM users WHERE id = $1"
+            delete_params = [user_id]
+
+            case Postgrex.query(pid, delete_query, delete_params) do
+              {:ok, _result} ->
+                IO.puts("User removed from cal")
+
+              {:error, %Postgrex.Error{} = error} ->
+                IO.puts("Failed to remove user from cal: #{inspect(error)}")
+            end
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.puts("Failed to remove password for cal user: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        IO.puts("User not found in cal")
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Error querying user in cal: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+  end
+
   def remove_member_from_product(email, "n8n" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 

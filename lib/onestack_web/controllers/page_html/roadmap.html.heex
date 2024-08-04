@@ -1,0 +1,26 @@
+<!-- Import Featurebase SDK -->
+<script>
+  !(function(e,t){const a="featurebase-sdk";function n(){if(!t.getElementById(a)){var e=t.createElement("script");(e.id=a),(e.src="https://do.featurebase.app/js/sdk.js"),t.getElementsByTagName("script")[0].parentNode.insertBefore(e,t.getElementsByTagName("script")[0])}}"function"!=typeof e.Featurebase&&(e.Featurebase=function(){(e.Featurebase.q=e.Featurebase.q||[]).push(arguments)}),"complete"===t.readyState||"interactive"===t.readyState?n():t.addEventListener("DOMContentLoaded",n)})(window,document);
+</script>
+<!-- Embed Featurebase -->
+<div data-featurebase-embed></div>
+<!-- Identify user in Featurebase -->
+<script>
+  Featurebase('embed', {
+    /* Required */
+    organization: 'onestack', // Replace this with your organization name, copy-paste the subdomain part from your Featurebase workspace url (e.g. https://*yourorg*.featurebase.app)
+
+    /* Optional */
+    basePath: null, // Sync urls between your website & our embed. Example: '/feedback'. Refer to the url synchronizing section below to learn more.
+
+    // Aesthetic or Display
+    // theme: 'light', // options: light [default], dark. Remove for auto.
+    initialPage: 'Board', // options: Board [default], Changelog, Roadmap
+    hideMenu: false, // Hides the top navigation bar
+    hideLogo: false, // Hides the logo in the top navigation bar & leaves the Sign In button visible.
+    filters: null, // Default filters to apply to the board view. Copy the filters from the URL when you have the filters you want selected. Example: 'b=63f827df2d62cb301468aac4&sortBy=upvotes:desc'
+    jwtToken: null, // Automatically sign in a user with a JWT token. See the JWT section below.
+    metadata: null, // Attach session-specific metadata to feedback. Refer to the advanced section for the details: https://help.featurebase.app/en/articles/3774671-advanced#7k8iriyap66
+    locale: "en" // Change the language, view all available languages from https://help.featurebase.app/en/articles/8879098-using-featurebase-in-my-language
+  })
+</script>

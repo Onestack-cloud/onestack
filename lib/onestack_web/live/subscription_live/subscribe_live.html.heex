@@ -119,13 +119,17 @@
         <% end %>
       </div>
 
-      <%= if !@has_subscription do %>
+      <%= if !@has_subscription and @current_user do %>
         <button
           class="btn btn-primary text-lg"
           phx-click="subscribe"
           phx-disable-with="Creating session..."
         >
           Subscribe
+        </button>
+      <% else %>
+        <button phx-click={JS.navigate(~p"/users/register")} class="btn btn-primary text-lg">
+          Sign-up
         </button>
       <% end %>
 

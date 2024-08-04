@@ -25,10 +25,12 @@ defmodule OnestackWeb.Router do
     live "/", LandingLive, :index
     live "/subscribe", SubscribeLive, :index
     get "/privacy", PageController, :privacy_policy
+    # get "/roadmap", PageController, :roadmap
     get "/security", PageController, :security
     get "/test_land", PageController, :test_land
-    live "/subscribe/success", SuccessLive
-    live "/invitations/:token", InvitationLive
+    get "/checkout", PageController, :redirect_to_subscribe
+    live "/subscribe/success", SuccessLive, :index
+    live "/invitations/:token", InvitationLive, :index
 
     # live "/product-cost-comparison", ProductCostComparisonLive
   end

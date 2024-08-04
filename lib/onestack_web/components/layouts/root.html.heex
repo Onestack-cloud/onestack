@@ -35,6 +35,15 @@
 </head>
 
 <%!-- TOPBAR --%>
+<div class="bg-neutral py-1.5 text-center text-xs text-neutral-content md:text-sm">
+  <span>
+    We're currently in <span class="font-semibold text-info">early access</span>.
+    <a class="link" href="mailto:contact@onestack.cloud?subject=Join%20Onestack%20Testers">
+      Join our private testers program
+    </a>
+    for free lifetime access! 🚀
+  </span>
+</div>
 
 <div
   id="navbar-wrapper"
@@ -82,6 +91,11 @@
         <ul class="menu menu-horizontal menu-sm gap-2 px-1">
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
           <li class="font-medium"><a href={~p"/subscribe"}>Subscribe</a></li>
+          <li class="font-medium" aria-disabled="true">
+            <span class="indicator btn-disabled disabled opacity-50">
+              Roadmap <span class="badge badge-sm indicator-item badge-neutral">Coming Soon</span>
+            </span>
+          </li>
         </ul>
       </div>
 
@@ -147,6 +161,12 @@
 
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
           <li class="font-medium"><a href={~p"/subscribe"}>Subscribe</a></li>
+          <li class="font-medium" aria-disabled="true">
+            <span class="indicator btn-disabled disabled opacity-50">
+              Roadmap <span class="badge badge-sm indicator-item badge-neutral">Coming Soon</span>
+            </span>
+          </li>
+
           <%= if @current_user do %>
             <%!-- <li class="font-medium"><a href={~p"/subscribe"}>My Stack</a></li>
             <li class="font-medium"><a href={~p"/users/settings"}>Settings</a></li>
@@ -178,6 +198,7 @@
     <nav class="flex flex-col">
       <h6 class="footer-title">Company</h6>
       <a class="link link-hover" href="mailto:contact@onestack.cloud">Contact Us</a>
+      <a class="link link-hover" href="https://kuma.onestack.cloud/status/onestack">Status</a>
     </nav>
   </div>
 </footer>
