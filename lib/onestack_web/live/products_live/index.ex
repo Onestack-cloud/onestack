@@ -1,23 +1,14 @@
 defmodule OnestackWeb.ProductLive.Index do
   use OnestackWeb, :live_view
 
-  alias Onestack.CatalogMonthly
-  alias Onestack.CatalogMonthly.Product
+  alias Onestack.StripeCache
 
   @impl true
   def mount(_params, _session, socket) do
-    products = CatalogMonthly.list_products()
-
-    product_categories =
-      products
-      |> Enum.map(& &1.category)
-      |> Enum.uniq()
-
     {:ok,
      socket
-     |> assign(:product_categories, product_categories)
      |> assign(:selected_product_categories, [])
-     |> stream(:products, products)}
+     |> assign(:products, StripeCache.list_products())}
   end
 
   @impl true
@@ -25,17 +16,17 @@ defmodule OnestackWeb.ProductLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Product")
-    |> assign(:product, CatalogMonthly.get_product!(id))
-  end
+  # defp apply_action(socket, :edit, %{"id" => id}) do
+  #   socket
+  #   |> assign(:page_title, "Edit Product")
+  #   |> assign(:product, CatalogMonthly.get_product!(id))
+  # end
 
-  defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(:page_title, "New Product")
-    |> assign(:product, %Product{})
-  end
+  # defp apply_action(socket, :new, _params) do
+  #   socket
+  #   |> assign(:page_title, "New Product")
+  #   |> assign(:product, %Product{})
+  # end
 
   defp apply_action(socket, :index, _params) do
     socket

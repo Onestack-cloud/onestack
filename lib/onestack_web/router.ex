@@ -23,14 +23,11 @@ defmodule OnestackWeb.Router do
     # get "/", PageController, :home
 
     live "/", LandingLive, :index
-    live "/subscribe", SubscribeLive, :index
     get "/privacy", PageController, :privacy_policy
     # get "/roadmap", PageController, :roadmap
     get "/security", PageController, :security
     get "/test_land", PageController, :test_land
-    get "/checkout", PageController, :redirect_to_subscribe
-    live "/subscribe/success", SuccessLive, :index
-    live "/invitations/:token", InvitationLive, :index
+    live "/products", ProductLive.Index, :index
 
     # live "/product-cost-comparison", ProductCostComparisonLive
   end
@@ -80,9 +77,12 @@ defmodule OnestackWeb.Router do
       on_mount: [{OnestackWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      live "/subscribe", SubscribeLive, :index
+      get "/checkout", PageController, :redirect_to_subscribe
+      live "/subscribe/success", SuccessLive, :index
+      live "/invitations/:token", InvitationLive, :index
       # live "/products/:id", ProductLive.Show, :show
       # live "/products/:id/show/edit", ProductLive.Show, :edit
-      # live "/products", ProductLive.Index, :index
       # live "/products/new", ProductLive.Index, :new
       # live "/products/:id/edit", ProductLive.Index, :edit
     end

@@ -90,7 +90,8 @@
       <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal menu-sm gap-2 px-1">
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
-          <li class="font-medium"><a href={~p"/subscribe"}>Subscribe</a></li>
+          <li class="font-medium"><a href={~p"/products"}>Products</a></li>
+
           <li class="font-medium" aria-disabled="true">
             <span class="indicator btn-disabled disabled opacity-50">
               Roadmap <span class="badge badge-sm indicator-item badge-neutral">Coming Soon</span>
@@ -101,7 +102,7 @@
 
       <div class="navbar-end gap-3">
         <%= if @current_user do %>
-          <a href={~p"/subscribe"} class="btn btn-secondary btn-sm">My Stack</a>
+          <a href={~p"/subscribe"} class="btn btn-primary btn-sm">My Stack</a>
           <div class="dropdown dropdown-end">
             <label tabindex="0" class="btn btn-ghost btn-circle btn-sm p-0 overflow-hidden">
               <div class="w-full h-full flex items-center justify-center">
@@ -140,7 +141,8 @@
             </ul>
           </div>
         <% else %>
-          <a href={~p"/users/log_in"} class="btn btn-primary btn-sm">Login</a>
+          <a href={~p"/users/log_in"} class="btn btn-secondary btn-sm">Login</a>
+          <a href={~p"/users/register"} class="btn btn-primary btn-sm">Get started</a>
         <% end %>
       </div>
     </nav>
