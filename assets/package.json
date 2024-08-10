@@ -11,5 +11,8 @@
   "description": "",
   "devDependencies": {
     "daisyui": "^4.11.1"
+  },
+  "dependencies": {
+    "alpinejs": "^3.14.1"
   }
 }

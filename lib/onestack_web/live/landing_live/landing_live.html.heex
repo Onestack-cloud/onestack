@@ -161,21 +161,23 @@
       </p>
     </div>
 
-    <div class="mt-12 rounded-lg p-8 bg-secondary/20 text-base-content lg:px-24 lg:py-14 ">
-      <%!-- <h3 class="card-title text-center">Search by</h3> --%>
+    <div
+      class="mt-12 rounded-lg p-8 bg-secondary/20 text-base-content lg:px-24 lg:py-14"
+      x-data="calculator"
+    >
       <div class="mt-6 flex justify-center">
         <div class="tabs-boxed bg-secondary/20 tabs">
           <button
-            class={"tab lg:px-10 #{if @product_category_search == "products", do: "tab-active"}"}
-            phx-click="select_search"
-            value="products"
+            class="tab lg:px-10"
+            x-bind:class="{ 'tab-active': searchType === 'products' }"
+            @click="searchType = 'products'"
           >
             Products
           </button>
           <button
-            class={"tab lg:px-10 #{if @product_category_search == "categories", do: "tab-active"}"}
-            phx-click="select_search"
-            value="categories"
+            class="tab lg:px-10"
+            x-bind:class="{ 'tab-active': searchType === 'categories' }"
+            @click="searchType = 'categories'"
           >
             Categories
           </button>
@@ -183,40 +185,38 @@
       </div>
 
       <div class="mt-6 mx-auto flex flex-wrap justify-center">
-        <%= for product_or_category <- @products_or_categories do %>
-          <input
+        <template x-for="item in itemsToShow" x-bind:key="item">
+          <button
             type="checkbox"
-            class={"btn btn-outline btn-secondary my-0.5 mx-1 toggle-btn " <> if Enum.member?(@selected_products_or_categories, product_or_category), do: "btn-active", else: ""}
-            phx-click="select_product_or_category"
-            phx-value-product_or_category={product_or_category}
-            aria-label={product_or_category}
+            x-bind:class="{'btn btn-outline btn-secondary my-0.5 mx-1 toggle-btn': true, 'btn-active': selectedItems.includes(item)}"
+            @click="toggleItem(item)"
+            x-text="item"
           />
-        <% end %>
+        </template>
       </div>
-      <div id="calculator" class="mt-6 justify-center">
+
+      <div class="mt-6 justify-center">
         <h2 class="card-title">How big is your team?</h2>
-        <form phx-change="change" id="form">
-          <div class="flex items-center justify-between">
-            <input
-              id="slider"
-              type="range"
-              min="1"
-              max="30"
-              value={@num_users}
-              class="range w-full"
-              name="num_users"
-            />
-            <h2 class="ml-4"><%= @num_users %></h2>
-          </div>
-        </form>
+        <div class="flex items-center justify-between">
+          <input
+            id="slider"
+            type="range"
+            min="1"
+            max="30"
+            x-model="numUsers"
+            class="range w-full"
+          />
+          <h2 class="ml-4" x-text="numUsers"></h2>
+        </div>
       </div>
+
       <div class="my-12 mx-auto flex justify-center">
         <div class="stats stats-vertical md:stats-horizontal">
           <div class="stat">
             <div class="stat-title">Monthly savings</div>
-            <div class="stat-value">$<%= @savings %></div>
+            <div class="stat-value">$<span x-text="savings.toFixed(2)"></span></div>
             <div class="stat-desc">
-              <%= @savings_percent %>% saved compared to closed source
+              <span x-text="savingsPercent"></span>% saved compared to closed source
             </div>
             <div class="stat-actions">
               <button class="btn btn-primary btn-sm">
@@ -228,7 +228,9 @@
           </div>
           <div class="stat">
             <div class="stat-title">Our price</div>
-            <div class="stat-value p mb-16">$<%= @total_costs[:open_source] %></div>
+            <div class="stat-value p mb-16">
+              $<span x-text="totalCosts.openSource.toFixed(2)"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -316,3 +318,104 @@
     </div>
   </div>
 </section>
+
+<script>
+  function calculator() {
+    return {
+      searchType: 'categories',
+      numUsers: 1,
+      products: <%= Phoenix.HTML.raw(@prepared_products) %>,
+      selectedItems: [],
+      
+      get categories() {
+        return [...new Set(this.products.map(p => p.category))];
+      },
+      
+      get itemsToShow() {
+        return this.searchType === 'products' 
+          ? this.products.map(p => p.closed_source_name)
+          : this.categories;
+      },
+      
+      toggleItem(item) {
+        const index = this.selectedItems.indexOf(item);
+        if (index === -1) {
+          this.selectedItems.push(item);
+        } else {
+          this.selectedItems.splice(index, 1);
+        }
+      },
+      
+       get prices() {
+        console.log('Calculating prices');
+        console.log('Search type:', this.searchType);
+        console.log('Selected items:', this.selectedItems);
+        if (this.searchType === 'products') {
+          return this.getProductPrices(this.selectedItems);
+        } else {
+          return this.getAveragePrices(this.selectedItems);
+        }
+      },
+      
+      getProductPrices(products) {
+        console.log('Getting product prices for:', products);
+        const prices = this.products.filter(p => products.includes(p.closed_source_name));
+        console.log('Product prices:', prices);
+        return prices;
+      },
+      
+      getAveragePrices(categories) {
+        console.log('Getting average prices for categories:', categories);
+        const prices = categories.map(category => {
+          const categoryProducts = this.products.filter(p => p.category === category);
+          const avgClosedSourcePrice = categoryProducts.reduce((sum, p) => sum + p.closed_source_user_price_aud, 0) / categoryProducts.length;
+          const avgOpenSourcePrice = categoryProducts.reduce((sum, p) => sum + p.open_source_fixed_price, 0) / categoryProducts.length;
+          return {
+            category,
+            closed_source_user_price_aud: avgClosedSourcePrice,
+            open_source_fixed_price: avgOpenSourcePrice
+          };
+        });
+        console.log('Average prices:', prices);
+        return prices;
+      },
+      
+      get totalCosts() {
+        console.log('Calculating total costs');
+        console.log('Number of users:', this.numUsers);
+        console.log('Prices:', this.prices);
+        const costs = this.prices.reduce((acc, price) => {
+          const closedSourceCost = price.closed_source_user_price_aud * this.numUsers;
+          const steps = Math.floor((this.numUsers - 1) / 10) + 1;
+          const openSourceCost = price.open_source_fixed_price * steps;
+          
+          console.log('Item costs:', {
+            closedSource: closedSourceCost,
+            openSource: openSourceCost
+          });
+
+          return {
+            closedSource: acc.closedSource + closedSourceCost,
+            openSource: acc.openSource + openSourceCost
+          };
+        }, { closedSource: 0, openSource: 0 });
+
+        console.log('Total costs:', costs);
+        return costs;
+      },
+      
+      get savings() {
+        const savingsAmount = this.totalCosts.closedSource - this.totalCosts.openSource;
+        console.log('Savings:', savingsAmount);
+        return isNaN(savingsAmount) ? 0 : savingsAmount;
+      },
+      
+      get savingsPercent() {
+        if (this.totalCosts.closedSource === 0) return "0.00";
+        const percent = (this.savings / this.totalCosts.closedSource) * 100;
+        console.log('Savings percent:', percent);
+        return isNaN(percent) ? "0.00" : percent.toFixed(2);
+      }
+    };
+  }
+</script>

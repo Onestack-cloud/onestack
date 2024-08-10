@@ -11,6 +11,7 @@ defmodule OnestackWeb.LandingLive do
   @impl true
   def mount(_params, session, socket) do
     products = CatalogMonthly.list_products()
+    IO.inspect(products)
 
     current_user =
       case session["user_token"] do
@@ -18,23 +19,26 @@ defmodule OnestackWeb.LandingLive do
         user_token -> Accounts.get_user_by_session_token(user_token)
       end
 
-    product_categories =
-      products
-      |> Enum.map(fn product -> product.category end)
-      |> Enum.uniq()
+    prepared_products =
+      Enum.map(products, fn product ->
+        product
+        |> Map.from_struct()
+        |> Map.drop([:__meta__])
+        |> Map.new(fn {k, v} ->
+          {k,
+           if is_struct(v, Decimal) do
+             Decimal.to_float(v)
+           else
+             v
+           end}
+        end)
+      end)
 
     {:ok,
      assign(socket,
-       selected_products_or_categories: [],
-       num_users: "2",
-       chart_data: %{},
-       total_costs: %{:open_source => 0},
-       savings: 0,
-       products_or_categories: product_categories,
        products: products,
-       savings_percent: 0,
-       product_category_search: "categories",
-       current_user: current_user
+       current_user: current_user,
+       prepared_products: Jason.encode!(prepared_products)
      )}
   end
 
