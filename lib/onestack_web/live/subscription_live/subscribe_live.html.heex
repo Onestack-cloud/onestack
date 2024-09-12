@@ -26,7 +26,10 @@
               <%= for product <- @products do %>
                 <tr
                   class={"#{if Enum.member?(@selected_products, product.id), do: '', else: 'cursor-pointer hover:bg-base-200 transition-colors duration-200'} "}
-                  phx-click={if !Enum.member?(@selected_products, product.id), do: "open_modal"}
+                  phx-click={
+                    if !Enum.member?(@selected_products, product.id),
+                      do: if(@has_subscription, do: "open_modal", else: "select_product")
+                  }
                   phx-value-product={
                     if !Enum.member?(@selected_products, product.id), do: product.id
                   }
