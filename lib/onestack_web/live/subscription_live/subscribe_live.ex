@@ -77,6 +77,10 @@ defmodule OnestackWeb.SubscribeLive do
     {:noreply, socket}
   end
 
+  def handle_event("set_num_users", %{"num_users" => num_users}, socket) do
+    {:noreply, assign(socket, num_users: String.to_integer(num_users))}
+  end
+
   def handle_event("select_product", %{"product" => product_id}, socket) do
     selected_products = socket.assigns.selected_products
 
@@ -447,7 +451,7 @@ defmodule OnestackWeb.SubscribeLive do
           cancel_url: "#{base_url}/subscribe",
           allow_promotion_codes: true,
           billing_address_collection: :required,
-          payment_method_collection: :always,
+          payment_method_collection: :if_required,
           customer_email: socket.assigns.current_user.email
         })
       end

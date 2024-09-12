@@ -2,7 +2,7 @@
   <div class="container">
     <div class="grid gap-12 lg:grid-cols-2">
       <div>
-        <h1 class="text-4xl font-black tracking-tighter lg:text-6xl lg:leading-none">
+        <h1 class="text-4xl font-extrabold tracking-tighter lg:text-6xl lg:leading-none">
           All-in-one <span class="text-primary">software platform</span> for your business
         </h1>
         <p class="mt-8 text-lg">
@@ -347,9 +347,7 @@
       },
       
        get prices() {
-        console.log('Calculating prices');
-        console.log('Search type:', this.searchType);
-        console.log('Selected items:', this.selectedItems);
+
         if (this.searchType === 'products') {
           return this.getProductPrices(this.selectedItems);
         } else {
@@ -358,14 +356,11 @@
       },
       
       getProductPrices(products) {
-        console.log('Getting product prices for:', products);
         const prices = this.products.filter(p => products.includes(p.closed_source_name));
-        console.log('Product prices:', prices);
         return prices;
       },
       
       getAveragePrices(categories) {
-        console.log('Getting average prices for categories:', categories);
         const prices = categories.map(category => {
           const categoryProducts = this.products.filter(p => p.category === category);
           const avgClosedSourcePrice = categoryProducts.reduce((sum, p) => sum + p.closed_source_user_price_aud, 0) / categoryProducts.length;
@@ -376,23 +371,15 @@
             open_source_fixed_price: avgOpenSourcePrice
           };
         });
-        console.log('Average prices:', prices);
         return prices;
       },
       
       get totalCosts() {
-        console.log('Calculating total costs');
-        console.log('Number of users:', this.numUsers);
-        console.log('Prices:', this.prices);
         const costs = this.prices.reduce((acc, price) => {
           const closedSourceCost = price.closed_source_user_price_aud * this.numUsers;
           const steps = Math.floor((this.numUsers - 1) / 10) + 1;
           const openSourceCost = price.open_source_fixed_price * steps;
           
-          console.log('Item costs:', {
-            closedSource: closedSourceCost,
-            openSource: openSourceCost
-          });
 
           return {
             closedSource: acc.closedSource + closedSourceCost,
@@ -400,20 +387,17 @@
           };
         }, { closedSource: 0, openSource: 0 });
 
-        console.log('Total costs:', costs);
         return costs;
       },
       
       get savings() {
         const savingsAmount = this.totalCosts.closedSource - this.totalCosts.openSource;
-        console.log('Savings:', savingsAmount);
         return isNaN(savingsAmount) ? 0 : savingsAmount;
       },
       
       get savingsPercent() {
         if (this.totalCosts.closedSource === 0) return "0.00";
         const percent = (this.savings / this.totalCosts.closedSource) * 100;
-        console.log('Savings percent:', percent);
         return isNaN(percent) ? "0.00" : percent.toFixed(2);
       }
     };

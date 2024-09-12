@@ -13,13 +13,13 @@ config :onestack,
 
 # Configures the endpoint
 config :onestack, OnestackWeb.Endpoint,
-  url: [host: "localhost"],
+  url: [host: System.get_env("PHX_HOST")],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: OnestackWeb.ErrorHTML, json: OnestackWeb.ErrorJSON],
     layout: false
   ],
-  check_origin: ["https://onestack.cloud"],
+  check_origin: ["https://onestack.cloud", "https://dev.onestack.cloud"],
   pubsub_server: Onestack.PubSub,
   live_view: [signing_salt: "AYfWDwt/"]
 

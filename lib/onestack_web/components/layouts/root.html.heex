@@ -26,6 +26,10 @@
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200..900&display=swap"
     rel="stylesheet"
   />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"
+    rel="stylesheet"
+  />
   <script
     defer
     data-domain="onestack.cloud"
@@ -80,10 +84,18 @@
         </div>
         <!-- Navbar Brand logo -->
         <a href="/">
-          <img src="/images/logo_black_text.png" alt="Logo" class="h-8 dark:hidden" />
-          <img src="/images/logo_white_text.png" alt="Logo" class="h-8 hidden dark:block" />
+          <img
+            src="/images/logo_black_text.png"
+            alt="Logo"
+            class="h-8 object-contain dark:hidden"
+          />
+          <img
+            src="/images/logo_white_text.png"
+            alt="Logo"
+            class="h-8 object-contain hidden dark:block"
+          />
 
-          <p class="text-xs flex justify-end">Powered by open source</p>
+          <p class="text-[0.625rem] lg:text-xs flex justify-end">Powered by open source</p>
         </a>
       </div>
 
@@ -142,7 +154,9 @@
           </div>
         <% else %>
           <a href={~p"/users/log_in"} class="btn btn-secondary btn-sm">Login</a>
-          <a href={~p"/users/register"} class="btn btn-primary btn-sm">Get started</a>
+          <a href={~p"/users/register"} class="btn btn-primary btn-sm hidden lg:flex">
+            Get started
+          </a>
         <% end %>
       </div>
     </nav>
@@ -156,8 +170,16 @@
           <!-- Navbar Brand logo -->
           <li class="font-medium">
             <a href="/" class="text-xl font-bold">
-              <img src="/images/logo_black_text.png" alt="Logo" class="h-8 dark:hidden" />
-              <img src="/images/logo_white_text.png" alt="Logo" class="h-8 hidden dark:block" />
+              <img
+                src="/images/logo_black_text.png"
+                alt="Logo"
+                class="h-8 object-contain dark:hidden"
+              />
+              <img
+                src="/images/logo_white_text.png"
+                alt="Logo"
+                class="h-8 object-contain hidden dark:block"
+              />
             </a>
           </li>
 
