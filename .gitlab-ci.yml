@@ -40,11 +40,5 @@ deploy:
     - chmod 600 $ID_SSH
     - apk update && apk add openssh-client
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
-    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker pull $TAG_COMMIT"
-
-    # Stop and remove the existing container gracefully
-    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker stop $CI_PROJECT_NAME || true"
-    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker rm $CI_PROJECT_NAME || true"
-
-    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_docker && docker compose up -d"
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_docker && docker compose pull && docker compose up -d"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"
