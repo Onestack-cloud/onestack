@@ -451,7 +451,7 @@ defmodule OnestackWeb.SubscribeLive do
           cancel_url: "#{base_url}/subscribe",
           allow_promotion_codes: true,
           billing_address_collection: :required,
-          payment_method_collection: :if_required,
+          payment_method_collection: :always,
           customer_email: socket.assigns.current_user.email
         })
       end
