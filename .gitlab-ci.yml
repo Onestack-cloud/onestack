@@ -34,7 +34,7 @@ deploy:
     name: production
     url: https://onestack.cloud
   only:
-    - main
+    - website
   stage: deploy
   script:
     - chmod 600 $ID_SSH
