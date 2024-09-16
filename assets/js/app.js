@@ -44,18 +44,6 @@ Hooks.CopyToClipboard = {
   }
 }
 
-Hooks.AutoDismissFlash = {
-  mounted() {
-    this.timer = setTimeout(() => {
-      const event = new Event("phx:clear-flash")
-      this.el.dispatchEvent(event)
-    }, 5000)
-  },
-  destroyed() {
-    clearTimeout(this.timer)
-  }
-}
-
 
 
 

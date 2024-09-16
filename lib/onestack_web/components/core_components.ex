@@ -112,8 +112,7 @@ defmodule OnestackWeb.CoreComponents do
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
-      phx-hook="AutoDismissFlash"
-      phx-click="lv:clear-flash"
+      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       phx-value-key={@kind}
       role="alert"
       class={[
