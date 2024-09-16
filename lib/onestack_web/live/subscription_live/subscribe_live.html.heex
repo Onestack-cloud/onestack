@@ -24,44 +24,36 @@
             </thead>
             <tbody>
               <%= for product <- @products do %>
-                <tr
-                  class={"#{if Enum.member?(@selected_products, product.id), do: '', else: 'cursor-pointer hover:bg-base-200 transition-colors duration-200'} "}
-                  phx-click={
-                    if !Enum.member?(@selected_products, product.id),
-                      do: if(@has_subscription, do: "open_modal", else: "select_product")
-                  }
-                  phx-value-product={
-                    if !Enum.member?(@selected_products, product.id), do: product.id
-                  }
-                  phx-value-action={if !Enum.member?(@selected_products, product.id), do: "add"}
-                >
-                  <td class="flex items-center">
-                    <img
-                      src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
-                      class="h-8 w-8 object-contain mask mask-squircle mr-2"
-                      alt={product.name}
-                    />
-                    <%= product.name %>
-                  </td>
-                  <td><%= product.description %></td>
-                  <td class="text-center">
-                    <span
-                      class={"btn btn-primary btn-xs w-20 #{if Enum.member?(@selected_products, product.id), do: 'btn-disabled', else: ''}"}
-                      aria-label={product.name}
-                    >
-                      <%= if Enum.member?(@selected_products, product.id),
-                        do: "Added",
-                        else: "Add" %>
-                    </span>
-                  </td>
-                </tr>
+                <%= if !Enum.member?(@selected_products, product.id) do %>
+                  <tr
+                    class="cursor-pointer hover:bg-base-200 transition-colors duration-200"
+                    phx-click={if(@has_subscription, do: "open_modal", else: "select_product")}
+                    phx-value-product={product.id}
+                    phx-value-action="add"
+                  >
+                    <td class="flex items-center">
+                      <img
+                        src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                        class="h-8 w-8 object-contain mask mask-squircle mr-2"
+                        alt={product.name}
+                      />
+                      <%= product.name %>
+                    </td>
+                    <td><%= product.description %></td>
+                    <td class="text-center">
+                      <span class="btn btn-primary btn-xs w-20" aria-label={product.name}>
+                        Add
+                      </span>
+                    </td>
+                  </tr>
+                <% end %>
               <% end %>
             </tbody>
           </table>
         </div>
       </div>
       <!-- My Stack -->
-      <div class="w-full md:w-1/3">
+      <div class="w-full md:w-1/2">
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
             <h3 class="card-title">My Stack</h3>
@@ -81,14 +73,24 @@
                           />
                           <span><%= product.name %></span>
                         </div>
-                        <button
-                          class="btn btn-error btn-xs"
-                          phx-click="open_modal"
-                          phx-value-product={product.id}
-                          phx-value-action="remove"
-                        >
-                          Remove
-                        </button>
+                        <div class="flex items-center">
+                          <a
+                            href={"https://#{String.downcase(product.name)}.onestack.cloud"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn btn-primary btn-xs mr-8"
+                          >
+                            Launch
+                          </a>
+                          <button
+                            class="text-gray-500 hover:text-error transition-colors duration-200"
+                            phx-click="open_modal"
+                            phx-value-product={product.id}
+                            phx-value-action="remove"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </li>
                     <% end %>
                   <% end %>
