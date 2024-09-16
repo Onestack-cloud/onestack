@@ -14,7 +14,7 @@
     <div style="background-color: white; padding: 30px; border-radius: 5px;">
       <div style="text-align: center; margin-bottom: 20px;">
         <img
-          src="https://media.discordapp.net/attachments/1262319493150019645/1262320236745461800/logo_black.png?ex=66962ad5&is=6694d955&hm=0d037e778b9ab74ce65bf4ba8b7d63102f39fbca5760f25bfb18f9b0190e6faa&=&format=webp&quality=lossless"
+          src="https://onestack-images.pages.dev/logo_black_text.png"
           alt="OneStack Logo"
           style="width: 150px;"
         />
@@ -35,21 +35,22 @@
         Onestack journey today!
       </p>
 
-      <div style="text-align: center; margin-bottom: 20px;">
-        <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>" style="display: inline-block; text-decoration: none;">
-          <img
-            src="https://media.discordapp.net/attachments/1262319493150019645/1262319751632257075/copy_credentials_button.png?ex=66962a61&is=6694d8e1&hm=6c53adefa419bb85666f0ad900cef95f5ab38898b0343e629bea5ea311b57b6c&=&format=webp&quality=lossless"
-            alt="Copy credentials"
-            style="width: 200px;"
-          />
-        </a>
-      </div>
+<div style="text-align: center; margin-bottom: 20px;">
+  <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>" style="display: inline-block; text-decoration: none;">
+    <img
+      src="https://onestack-images.pages.dev/copy_credentials_button.png"
+      alt="Copy credentials"
+      style="width: 200px; border-radius: 15px;"
+    />
+  </a>
+  <p style="font-size: 14px; margin-top: 10px;">
+    Can't see the button? <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>" style="color: #0066cc; text-decoration: underline;">Click here to copy your credentials</a>
+  </p>
+</div>
 
-      <p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666;">
+      <p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666; font-weight: bold;">
         Remember, these credentials will be wiped from our systems as soon as you click, so make sure to save them
         in your preferred password manager.
-
-        P.S. If you have previously had an account for a product with Onestack, then your old password is still valid.
       </p>
     </div>
 

@@ -2,22 +2,24 @@
 <html lang="en">
 
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Welcome to OneStack</title>
-	<link href="https://fonts.googleapis.com/css2?family=Inconsolata&family=VT323&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inconsolata&family=VT323&display=swap" rel="stylesheet" />
 </head>
 
 <body
 	style="font-family: 'Inconsolata', monospace; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
 	<div style="background-color: white; padding: 30px; border-radius: 5px;">
 		<div style="text-align: center; margin-bottom: 20px;">
-			<img src="../../../priv/static/images/onestack_logo_text_black.svg" alt="OneStack Logo"
-				style="width: 150px;">
+			<img src="https://onestack-images.pages.dev/logo_black_text.png" alt="OneStack Logo"
+				style="width: 150px;" />
 		</div>
 
-		<h1 style="font-family: 'VT323', monospace; font-size: 28px; text-align: center; margin-bottom: 20px;">Welcome
-			to Onestack!</h1>
+		<h1 style="font-family: 'VT323', monospace; font-size: 28px; text-align: center; margin-bottom: 20px;">
+			Welcome
+			to Onestack!
+		</h1>
 
 		<p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
 			You've been invited to join the ultimate platform for leading open-source alternatives to popular
@@ -30,13 +32,18 @@
 		</p>
 
 		<div style="text-align: center; margin-bottom: 20px;">
-			<a href="#" style="display: inline-block; text-decoration: none;">
-				<img src="../../../priv/static/images/copy_credentials_button.png" alt="Copy credentials"
-					style="width: 200px;">
+			<a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>"
+				style="display: inline-block; text-decoration: none;">
+				<img src="https://onestack-images.pages.dev/copy_credentials_button.png" alt="Copy credentials"
+					style="width: 200px; border-radius: 15px;" />
 			</a>
+			<p style="font-size: 14px; margin-top: 10px;">
+				Can't see the button? <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>"
+					style="color: #0066cc; text-decoration: underline;">Click here to copy your credentials</a>
+			</p>
 		</div>
 
-		<p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666;">
+		<p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666; font-weight: bold;">
 			Remember, these credentials will be wiped from our systems as soon as you click, so make sure to save them
 			in your preferred password manager.
 		</p>
