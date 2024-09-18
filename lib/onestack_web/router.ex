@@ -27,6 +27,7 @@ defmodule OnestackWeb.Router do
     # get "/roadmap", PageController, :roadmap
     get "/security", PageController, :security
     get "/test_land", PageController, :test_land
+    get "/roadmap", PageController, :roadmap
     live "/products", ProductLive.Index, :index
 
     # live "/product-cost-comparison", ProductCostComparisonLive

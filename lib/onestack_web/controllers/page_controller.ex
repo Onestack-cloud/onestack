@@ -23,6 +23,10 @@ defmodule OnestackWeb.PageController do
     render(conn, :test_land)
   end
 
+  def roadmap(conn, _params) do
+    render(conn, :roadmap)
+  end
+
   def redirect_to_subscribe(conn, _params) do
     redirect(conn, to: ~p"/subscribe")
   end

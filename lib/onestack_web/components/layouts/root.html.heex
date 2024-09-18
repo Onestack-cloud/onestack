@@ -103,12 +103,7 @@
         <ul class="menu menu-horizontal menu-sm gap-2 px-1">
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
           <li class="font-medium"><a href={~p"/products"}>Products</a></li>
-
-          <li class="font-medium" aria-disabled="true">
-            <span class="indicator btn-disabled disabled opacity-50">
-              Roadmap <span class="badge badge-sm indicator-item badge-neutral">Coming Soon</span>
-            </span>
-          </li>
+          <li class="font-medium"><a href={~p"/roadmap"}>Roadmap</a></li>
         </ul>
       </div>
 
@@ -185,11 +180,7 @@
 
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
           <li class="font-medium"><a href={~p"/subscribe"}>Subscribe</a></li>
-          <li class="font-medium" aria-disabled="true">
-            <span class="indicator btn-disabled disabled opacity-50">
-              Roadmap <span class="badge badge-sm indicator-item badge-neutral">Coming Soon</span>
-            </span>
-          </li>
+          <li class="font-medium"><a href={~p"/subscribe"}>Roadmap</a></li>
 
           <%= if @current_user do %>
             <%!-- <li class="font-medium"><a href={~p"/subscribe"}>My Stack</a></li>
