@@ -47,7 +47,7 @@ defmodule OnestackWeb.UserRegistrationLive do
 
     socket =
       socket
-      |> assign(trigger_submit: false, check_errors: false)
+      |> assign(trigger_submit: false, check_errors: false, page_title: "Register")
       |> assign_form(changeset)
 
     {:ok, socket, temporary_assigns: [form: nil]}

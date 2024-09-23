@@ -8,23 +8,19 @@ defmodule OnestackWeb.PageController do
   end
 
   def privacy_policy(conn, _params) do
-    render(conn, :privacy_policy)
+    render(conn, :privacy_policy, page_title: "Privacy Policy")
   end
 
   def roadmap(conn, _params) do
-    render(conn, :roadmap)
+    render(conn, :roadmap, page_title: "Roadmap")
   end
 
   def security(conn, _params) do
-    render(conn, :security)
+    render(conn, :security, page_title: "Security")
   end
 
   def test_land(conn, _params) do
-    render(conn, :test_land)
-  end
-
-  def roadmap(conn, _params) do
-    render(conn, :roadmap)
+    render(conn, :test_land, page_title: "Test Land")
   end
 
   def redirect_to_subscribe(conn, _params) do

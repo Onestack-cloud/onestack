@@ -5,7 +5,7 @@ defmodule OnestackWeb.UserForgotPasswordLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="mx-auto max-w-sm my-16 min-h-screen">
       <.header class="text-center">
         Forgot your password?
         <:subtitle>We'll send a password reset link to your inbox</:subtitle>
@@ -28,7 +28,7 @@ defmodule OnestackWeb.UserForgotPasswordLive do
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: to_form(%{}, as: "user"))}
+    {:ok, assign(socket, form: to_form(%{}, as: "user"), page_title: "Forgot Password?")}
   end
 
   def handle_event("send_email", %{"user" => %{"email" => email}}, socket) do

@@ -44,6 +44,6 @@ defmodule OnestackWeb.UserLoginLive do
   def mount(_params, _session, socket) do
     email = Phoenix.Flash.get(socket.assigns.flash, :email)
     form = to_form(%{"email" => email}, as: "user")
-    {:ok, assign(socket, form: form), temporary_assigns: [form: form]}
+    {:ok, assign(socket, form: form, page_title: "Log in"), temporary_assigns: [form: form]}
   end
 end

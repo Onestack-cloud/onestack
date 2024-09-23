@@ -5,7 +5,7 @@ defmodule OnestackWeb.UserResetPasswordLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="mx-auto max-w-sm my-16 min-h-screen">
       <.header class="text-center">Reset Password</.header>
 
       <.simple_form
@@ -39,7 +39,9 @@ defmodule OnestackWeb.UserResetPasswordLive do
   end
 
   def mount(params, _session, socket) do
-    socket = assign_user_and_token(socket, params)
+    socket =
+      assign_user_and_token(socket, params)
+      |> assign(page_title: "Reset Password")
 
     form_source =
       case socket.assigns do
