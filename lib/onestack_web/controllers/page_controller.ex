@@ -26,7 +26,7 @@ defmodule OnestackWeb.PageController do
   def sitemap(conn, _params) do
     conn
     |> put_resp_content_type("text/xml")
-    |> send_file(200, "sitemaps/sitemap1.xml")
+    |> send_file(200, "priv/static/sitemap.xml")
   end
 
   def redirect_to_subscribe(conn, _params) do
