@@ -10,7 +10,7 @@ import Config
 config :sitemap,
   compress: false,
   host: "https://onestack.cloud",
-  files_path: Path.join(["priv", "static"])
+  files_path: Path.join(["priv", "static", "sitemap"])
 
 config :onestack,
   ecto_repos: [Onestack.Repo],
