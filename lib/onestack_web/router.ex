@@ -19,16 +19,13 @@ defmodule OnestackWeb.Router do
 
   scope "/", OnestackWeb do
     pipe_through :browser
-
-    # get "/", PageController, :home
-
     live "/", LandingLive, :index
     get "/privacy", PageController, :privacy_policy
-    # get "/roadmap", PageController, :roadmap
     get "/security", PageController, :security
     get "/test_land", PageController, :test_land
     get "/roadmap", PageController, :roadmap
     live "/products", ProductLive.Index, :index
+    get "/sitemap.xml", PageController, :sitemap
 
     # live "/product-cost-comparison", ProductCostComparisonLive
   end

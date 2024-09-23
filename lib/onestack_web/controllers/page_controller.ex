@@ -23,6 +23,12 @@ defmodule OnestackWeb.PageController do
     render(conn, :test_land, page_title: "Test Land")
   end
 
+  def sitemap(conn, _params) do
+    conn
+    |> put_resp_content_type("text/xml")
+    |> send_file(200, "sitemaps/sitemap1.xml")
+  end
+
   def redirect_to_subscribe(conn, _params) do
     redirect(conn, to: ~p"/subscribe")
   end

@@ -7,6 +7,10 @@
 # General application configuration
 import Config
 
+config :sitemap,
+  compress: false,
+  host: "https://onestack.cloud"
+
 config :onestack,
   ecto_repos: [Onestack.Repo],
   generators: [timestamp_type: :utc_datetime]

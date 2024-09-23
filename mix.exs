@@ -72,7 +72,8 @@ defmodule Onestack.MixProject do
       {:uuid, "~> 1.1"},
       {:hackney, "~> 1.20"},
       {:phoenix_swoosh, "~> 1.0"},
-      {:argon2_elixir, "~> 4.0"}
+      {:argon2_elixir, "~> 4.0"},
+      {:sitemap, "~> 1.1"}
     ]
   end
 
