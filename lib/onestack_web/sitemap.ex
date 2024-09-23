@@ -1,8 +1,6 @@
 defmodule OnestackWeb.Sitemap do
   use Sitemap
 
-  alias OnestackWeb.Router.Helpers, as: Routes
-
   def generate do
     create do
       # Get all routes from the router

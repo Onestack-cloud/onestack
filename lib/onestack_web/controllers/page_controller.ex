@@ -25,11 +25,15 @@ defmodule OnestackWeb.PageController do
   end
 
   def sitemap(conn, _params) do
-    # sitemap_path = Routes.static_path(conn,)
-
     conn
     |> put_resp_content_type("text/xml")
     |> send_file(200, Path.join(:code.priv_dir(:onestack), "static/sitemap/sitemap.xml"))
+  end
+
+  def sitemap1(conn, _params) do
+    conn
+    |> put_resp_content_type("text/xml")
+    |> send_file(200, Path.join(:code.priv_dir(:onestack), "static/sitemap/sitemap1.xml"))
   end
 
   def redirect_to_subscribe(conn, _params) do
