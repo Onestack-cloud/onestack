@@ -1,5 +1,6 @@
 defmodule OnestackWeb.PageController do
   use OnestackWeb, :controller
+  alias OnestackWeb.Router.Helpers, as: Routes
 
   def home(conn, _params) do
     # The home page is often custom made,
@@ -24,9 +25,11 @@ defmodule OnestackWeb.PageController do
   end
 
   def sitemap(conn, _params) do
+    # sitemap_path = Routes.static_path(conn,)
+
     conn
     |> put_resp_content_type("text/xml")
-    |> send_file(200, "priv/static/sitemap.xml")
+    |> send_file(200, Path.join(:code.priv_dir(:onestack), "static/sitemap/sitemap.xml"))
   end
 
   def redirect_to_subscribe(conn, _params) do

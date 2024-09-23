@@ -28,6 +28,8 @@ config :onestack, OnestackWeb.Endpoint,
   pubsub_server: Onestack.PubSub,
   live_view: [signing_salt: "AYfWDwt/"]
 
+# static_url: [path: "/"]
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
