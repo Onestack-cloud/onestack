@@ -325,8 +325,7 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div class="form-control" phx-feedback-for={@name}>
-      <label class="label cursor-pointer">
-        <span class="label-text"><%= @label %></span>
+      <label class="label cursor-pointer flex items-center gap-4 text-sm leading-6">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -334,9 +333,10 @@ defmodule OnestackWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="btn btn-outline my-0.5"
+          class="checkbox focus:ring-0"
           {@rest}
         />
+        <%= @label %>
       </label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>

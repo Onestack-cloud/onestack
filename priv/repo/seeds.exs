@@ -9,3 +9,13 @@
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
+alias Onestack.MatrixAccounts.MatrixUser
+
+dummy_user = %{
+  email: "test-example@example.com",
+  matrix_id: "@test-example.com:matrix.onestack.cloud"
+}
+
+%MatrixUser{}
+|> MatrixUser.changeset(dummy_user)
+|> Onestack.Repo.insert!()

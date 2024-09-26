@@ -29,11 +29,13 @@
             src={~p"/images/onestack-hero-test.png"}
             alt="Onestack alternatives"
             class="overflow-hidden rounded-ss-lg dark:hidden w-full"
+            rel="preload"
           />
           <img
             src={~p"/images/onestack-hero-test-transparent.png"}
             alt="Onestack alternatives"
             class="overflow-hidden rounded-ss-lg hidden dark:block w-full"
+            rel="preload"
           />
         </div>
       </div>
@@ -326,17 +328,17 @@
       numUsers: 1,
       products: <%= Phoenix.HTML.raw(@prepared_products) %>,
       selectedItems: [],
-      
+
       get categories() {
         return [...new Set(this.products.map(p => p.category))];
       },
-      
+
       get itemsToShow() {
-        return this.searchType === 'products' 
+        return this.searchType === 'products'
           ? this.products.map(p => p.closed_source_name)
           : this.categories;
       },
-      
+
       toggleItem(item) {
         const index = this.selectedItems.indexOf(item);
         if (index === -1) {
@@ -345,7 +347,7 @@
           this.selectedItems.splice(index, 1);
         }
       },
-      
+
        get prices() {
 
         if (this.searchType === 'products') {
@@ -354,12 +356,12 @@
           return this.getAveragePrices(this.selectedItems);
         }
       },
-      
+
       getProductPrices(products) {
         const prices = this.products.filter(p => products.includes(p.closed_source_name));
         return prices;
       },
-      
+
       getAveragePrices(categories) {
         const prices = categories.map(category => {
           const categoryProducts = this.products.filter(p => p.category === category);
@@ -373,13 +375,12 @@
         });
         return prices;
       },
-      
+
       get totalCosts() {
         const costs = this.prices.reduce((acc, price) => {
           const closedSourceCost = price.closed_source_user_price_aud * this.numUsers;
           const steps = Math.floor((this.numUsers - 1) / 10) + 1;
           const openSourceCost = price.open_source_fixed_price * steps;
-          
 
           return {
             closedSource: acc.closedSource + closedSourceCost,
@@ -389,12 +390,12 @@
 
         return costs;
       },
-      
+
       get savings() {
         const savingsAmount = this.totalCosts.closedSource - this.totalCosts.openSource;
         return isNaN(savingsAmount) ? 0 : savingsAmount;
       },
-      
+
       get savingsPercent() {
         if (this.totalCosts.closedSource === 0) return "0.00";
         const percent = (this.savings / this.totalCosts.closedSource) * 100;

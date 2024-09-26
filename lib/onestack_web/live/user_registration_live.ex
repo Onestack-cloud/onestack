@@ -67,8 +67,7 @@ defmodule OnestackWeb.UserRegistrationLive do
         {:noreply,
          socket
          |> assign(trigger_submit: true)
-         |> assign_form(changeset)
-         |> push_navigate(to: "/subscribe")}
+         |> assign_form(changeset)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, socket |> assign(check_errors: true) |> assign_form(changeset)}

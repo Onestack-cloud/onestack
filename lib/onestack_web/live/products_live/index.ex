@@ -39,39 +39,39 @@ defmodule OnestackWeb.ProductLive.Index do
     {:noreply, stream_insert(socket, :products, product)}
   end
 
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    product = CatalogMonthly.get_product!(id)
-    {:ok, _} = CatalogMonthly.delete_product(product)
+  # @impl true
+  # def handle_event("delete", %{"id" => id}, socket) do
+  #   product = CatalogMonthly.get_product!(id)
+  #   {:ok, _} = CatalogMonthly.delete_product(product)
 
-    {:noreply, stream_delete(socket, :products, product)}
-  end
+  #   {:noreply, stream_delete(socket, :products, product)}
+  # end
 
-  def handle_event(
-        "selected_product_category",
-        %{"product_category" => product_category},
-        socket
-      ) do
-    selected_product_categories = socket.assigns.selected_product_categories
+  # def handle_event(
+  #       "selected_product_category",
+  #       %{"product_category" => product_category},
+  #       socket
+  #     ) do
+  #   selected_product_categories = socket.assigns.selected_product_categories
 
-    selected_product_categories =
-      if product_category in selected_product_categories do
-        selected_product_categories -- [product_category]
-      else
-        [product_category | selected_product_categories]
-      end
+  #   selected_product_categories =
+  #     if product_category in selected_product_categories do
+  #       selected_product_categories -- [product_category]
+  #     else
+  #       [product_category | selected_product_categories]
+  #     end
 
-    products = CatalogMonthly.list_products()
+  #   products = CatalogMonthly.list_products()
 
-    filtered_products =
-      products
-      |> Enum.filter(fn product -> product.category in selected_product_categories end)
+  #   filtered_products =
+  #     products
+  #     |> Enum.filter(fn product -> product.category in selected_product_categories end)
 
-    # Reset the stream with the filtered products
-    socket = socket |> stream(:products, filtered_products, reset: true)
+  #   # Reset the stream with the filtered products
+  #   socket = socket |> stream(:products, filtered_products, reset: true)
 
-    {:noreply,
-     socket
-     |> assign(:selected_product_categories, selected_product_categories)}
-  end
+  #   {:noreply,
+  #    socket
+  #    |> assign(:selected_product_categories, selected_product_categories)}
+  # end
 end

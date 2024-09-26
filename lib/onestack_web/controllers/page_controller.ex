@@ -1,6 +1,5 @@
 defmodule OnestackWeb.PageController do
   use OnestackWeb, :controller
-  alias OnestackWeb.Router.Helpers, as: Routes
 
   def home(conn, _params) do
     # The home page is often custom made,

@@ -44,6 +44,10 @@ defmodule Onestack.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+      # {:ex_doc, "~> 0.29", only: :dev},
+      # {:comeonin, "~> 5.3"},
+      # {:dialyxir, "~> 1.3", only: :dev},
+      # {:elixir_make, "~> 0.7"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",
@@ -72,8 +76,9 @@ defmodule Onestack.MixProject do
       {:uuid, "~> 1.1"},
       {:hackney, "~> 1.20"},
       {:phoenix_swoosh, "~> 1.0"},
-      {:argon2_elixir, "~> 4.0"},
-      {:sitemap, "~> 1.1"}
+      {:argon2_elixir, git: "https://github.com/curiousgeorgios/argon2_elixir", branch: "master", compile: "git submodule update --init --recursive && mix compile"},
+      {:sitemap, "~> 1.1"},
+      {:sshex, "~> 2.2"}
     ]
   end
 

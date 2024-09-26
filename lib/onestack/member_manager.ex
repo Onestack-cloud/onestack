@@ -3,6 +3,7 @@ defmodule Onestack.MemberManager do
   require Logger
   alias Onestack.InvitationEmail
   alias Onestack.PasswordHasher
+  alias Onestack.MatrixAccounts
 
   @ets_table :member_results
 
@@ -55,6 +56,100 @@ defmodule Onestack.MemberManager do
     end)
 
     {:noreply, state}
+  end
+
+  def add_member_to_product(email, password, _hashed_password, _salt, "matrix") do
+    # TODO: check if email is already in DB and if so just reset the password
+    # Check if the email exists in MatrixAccounts
+    case Onestack.MatrixAccounts.list_users() |> Enum.find(&(&1.email == email)) do
+      nil ->
+        # Email not found, proceed with registration
+        "return"
+
+      existing_user ->
+        # Email found, update the existing user
+        url = "https://n8n.onestack.cloud/webhook/matrix/reset_password"
+
+        headers = [
+          {"Content-Type", "application/json"},
+          {"onestack_matrix", "27530ad6f47e83ee0a215f42699dd52fbd50956939fdfd2a6c0cd0304c597a0e"}
+        ]
+
+        body = Jason.encode!(%{matrix_id: existing_user.matrix_id})
+
+        # Build and send the request
+        request = Finch.build(:post, url, headers, body)
+
+        case Finch.request(request, Onestack.Finch) do
+          {:ok, response} ->
+            IO.puts("Response status: #{response.status}")
+            IO.puts("Response body: #{response.body}")
+
+          {:error, reason} ->
+            IO.puts("Error: #{inspect(reason)}")
+        end
+
+        Onestack.MatrixAccounts.update_matrix_user(existing_user, %{active: true})
+        %{email: existing_user.matrix_id, password: password}
+        IO.puts("Existing user reactivated in Matrix")
+    end
+
+    registration_token = "64629919445a7d83311275026d29b708c1939bd72242d56d0ef3b756c128a75f"
+    url = "https://matrix.onestack.cloud/_matrix/client/v3/register"
+
+    headers = [
+      {"Accept", "application/json"},
+      {"Accept-Language", "en-GB,en;q=0.5"},
+      {"Accept-Encoding", "gzip, deflate, br"},
+      {"Content-Type", "application/json"},
+      {"Sec-Fetch-Dest", "empty"},
+      {"Sec-Fetch-Mode", "cors"},
+      {"Sec-Fetch-Site", "cross-site"},
+      {"Sec-GPC", "1"},
+      {"Connection", "keep-alive"},
+      {"TE", "trailers"}
+    ]
+
+    body =
+      Jason.encode!(%{
+        email: email,
+        password: password,
+        initial_device_display_name: "Onestack Auto Registration",
+        auth: %{
+          # session: "lsr7ad086esADPdg84YttTwuv3mEZvZA",
+          type: "m.login.registration_token",
+          token: registration_token
+        }
+      })
+
+    case HTTPoison.post(url, body, headers) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+        IO.puts("User created successfully in Matrix")
+        IO.puts("Response: #{response_body}")
+        IO.puts("Generated Password for #{email}: #{password}")
+
+        # Parse the response body
+        case Jason.decode(response_body) do
+          {:ok, decoded_response} ->
+            user_id =
+              decoded_response["user_id"]
+
+            # Insert user_id and email into matrix_users table
+            MatrixAccounts.create_matrix_user(%{email: email, matrix_id: user_id})
+
+            %{email: user_id, password: password}
+
+          {:error, _} ->
+            IO.puts("Failed to parse response body")
+        end
+
+      {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}} ->
+        IO.puts("Failed to create user in Matrix. Status code: #{status_code}")
+        IO.puts("Response: #{response_body}")
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.puts("Error creating user in Matrix: #{inspect(reason)}")
+    end
   end
 
   def add_member_to_product(email, password, _hashed_password, _salt, "chatwoot") do
@@ -917,6 +1012,30 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
+  end
+
+  def remove_member_from_product(email, "matrix" = _product_name) do
+    {:ok, updated_user} = MatrixAccounts.update_matrix_user_by_email(email, %{active: false})
+    url = "https://n8n.onestack.cloud/webhook/matrix/deactivate"
+
+    headers = [
+      {"Content-Type", "application/json"},
+      {"onestack_matrix", "27530ad6f47e83ee0a215f42699dd52fbd50956939fdfd2a6c0cd0304c597a0e"}
+    ]
+
+    body = Jason.encode!(%{matrix_id: updated_user.matrix_id})
+
+    # Build and send the request
+    request = Finch.build(:post, url, headers, body)
+
+    case Finch.request(request, Onestack.Finch) do
+      {:ok, response} ->
+        IO.puts("Response status: #{response.status}")
+        IO.puts("Response body: #{response.body}")
+
+      {:error, reason} ->
+        IO.puts("Error: #{inspect(reason)}")
+    end
   end
 
   # Helper function to extract name from email
