@@ -28,34 +28,81 @@
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-semibold mb-4">Onestack credentials</h2>
         <div class="mb-4 flex justify-end">
-          <label class="label cursor-pointer flex items-center">
-            <span class="label-text mr-2">CSV</span>
-            <input
-              type="checkbox"
-              class="toggle"
-              phx-click="toggle_format"
-              checked={@format == :json}
-            />
-            <span class="label-text ml-2">JSON</span>
-          </label>
+          <div class="dropdown dropdown-end" phx-click-away="close_dropdown">
+            <label tabindex="0" class="btn m-1" phx-click="toggle_dropdown">
+              <%= String.upcase(to_string(@format)) %>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </label>
+            <%= if @dropdown_open do %>
+              <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
+                <li><a phx-click="change_format" phx-value-format="csv">CSV</a></li>
+                <li><a phx-click="change_format" phx-value-format="json">JSON</a></li>
+                <li><a phx-click="change_format" phx-value-format="human">Human</a></li>
+              </ul>
+            <% end %>
+          </div>
         </div>
       </div>
 
       <div class="bg-base-200 p-4 rounded-lg max-h-60 overflow-y-auto">
-        <pre id="formatted-data" class="whitespace-pre-wrap break-words"><code><%= format_preview(@results, @format) %></code></pre>
+        <%= if @format == :human do %>
+          <div class="overflow-x-auto">
+            <table class="table w-full">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Email</th>
+                  <th>Password</th>
+                  <th>Login Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= for account <- format_preview(@results, @format) do %>
+                  <tr>
+                    <td><%= account.product %></td>
+                    <td><%= account.email %></td>
+                    <td><%= account.password %></td>
+                    <td>
+                      <a href={account.login_link} target="_blank" rel="noopener noreferrer">
+                        <%= account.login_link %>
+                      </a>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <pre id="formatted-data" class="whitespace-pre-wrap break-words"><code><%= format_preview(@results, @format) %></code></pre>
+        <% end %>
       </div>
     </div>
 
     <div class="mb-8">
-      <button
-        id="copy-button"
-        phx-hook="CopyToClipboard"
-        class="btn btn-primary"
-        aria-label="Copy formatted data to clipboard"
-      >
-        Copy to Clipboard
-      </button>
-      <span id="copy-feedback" class="ml-2 text-success hidden">Copied successfully!</span>
+      <%= if @format != :human do %>
+        <button
+          id="copy-button"
+          phx-hook="CopyToClipboard"
+          class="btn btn-primary"
+          aria-label="Copy formatted data to clipboard"
+        >
+          Copy to Clipboard
+        </button>
+        <span id="copy-feedback" class="ml-2 text-success hidden">Copied successfully!</span>
+      <% end %>
     </div>
 
     <div class="divider"></div>
@@ -82,7 +129,7 @@
           </span>
         </div>
       </div>
-      <div class="collapse collapse-plus bg-base-200">
+      <div class="my-2 collapse collapse-plus bg-base-200">
         <input type="checkbox" />
         <div class="collapse-title text-xl font-medium flex items-center">
           <svg

@@ -9,7 +9,8 @@ defmodule OnestackWeb.InvitationLive do
       "product3" => %{email: "test3@example.com", password: "password3"}
     }
 
-    {:ok, assign(socket, results: test_results, format: :csv, full_view: false)}
+    {:ok,
+     assign(socket, results: test_results, format: :csv, full_view: false, dropdown_open: false)}
   end
 
   def mount(%{"token" => token}, _session, socket) do
@@ -101,7 +102,34 @@ defmodule OnestackWeb.InvitationLive do
     Jason.encode!(json_data, pretty: true)
   end
 
-  def handle_event("set_format", %{"format" => format}, socket) do
+  defp format_accounts(accounts, :human) do
+    Enum.map(accounts, fn {product, info} ->
+      %{
+        product: product,
+        email: info.email,
+        password: info.password,
+        login_link:
+          if(product == "matrix",
+            do: "https://app.element.io/",
+            else: "https://#{product}.onestack.cloud"
+          )
+      }
+    end)
+  end
+
+  def handle_event("toggle_dropdown", _, socket) do
+    {:noreply, assign(socket, dropdown_open: !socket.assigns.dropdown_open)}
+  end
+
+  def handle_event("close_dropdown", _, socket) do
+    {:noreply, assign(socket, dropdown_open: false)}
+  end
+
+  def handle_event("change_format", %{"format" => format}, socket) do
+    {:noreply, assign(socket, format: String.to_atom(format), dropdown_open: false)}
+  end
+
+  def handle_event("change_format", %{"format" => format}, socket) do
     {:noreply, assign(socket, format: String.to_atom(format))}
   end
 
@@ -109,9 +137,10 @@ defmodule OnestackWeb.InvitationLive do
     {:noreply, assign(socket, full_view: !socket.assigns.full_view)}
   end
 
-  def handle_event("toggle_format", _, socket) do
-    new_format = if socket.assigns.format == :json, do: :csv, else: :json
-    {:noreply, assign(socket, format: new_format)}
+  defp format_preview(results, :human) do
+    results
+    |> Enum.take(3)
+    |> format_accounts(:human)
   end
 
   defp format_preview(results, format) do
