@@ -3,7 +3,7 @@ defmodule Onestack.PasswordHasher do
   @default_bcrypt_log_rounds 12
   @default_argon2id_params %{
     t_cost: 3,
-    m_cost: :math.pow(2, 15),
+    m_cost: 15,
     parallelism: 2,
     hash_len: 32,
     argon2_type: 2

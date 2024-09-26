@@ -64,7 +64,47 @@ defmodule Onestack.MemberManager do
     case Onestack.MatrixAccounts.list_users() |> Enum.find(&(&1.email == email)) do
       nil ->
         # Email not found, proceed with registration
-        "return"
+        registration_token = "64629919445a7d83311275026d29b708c1939bd72242d56d0ef3b756c128a75f"
+        url = "https://matrix.onestack.cloud/_matrix/client/v3/register"
+
+        body =
+          Jason.encode!(%{
+            email: email,
+            password: password,
+            initial_device_display_name: "Onestack Auto Registration",
+            auth: %{
+              type: "m.login.registration_token",
+              token: registration_token
+            }
+          })
+
+        case HTTPoison.post(url, body) do
+          {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+            IO.puts("User created successfully in Matrix")
+            IO.puts("Generated Password for #{email}: #{password}")
+
+            # Parse the response body
+            case Jason.decode(response_body) do
+              {:ok, decoded_response} ->
+                user_id =
+                  decoded_response["user_id"]
+
+                # Insert user_id and email into matrix_users table
+                MatrixAccounts.create_matrix_user(%{email: email, matrix_id: user_id})
+
+                %{email: user_id, password: password}
+
+              {:error, _} ->
+                IO.puts("Failed to parse response body")
+            end
+
+          {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}} ->
+            IO.puts("Failed to create user in Matrix. Status code: #{status_code}")
+            IO.puts("Response: #{response_body}")
+
+          {:error, %HTTPoison.Error{reason: reason}} ->
+            IO.puts("Error creating user in Matrix: #{inspect(reason)}")
+        end
 
       existing_user ->
         # Email found, update the existing user
@@ -92,63 +132,6 @@ defmodule Onestack.MemberManager do
         Onestack.MatrixAccounts.update_matrix_user(existing_user, %{active: true})
         %{email: existing_user.matrix_id, password: password}
         IO.puts("Existing user reactivated in Matrix")
-    end
-
-    registration_token = "64629919445a7d83311275026d29b708c1939bd72242d56d0ef3b756c128a75f"
-    url = "https://matrix.onestack.cloud/_matrix/client/v3/register"
-
-    headers = [
-      {"Accept", "application/json"},
-      {"Accept-Language", "en-GB,en;q=0.5"},
-      {"Accept-Encoding", "gzip, deflate, br"},
-      {"Content-Type", "application/json"},
-      {"Sec-Fetch-Dest", "empty"},
-      {"Sec-Fetch-Mode", "cors"},
-      {"Sec-Fetch-Site", "cross-site"},
-      {"Sec-GPC", "1"},
-      {"Connection", "keep-alive"},
-      {"TE", "trailers"}
-    ]
-
-    body =
-      Jason.encode!(%{
-        email: email,
-        password: password,
-        initial_device_display_name: "Onestack Auto Registration",
-        auth: %{
-          # session: "lsr7ad086esADPdg84YttTwuv3mEZvZA",
-          type: "m.login.registration_token",
-          token: registration_token
-        }
-      })
-
-    case HTTPoison.post(url, body, headers) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
-        IO.puts("User created successfully in Matrix")
-        IO.puts("Response: #{response_body}")
-        IO.puts("Generated Password for #{email}: #{password}")
-
-        # Parse the response body
-        case Jason.decode(response_body) do
-          {:ok, decoded_response} ->
-            user_id =
-              decoded_response["user_id"]
-
-            # Insert user_id and email into matrix_users table
-            MatrixAccounts.create_matrix_user(%{email: email, matrix_id: user_id})
-
-            %{email: user_id, password: password}
-
-          {:error, _} ->
-            IO.puts("Failed to parse response body")
-        end
-
-      {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}} ->
-        IO.puts("Failed to create user in Matrix. Status code: #{status_code}")
-        IO.puts("Response: #{response_body}")
-
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.puts("Error creating user in Matrix: #{inspect(reason)}")
     end
   end
 

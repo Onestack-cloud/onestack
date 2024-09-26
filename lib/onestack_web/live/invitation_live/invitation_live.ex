@@ -68,7 +68,12 @@ defmodule OnestackWeb.InvitationLive do
             "uris" => [
               %{
                 "match" => nil,
-                "uri" => "https://#{product}.onestack.cloud"
+                "uri" =>
+                  if product == "matrix" do
+                    "https://app.element.io/"
+                  else
+                    "https://#{product}.onestack.cloud"
+                  end
               }
             ],
             "username" => info.email,
