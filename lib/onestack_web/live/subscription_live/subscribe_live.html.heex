@@ -64,34 +64,40 @@
                 <%= if @has_subscription do %>
                   <%= for product <- @products do %>
                     <%= if Enum.member?(@selected_products, product.id) do %>
-                      <li class="flex items-center justify-between bg-base-200 rounded-md p-2">
-                        <div class="flex items-center">
-                          <img
-                            src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
-                            class="h-6 w-6 mask mask-squircle object-contain mr-2"
-                            alt={product.name}
-                          />
-                          <span><%= product.name %></span>
-                        </div>
-                        <div class="flex items-center">
-                          <a
-                            href={"https://#{String.downcase(product.name)}.onestack.cloud"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="btn btn-primary btn-xs mr-8"
-                          >
-                            Launch
-                          </a>
-                          <button
-                            class="text-gray-500 hover:text-error transition-colors duration-200"
-                            phx-click="open_modal"
-                            phx-value-product={product.id}
-                            phx-value-action="remove"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </li>
+                      <rewrite_this>
+                        <li class="flex items-center justify-between bg-base-200 rounded-md p-2">
+                          <div class="flex items-center">
+                            <img
+                              src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                              class="h-6 w-6 mask mask-squircle object-contain mr-2"
+                              alt={product.name}
+                            />
+                            <span><%= product.name %></span>
+                          </div>
+                          <div class="flex items-center">
+                            <a
+                              href={
+                                if String.downcase(product.name) == "matrix",
+                                  do: "https://app.element.io/",
+                                  else: "https://#{String.downcase(product.name)}.onestack.cloud"
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="btn btn-primary btn-xs mr-8"
+                            >
+                              Launch
+                            </a>
+                            <button
+                              class="text-gray-500 hover:text-error transition-colors duration-200"
+                              phx-click="open_modal"
+                              phx-value-product={product.id}
+                              phx-value-action="remove"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </li>
+                      </rewrite_this>
                     <% end %>
                   <% end %>
                 <% else %>
