@@ -4,6 +4,10 @@ defmodule Onestack.MemberManager do
   alias Onestack.InvitationEmail
   alias Onestack.PasswordHasher
   alias Onestack.MatrixAccounts
+  alias Onestack.MemberManagement
+  alias Onestack.Repo
+
+  import Ecto.Query
 
   @ets_table :member_results
 
@@ -36,7 +40,18 @@ defmodule Onestack.MemberManager do
         password = generate_password()
         {hashed_password, salt} = PasswordHasher.hash_password(password)
         result = add_member_to_product(email, password, hashed_password, salt, product)
-        :ets.insert(@ets_table, {{job_id, product}, result})
+
+        attrs = %{
+          job_id: job_id,
+          email: email,
+          product: product,
+          password: password,
+          hashed_password: hashed_password,
+          salt: salt,
+          result: result
+        }
+
+        {:ok, _member_result} = MemberManagement.create_member_credentials(attrs)
         result
       end)
 
@@ -1063,11 +1078,12 @@ defmodule Onestack.MemberManager do
     |> List.to_string()
   end
 
-  @spec get_job_results(any(), any()) :: any()
   def get_job_results(job_id, clear \\ false) do
     results =
-      :ets.match_object(@ets_table, {{job_id, :_}, :_})
-      |> Enum.map(fn {{^job_id, product}, result} -> {product, result} end)
+      MemberManagement.MemberCredentials
+      |> where(job_id: ^job_id)
+      |> Repo.all()
+      |> Enum.map(fn cred -> {cred.product, %{email: cred.email, password: cred.password}} end)
       |> Enum.into(%{})
 
     if clear do
@@ -1080,7 +1096,9 @@ defmodule Onestack.MemberManager do
 
   # Add this new function to handle the delayed deletion
   def clear_job_results(job_id) do
-    :ets.match_delete(@ets_table, {{job_id, :_}, :_})
+    MemberManagement.MemberCredentials
+    |> where(job_id: ^job_id)
+    |> Repo.delete_all()
   end
 
   def generate_job_id, do: UUID.uuid4()

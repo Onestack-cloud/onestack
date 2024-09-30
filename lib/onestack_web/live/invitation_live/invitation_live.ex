@@ -15,7 +15,7 @@ defmodule OnestackWeb.InvitationLive do
 
   def mount(%{"token" => token}, _session, socket) do
     # Fetch and clear the results
-    results = MemberManager.get_job_results(token, false)
+    results = MemberManager.get_job_results(token, true)
 
     if Enum.empty?(results) do
       {:ok,
