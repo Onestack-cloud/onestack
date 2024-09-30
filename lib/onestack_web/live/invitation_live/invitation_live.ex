@@ -23,7 +23,7 @@ defmodule OnestackWeb.InvitationLive do
        |> put_flash(:error, "Account information not found or already accessed.")
        |> redirect(to: "/")}
     else
-      {:ok, assign(socket, results: results, format: :csv, full_view: false)}
+      {:ok, assign(socket, results: results, format: :csv, full_view: false, dropdown_open: false)}
     end
   end
 
@@ -148,7 +148,7 @@ defmodule OnestackWeb.InvitationLive do
     |> Enum.take(3)
     |> format_accounts(format)
   end
-
+dropdown_open: false
   defp escape_csv(field) do
     field = to_string(field)
 
