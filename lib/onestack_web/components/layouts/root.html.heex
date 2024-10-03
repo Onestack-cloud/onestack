@@ -181,15 +181,15 @@
           </li>
 
           <li class="font-medium"><a href={~p"/security"}>Security</a></li>
-          <li class="font-medium"><a href={~p"/subscribe"}>Subscribe</a></li>
+          <li class="font-medium"><a href={~p"/products"}>Products</a></li>
           <li class="font-medium"><a href={~p"/roadmap"}>Roadmap</a></li>
 
           <%= if @current_user do %>
-            <%!-- <li class="font-medium"><a href={~p"/subscribe"}>My Stack</a></li>
+            <li class="font-medium"><a href={~p"/subscribe"}>My Stack</a></li>
             <li class="font-medium"><a href={~p"/users/settings"}>Settings</a></li>
             <li class="font-medium">
               <.link href={~p"/users/log_out"} method="delete">Log out</.link>
-            </li> --%>
+            </li>
           <% else %>
           <% end %>
         </ul>
