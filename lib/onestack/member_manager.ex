@@ -186,8 +186,8 @@ defmodule Onestack.MemberManager do
   end
 
   # Product-specific add member functions
-  def add_member_to_product(email, password, hashed_password, _salt, "cal") do
-    {:ok, pid} = Postgrex.start_link(get_db_config("cal"))
+  def add_member_to_product(email, password, hashed_password, _salt, "cal" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
@@ -204,10 +204,10 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, reactivate_query, [email, user_id]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in cal")
+            IO.puts("User reactivated successfully in #{product_name}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in cal: #{inspect(error)}")
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -225,7 +225,7 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            IO.puts("User inserted successfully in cal with ID: #{db_user_id}")
+            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
             password_query = """
             INSERT INTO "UserPassword" ("userId", hash)
@@ -236,19 +236,19 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                IO.puts("Password inserted successfully for cal")
+                IO.puts("Password inserted successfully for #{product_name}")
                 IO.puts("Generated Password for #{email}: #{password}")
 
               {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to insert password for cal: #{inspect(error)}")
+                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
             end
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user for cal: #{inspect(error)}")
+            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error checking for existing user in cal: #{inspect(error)}")
+        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -540,7 +540,7 @@ defmodule Onestack.MemberManager do
 
         Postgrex.query!(pid, reactivate_query, [email, disabled_email])
 
-      _ ->
+      {:ok, %Postgrex.Result{rows: []}} ->
         # Email not found, proceed with new user creation
         nocodb_id = generate_random_string()
         base_id = generate_random_string()
@@ -816,6 +816,114 @@ defmodule Onestack.MemberManager do
     %{email: email, password: password}
   end
 
+  # Product-specific add member functions
+  def add_member_to_product(email, password, _hashed_password, _salt, "plane" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+
+    password_hash =
+      Pbkdf2.hash_pwd_salt(password, digest: :sha256, format: :django, rounds: 600_000)
+
+    # Check if the email exists with @onestack.cloud suffix
+    check_query = """
+    SELECT id, email FROM users
+    WHERE email LIKE $1 || '@onestack.cloud%'
+    """
+
+    case Postgrex.query(pid, check_query, [email]) do
+      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
+        # User found, reactivate by removing @onestack.cloud and random string
+        reactivate_query = """
+        UPDATE users SET email = $1 WHERE id = $2
+        """
+
+        case Postgrex.query(pid, reactivate_query, [email, user_id]) do
+          {:ok, _} ->
+            IO.puts("User reactivated successfully in #{product_name}")
+
+          {:error, error} ->
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        # User not found, proceed with new user creation
+        name = extract_name_from_email(email)
+        email_verified = DateTime.utc_now()
+
+        ua_agent = "Onestack Auto Registration"
+        login_ip = "1.1.1.1"
+        login_medium = "onestack_rego"
+        timezone = "UTC"
+
+        user_query = """
+        INSERT INTO "users" (
+          password,
+          id,
+          username,
+          email,
+          first_name,
+          last_name,
+          display_name,
+          date_joined,
+          created_at,
+          updated_at,
+          token,
+          user_timezone,
+          last_login_ip,
+          last_logout_ip,
+          last_login_medium,
+          last_login_uagent,
+          avatar,
+          last_location,
+          created_location,
+          is_superuser,
+          is_managed,
+          is_password_expired,
+          is_active,
+          is_email_verified,
+          is_staff,
+          is_password_autoset,
+          is_bot
+        )
+        VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $6, $6, $7, $8, $9, $9, $10, $11, $12, $13, $13, $14, $14, $14, $14, $14, $14, $14, $14)
+        RETURNING id
+        """
+
+        username = :crypto.strong_rand_bytes(128) |> Base.url_encode64() |> binary_part(0, 128)
+        token = :crypto.strong_rand_bytes(64) |> Base.url_encode64() |> binary_part(0, 64)
+
+        user_params = [
+          password_hash,
+          Ecto.UUID.dump!(UUID.uuid4()),
+          username,
+          email,
+          name,
+          email_verified,
+          token,
+          timezone,
+          login_ip,
+          login_medium,
+          ua_agent,
+          "",
+          "",
+          false
+        ]
+
+        case Postgrex.query(pid, user_query, user_params) do
+          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+            IO.inspect("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.inspect("Failed to insert user for #{product_name}: #{inspect(error)}")
+        end
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.inspect("Error checking for existing user in #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+    %{email: email, password: password}
+  end
+
   def remove_member_from_product(email, "cal" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 
@@ -825,35 +933,44 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, user_query, user_params) do
       {:ok, %Postgrex.Result{rows: [[user_id]]}} ->
-        # Delete from UserPassword table
-        password_query = "DELETE FROM \"UserPassword\" WHERE \"userId\" = $1"
-        password_params = [user_id]
+        # Update UserPassword table to set hash to null
+        password_query = "UPDATE \"UserPassword\" SET hash = '' WHERE \"userId\" = $1"
 
-        case Postgrex.query(pid, password_query, password_params) do
+        case Postgrex.query(pid, password_query, [user_id]) do
           {:ok, _result} ->
-            IO.puts("Password removed for cal user")
-
-            # Delete from users table
-            delete_query = "DELETE FROM users WHERE id = $1"
-            delete_params = [user_id]
-
-            case Postgrex.query(pid, delete_query, delete_params) do
-              {:ok, _result} ->
-                IO.puts("User removed from cal")
-
-              {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to remove user from cal: #{inspect(error)}")
-            end
+            IO.puts("Password removed for #{product_name} user")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to remove password for cal user: #{inspect(error)}")
+            IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
-        IO.puts("User not found in cal")
+        IO.puts("User not found in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error querying user in cal: #{inspect(error)}")
+        IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+    end
+
+    random_string = generate_random_string(12)
+    new_email = "#{email}@onestack.cloud#{random_string}"
+
+    query = """
+    UPDATE "users"
+    SET email = $1
+    WHERE email = $2
+    """
+
+    params = [new_email, email]
+
+    case Postgrex.query(pid, query, params) do
+      {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
+        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+
+      {:ok, %Postgrex.Result{num_rows: 0}} ->
+        IO.puts("No user found with email #{email} in #{product_name}")
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -923,7 +1040,7 @@ defmodule Onestack.MemberManager do
     WHERE email = $2
     """
 
-    params = [new_email]
+    params = [new_email, email]
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
@@ -1034,6 +1151,58 @@ defmodule Onestack.MemberManager do
       {:error, reason} ->
         IO.puts("Error: #{inspect(reason)}")
     end
+  end
+
+  def remove_member_from_product(email, "plane" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+
+    # First, get the user ID
+    # user_query = "SELECT id FROM users WHERE email = $1"
+    # user_params = [email]
+
+    # case Postgrex.query(pid, user_query, user_params) do
+    #   {:ok, %Postgrex.Result{rows: [[user_id]]}} ->
+    #     # Update UserPassword table to set hash to null
+    #     password_query = "UPDATE \"UserPassword\" SET hash = '' WHERE \"userId\" = $1"
+
+    #     case Postgrex.query(pid, password_query, [user_id]) do
+    #       {:ok, _result} ->
+    #         IO.puts("Password removed for #{product_name} user")
+
+    #       {:error, %Postgrex.Error{} = error} ->
+    #         IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
+    #     end
+
+    #   {:ok, %Postgrex.Result{rows: []}} ->
+    #     IO.puts("User not found in #{product_name}")
+
+    #   {:error, %Postgrex.Error{} = error} ->
+    #     IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+    # end
+
+    random_string = generate_random_string(12)
+    new_email = "#{email}@onestack.cloud#{random_string}"
+
+    query = """
+    UPDATE "users"
+    SET email = $1
+    WHERE email = $2
+    """
+
+    params = [new_email, email]
+
+    case Postgrex.query(pid, query, params) do
+      {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
+        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+
+      {:ok, %Postgrex.Result{num_rows: 0}} ->
+        IO.puts("No user found with email #{email} in #{product_name}")
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
   end
 
   # Helper function to extract name from email

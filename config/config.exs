@@ -171,6 +171,16 @@ config :onestack,
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "penpot"
       ]
+    },
+    %{
+      name: "plane",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5433,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "plane"
+      ]
     }
   ]
 
