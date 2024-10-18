@@ -30,8 +30,7 @@ defmodule OnestackWeb.SubscribeLive do
         []
       end
 
-    num_users = calculate_num_users(current_user, team_members)
-
+    num_users = calculate_num_users(team_members)
     has_subscription = user_products != []
     IO.inspect(current_user)
 
@@ -51,13 +50,8 @@ defmodule OnestackWeb.SubscribeLive do
     {:ok, socket}
   end
 
-  defp calculate_num_users(current_user, team_members) do
-    if current_user do
-      # Include the current user
-      length(team_members)
-    else
-      1
-    end
+  defp calculate_num_users(team_members) do
+    max(1, length(team_members))
   end
 
   @impl true
@@ -151,7 +145,7 @@ defmodule OnestackWeb.SubscribeLive do
           {:noreply,
            socket
            |> assign(team_members: updated_team_members)
-           |> assign(num_users: calculate_num_users(current_user, updated_team_members))
+           |> assign(num_users: calculate_num_users(updated_team_members))
            |> put_flash(:info, "Team member added successfully")}
 
         {:error, _changeset} ->
@@ -183,7 +177,7 @@ defmodule OnestackWeb.SubscribeLive do
         {:noreply,
          socket
          |> assign(team_members: Teams.list_team_members(current_user))
-         |> assign(num_users: calculate_num_users(current_user, updated_team_members))
+         |> assign(num_users: calculate_num_users(updated_team_members))
          |> put_flash(:info, "Team member removed successfully")}
 
       {:error, :not_found} ->

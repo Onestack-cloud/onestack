@@ -180,21 +180,6 @@
                   <h2 class="ml-4"><%= @num_users %></h2>
                 </div>
               <% else %>
-                <h3 class="text-2xl font-semibold">Select the number of users</h3>
-                <form phx-change="change" id="form" class="mt-2">
-                  <div class="flex items-center justify-between">
-                    <input
-                      id="slider"
-                      type="range"
-                      min="1"
-                      max="30"
-                      value={@num_users}
-                      class="range w-full"
-                      name="num_users"
-                    />
-                    <h2 class="ml-4"><%= @num_users %></h2>
-                  </div>
-                </form>
               <% end %>
             </div>
 

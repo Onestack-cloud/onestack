@@ -19,27 +19,31 @@ defmodule OnestackWeb.LandingLive do
         user_token -> Accounts.get_user_by_session_token(user_token)
       end
 
-    prepared_products =
-      Enum.map(products, fn product ->
-        product
-        |> Map.from_struct()
-        |> Map.drop([:__meta__])
-        |> Map.new(fn {k, v} ->
-          {k,
-           if is_struct(v, Decimal) do
-             Decimal.to_float(v)
-           else
-             v
-           end}
+    if current_user do
+      {:ok, push_redirect(socket, to: ~p"/subscribe")}
+    else
+      prepared_products =
+        Enum.map(products, fn product ->
+          product
+          |> Map.from_struct()
+          |> Map.drop([:__meta__])
+          |> Map.new(fn {k, v} ->
+            {k,
+             if is_struct(v, Decimal) do
+               Decimal.to_float(v)
+             else
+               v
+             end}
+          end)
         end)
-      end)
 
-    {:ok,
-     assign(socket,
-       products: products,
-       current_user: current_user,
-       prepared_products: Jason.encode!(prepared_products)
-     )}
+      {:ok,
+       assign(socket,
+         products: products,
+         current_user: current_user,
+         prepared_products: Jason.encode!(prepared_products)
+       )}
+    end
   end
 
   @impl true
