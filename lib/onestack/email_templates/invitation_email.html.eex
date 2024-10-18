@@ -47,7 +47,15 @@
     Can't see the button? <a href="https://onestack.cloud/invitations/<%= @copy_credentials_url %>" style="color: #0066cc; text-decoration: underline;">Click here to copy your credentials</a>
   </p>
 </div>
-
+<hr style="border: 0; border-top: 1px solid #dddddd; margin: 20px 0;">
+<div style="text-align: center; margin-bottom: 20px;">
+  <p style="font-size: 16px; line-height: 1.5; margin-bottom: 10px;">
+    Join our Telegram channel for updates, support, and community interaction:
+  </p>
+  <a href="https://t.me/+Aula4QyzLKY1ZmZl" style="display: inline-block; background-color: #0088cc; color: white; padding: 10px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px;">
+    Join Onestack Telegram
+  </a>
+</div>
       <p style="text-align: center; font-size: 14px; line-height: 1.5; color: #666; font-weight: bold;">
         Remember, these credentials will be wiped from our systems as soon as you click, so make sure to save them
         in your preferred password manager.
