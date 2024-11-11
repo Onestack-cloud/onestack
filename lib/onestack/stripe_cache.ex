@@ -6,7 +6,16 @@ defmodule Onestack.StripeCache do
   require Logger
 
   alias Stripe.{Price, TaxRate, Product, Subscription, Customer}
-  defstruct [:tax_rates, :prices, :products, :customers, :subscriptions, :combined_customers]
+
+  defstruct [
+    :tax_rates,
+    :prices,
+    :products,
+    :customers,
+    :subscriptions,
+    :combined_customers,
+    :upcoming_invoices
+  ]
 
   @refresh_interval :timer.minutes(30)
 
@@ -148,7 +157,9 @@ defmodule Onestack.StripeCache do
     GenServer.call(__MODULE__, {:update_subscription, subscription_id})
   end
 
-  # Server callbacks
+  def get_upcoming_invoice(subscription_id) do
+    GenServer.call(__MODULE__, {:get_upcoming_invoice, subscription_id})
+  end
 
   @doc false
   def init(_state) do
@@ -157,6 +168,7 @@ defmodule Onestack.StripeCache do
          {:ok, %{data: products}} <- Product.list(%{active: true}),
          {:ok, %{data: customers}} <- Customer.list(),
          {:ok, %{data: subscriptions}} <- Subscription.list(),
+         upcoming_invoices <- fetch_upcoming_invoices(subscriptions),
          combined_customers =
            Onestack.CustomerCombiner.combine_customers(customers, subscriptions) do
       schedule_refresh()
@@ -168,7 +180,8 @@ defmodule Onestack.StripeCache do
          products: products,
          customers: customers,
          subscriptions: subscriptions,
-         combined_customers: combined_customers
+         combined_customers: combined_customers,
+         upcoming_invoices: upcoming_invoices
        }}
     else
       {:error, error} ->
@@ -185,6 +198,7 @@ defmodule Onestack.StripeCache do
          {:ok, %{data: products}} <- Product.list(%{active: true}),
          {:ok, %{data: customers}} <- Customer.list(),
          {:ok, %{data: subscriptions}} <- Subscription.list(),
+         upcoming_invoices <- fetch_upcoming_invoices(subscriptions),
          combined_customers =
            Onestack.CustomerCombiner.combine_customers(customers, subscriptions) do
       {:noreply,
@@ -194,7 +208,8 @@ defmodule Onestack.StripeCache do
          products: products,
          customers: customers,
          subscriptions: subscriptions,
-         combined_customers: combined_customers
+         combined_customers: combined_customers,
+         upcoming_invoices: upcoming_invoices
        }}
     else
       {:error, reason} ->
@@ -260,10 +275,20 @@ defmodule Onestack.StripeCache do
               "Recalculated combined customers. New count: #{length(updated_combined_customers)}"
             )
 
+            updated_upcoming_invoices =
+              case Stripe.Invoice.upcoming(%{subscription: subscription_id}) do
+                {:ok, upcoming_invoice} ->
+                  Map.put(state.upcoming_invoices, subscription_id, upcoming_invoice)
+
+                {:error, _} ->
+                  state.upcoming_invoices
+              end
+
             new_state = %{
               state
               | subscriptions: updated_subscriptions,
-                combined_customers: updated_combined_customers
+                combined_customers: updated_combined_customers,
+                upcoming_invoices: updated_upcoming_invoices
             }
 
             Logger.info(
@@ -357,6 +382,11 @@ defmodule Onestack.StripeCache do
     end
   end
 
+  def handle_call({:get_upcoming_invoice, subscription_id}, _from, state) do
+    invoice = Map.get(state.upcoming_invoices, subscription_id)
+    {:reply, invoice, state}
+  end
+
   defp update_list(list, updated_item) do
     if Enum.any?(list, fn item -> item.id == updated_item.id end) do
       Enum.map(list, fn item ->
@@ -365,6 +395,16 @@ defmodule Onestack.StripeCache do
     else
       [updated_item | list]
     end
+  end
+
+  defp fetch_upcoming_invoices(subscriptions) do
+    subscriptions
+    |> Enum.reduce(%{}, fn subscription, acc ->
+      case Stripe.Invoice.upcoming(%{subscription: subscription.id}) do
+        {:ok, upcoming_invoice} -> Map.put(acc, subscription.id, upcoming_invoice)
+        {:error, _error} -> acc
+      end
+    end)
   end
 
   defp recalculate_combined_customers(customers, subscriptions) do

@@ -32,6 +32,23 @@ defmodule OnestackWeb.SubscribeLive do
 
     num_users = calculate_num_users(team_members)
     has_subscription = user_products != []
+
+    upcoming_invoice =
+      if has_subscription do
+        stripe_customer =
+          Enum.find(combined_customers, fn customer -> customer.email == current_user.email end)
+
+        case Onestack.StripeCache.get_upcoming_invoice(stripe_customer.subscription_id) do
+          nil ->
+            {:error, "Subscription not found"}
+
+          subscription ->
+            subscription
+        end
+      else
+        nil
+      end
+
     IO.inspect(current_user)
 
     socket =
@@ -46,6 +63,7 @@ defmodule OnestackWeb.SubscribeLive do
       |> assign(modal_product: nil)
       |> assign(updating: false)
       |> assign(has_subscription: has_subscription)
+      |> assign(upcoming_invoice: upcoming_invoice)
 
     {:ok, socket}
   end
