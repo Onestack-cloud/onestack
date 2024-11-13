@@ -464,7 +464,10 @@ defmodule OnestackWeb.SubscribeLive do
           allow_promotion_codes: true,
           billing_address_collection: :required,
           payment_method_collection: :always,
-          customer_email: socket.assigns.current_user.email
+          customer_email: socket.assigns.current_user.email,
+          subscription_data: %{
+            trial_period_days: 14
+          }
         })
       end
     end
