@@ -166,8 +166,8 @@ defmodule Onestack.StripeCache do
     with {:ok, %{data: prices}} <- Price.list(%{active: true}),
          {:ok, %{data: tax_rates}} <- TaxRate.list(%{active: true}),
          {:ok, %{data: products}} <- Product.list(%{active: true}),
-         {:ok, %{data: customers}} <- Customer.list(),
-         {:ok, %{data: subscriptions}} <- Subscription.list(),
+         {:ok, %{data: customers}} <- Customer.list(%{limit: 9999}),
+         {:ok, %{data: subscriptions}} <- Subscription.list(%{limit: 9999}),
          upcoming_invoices <- fetch_upcoming_invoices(subscriptions),
          combined_customers =
            Onestack.CustomerCombiner.combine_customers(customers, subscriptions) do
