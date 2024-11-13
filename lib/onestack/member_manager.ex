@@ -192,19 +192,36 @@ defmodule Onestack.MemberManager do
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT id, email FROM users
-    WHERE email LIKE $1 || '@onestack.cloud%'
+    WHERE email LIKE $1
     """
 
-    case Postgrex.query(pid, check_query, [email]) do
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
         reactivate_query = """
-        UPDATE users SET email = $1 WHERE id = $2
+        UPDATE users SET email = $1, password = $3 WHERE id = $2
         """
 
         case Postgrex.query(pid, reactivate_query, [email, user_id]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name}")
+            password_query = """
+            INSERT INTO "UserPassword" ("userId", hash)
+            VALUES ($1, $2)
+            """
+
+            password_params = [user_id, hashed_password]
+
+            case Postgrex.query(pid, password_query, password_params) do
+              {:ok, _result} ->
+                IO.puts("User inserted successfully in #{product_name} with ID: #{user_id}")
+                IO.puts("Generated Password for #{email}: #{password}")
+                IO.puts("User reactivated successfully in #{product_name}")
+
+              {:error, %Postgrex.Error{} = error} ->
+                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
+            end
 
           {:error, error} ->
             IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
@@ -225,8 +242,6 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
-
             password_query = """
             INSERT INTO "UserPassword" ("userId", hash)
             VALUES ($1, $2)
@@ -236,7 +251,7 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                IO.puts("Password inserted successfully for #{product_name}")
+                IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
                 IO.puts("Generated Password for #{email}: #{password}")
 
               {:error, %Postgrex.Error{} = error} ->
@@ -262,10 +277,12 @@ defmodule Onestack.MemberManager do
       # Check if the email exists with @onestack.cloud suffix
       check_query = """
       SELECT id, email FROM "User"
-      WHERE email LIKE $1 || '@onestack.cloud%'
+      WHERE email LIKE $1
       """
 
-      case Postgrex.query(pid, check_query, [email]) do
+      email_pattern = "#{email}@onestack.cloud%"
+
+      case Postgrex.query(pid, check_query, [email_pattern]) do
         {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
           # User found, reactivate by removing @onestack.cloud and random string
           reactivate_query = """
@@ -526,10 +543,12 @@ defmodule Onestack.MemberManager do
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT email FROM "nc_users_v2"
-    WHERE email LIKE $1 || '@onestack.cloud%'
+    WHERE email LIKE $1
     """
 
-    case Postgrex.query!(pid, check_query, [email]) do
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query!(pid, check_query, [email_pattern]) do
       %Postgrex.Result{num_rows: 1, rows: [[disabled_email]]} ->
         # Email found, reactivate by removing @onestack.cloud and random string
         reactivate_query = """
@@ -738,9 +757,11 @@ defmodule Onestack.MemberManager do
 
     # Check if the email exists with @onestack.cloud suffix
     check_query =
-      "SELECT id, username FROM cp_users WHERE username LIKE CONCAT(?, '@onestack.cloud%')"
+      "SELECT id, username FROM cp_users WHERE username LIKE ?"
 
-    case MyXQL.query(conn, check_query, [email]) do
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case MyXQL.query(conn, check_query, [email_pattern]) do
       {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
         reactivate_query = "UPDATE cp_users SET username = ? WHERE id = ?"
@@ -816,7 +837,6 @@ defmodule Onestack.MemberManager do
     %{email: email, password: password}
   end
 
-  # Product-specific add member functions
   def add_member_to_product(email, password, _hashed_password, _salt, "plane" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 
@@ -826,10 +846,12 @@ defmodule Onestack.MemberManager do
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT id, email FROM users
-    WHERE email LIKE $1 || '@onestack.cloud%'
+    WHERE email LIKE $1
     """
 
-    case Postgrex.query(pid, check_query, [email]) do
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
         reactivate_query = """
@@ -918,6 +940,61 @@ defmodule Onestack.MemberManager do
 
       {:error, %Postgrex.Error{} = error} ->
         IO.inspect("Error checking for existing user in #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+    %{email: email, password: password}
+  end
+
+  def add_member_to_product(email, password, hashed_password, _salt, "documenso" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+
+    # Check if the email exists with @onestack.cloud suffix
+    check_query = """
+    SELECT id, email FROM "User"
+    WHERE email LIKE $1
+    """
+
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query(pid, check_query, [email_pattern]) do
+      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
+        # User found, reactivate by removing @onestack.cloud and random string
+        reactivate_query = """
+        UPDATE "User" SET email = $1, password = $3 WHERE id = $2
+        """
+
+        case Postgrex.query(pid, reactivate_query, [email, user_id, hashed_password]) do
+          {:ok, _} ->
+            IO.puts("User reactivated successfully in #{product_name}")
+
+          {:error, error} ->
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        # User not found, proceed with new user creation
+        name = extract_name_from_email(email)
+        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+
+        user_query = """
+        INSERT INTO "User" (name, email, "emailVerified", password, "identityProvider", roles)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+        """
+
+        user_params = [name, email, email_verified, hashed_password, "DOCUMENSO", ["USER"]]
+
+        case Postgrex.query(pid, user_query, user_params) do
+          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+        end
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1185,6 +1262,58 @@ defmodule Onestack.MemberManager do
 
     query = """
     UPDATE "users"
+    SET email = $1
+    WHERE email = $2
+    """
+
+    params = [new_email, email]
+
+    case Postgrex.query(pid, query, params) do
+      {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
+        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+
+      {:ok, %Postgrex.Result{num_rows: 0}} ->
+        IO.puts("No user found with email #{email} in #{product_name}")
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+  end
+
+  def remove_member_from_product(email, "documenso" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+
+    # First, get the user ID
+    user_query = "SELECT id FROM \"User\" WHERE email = $1"
+    user_params = [email]
+
+    case Postgrex.query(pid, user_query, user_params) do
+      {:ok, %Postgrex.Result{rows: [[user_id]]}} ->
+        # Update UserPassword table to set hash to null
+        password_query = "UPDATE \"User\" SET password = '' WHERE id = $1"
+
+        case Postgrex.query(pid, password_query, [user_id]) do
+          {:ok, _result} ->
+            IO.puts("Password removed for #{product_name} user")
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        IO.puts("User not found in #{product_name}")
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+    end
+
+    random_string = generate_random_string(12)
+    new_email = "#{email}@onestack.cloud#{random_string}"
+
+    query = """
+    UPDATE "User"
     SET email = $1
     WHERE email = $2
     """
