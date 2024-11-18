@@ -5,9 +5,6 @@ defmodule Onestack.Repo.Migrations.CreateUsersAuthTables do
     create table(:users) do
       add :email, :string, null: false, collate: :nocase
       add :hashed_password, :string, null: false
-      add :bcrypt_hash, :string, null: false
-      add :argon2id_hash, :string, null: false
-      add :pkbdf2_hash, :string, null: false
       add :confirmed_at, :naive_datetime
       add :role, :string, default: "user", null: false
       timestamps(type: :utc_datetime)
