@@ -15,6 +15,10 @@ defmodule Onestack.PasswordHasher do
     hash_password(password, :bcrypt, @default_bcrypt_log_rounds)
   end
 
+  def hash_password(password, :pkbdf2) do
+    Pbkdf2.hash_pwd_salt(password, digest: :sha256, format: :django, rounds: 600_000)
+  end
+
   def hash_password(password, :argon2id) do
     salt = :crypto.strong_rand_bytes(16)
 

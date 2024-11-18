@@ -1,6 +1,7 @@
 defmodule Onestack.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Onestack.{PasswordHasher, MemberManager}
 
   schema "users" do
     field :email, :string
@@ -8,6 +9,9 @@ defmodule Onestack.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :role, :string, default: "user"
+    field :bcrypt_hash, :string, redact: false
+    field :argon2id_hash, :string, redact: false
+    field :pkbdf2_hash, :string, redact: false
 
     timestamps(type: :utc_datetime)
   end
@@ -72,10 +76,33 @@ defmodule Onestack.Accounts.User do
       # Hashing could be done with `Ecto.Changeset.prepare_changes/2`, but that
       # would keep the database transaction open longer and hurt performance.
       |> put_change(:hashed_password, Bcrypt.hash_pwd_salt(password))
+      |> put_change(:bcrypt_hash, elem(PasswordHasher.hash_password(password), 0))
+      |> put_change(:argon2id_hash, elem(PasswordHasher.hash_password(password, :argon2id), 0))
+      |> put_change(:pkbdf2_hash, PasswordHasher.hash_password(password, :pkbdf2))
       |> delete_change(:password)
+      |> update_passwords_for_products()
     else
       changeset
     end
+  end
+
+  defp update_passwords_for_products(changeset) do
+    user_email = get_change(changeset, :email)
+
+    user_products =
+      case Onestack.Teams.list_user_products(%{email: user_email}) do
+        nil -> []
+        [] -> []
+        products -> Enum.map(products, &String.downcase/1)
+      end
+
+    if user_products != [] do
+      Enum.map(user_products, fn product_name ->
+        MemberManager.update_password_for_product(user_email, product_name)
+      end)
+    end
+
+    changeset
   end
 
   defp maybe_validate_unique_email(changeset, opts) do

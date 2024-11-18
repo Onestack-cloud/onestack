@@ -36,14 +36,17 @@ defmodule OnestackWeb.SuccessLive do
               StripeCache.list_combined_customers()
               |> Enum.find(fn customer -> customer.email == customer_email end)
 
-            # Remember to update cache?
-            Teams.get_or_create_team(%{email: customer_email})
-
             product_names =
               SubscribeLive.get_product_names(
                 combined_customer.products,
                 StripeCache.list_products()
               )
+              |> Enum.map(&String.downcase/1)
+
+            IO.inspect(product_names)
+
+            # Remember to update cache?
+            Teams.get_or_create_team(%{email: customer_email, products: product_names})
 
             Onestack.MemberManager.add_member(
               customer_email,

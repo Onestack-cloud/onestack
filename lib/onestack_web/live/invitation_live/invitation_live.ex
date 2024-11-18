@@ -10,7 +10,7 @@ defmodule OnestackWeb.InvitationLive do
     }
 
     {:ok,
-     assign(socket, results: test_results, format: :csv, full_view: false, dropdown_open: false)}
+     assign(socket, results: test_results, format: :human, full_view: false, dropdown_open: false)}
   end
 
   def mount(%{"token" => token}, _session, socket) do

@@ -74,6 +74,23 @@ defmodule Onestack.Teams do
   end
 
   @doc """
+  Lists all products that a user has access to through their team memberships.
+  """
+  def list_user_products(%{email: email}) do
+    # Query all teams where the user is either an admin or a member
+    teams =
+      Repo.all(
+        from t in Team,
+          where: t.admin_email == ^email or ^email in t.members
+      )
+
+    # Extract and flatten all products from the teams
+    teams
+    |> Enum.flat_map(& &1.products)
+    |> Enum.uniq()
+  end
+
+  @doc """
   Deletes a team.
 
   ## Examples
@@ -163,7 +180,11 @@ defmodule Onestack.Teams do
   def get_or_create_team(user) do
     case get_team_by_admin(user) do
       nil ->
-        {:ok, team} = create_team(%{members: [user.email], products: [], admin_email: user.email})
+        products = Map.get(user, :products, [])
+
+        {:ok, team} =
+          create_team(%{members: [user.email], products: products, admin_email: user.email})
+
         team
 
       team ->

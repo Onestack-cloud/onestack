@@ -1,11 +1,14 @@
 defmodule Onestack.MemberManager do
   use GenServer
   require Logger
-  alias Onestack.InvitationEmail
-  alias Onestack.PasswordHasher
-  alias Onestack.MatrixAccounts
-  alias Onestack.MemberManagement
-  alias Onestack.Repo
+
+  alias Onestack.{
+    InvitationEmail,
+    MatrixAccounts,
+    MemberManagement,
+    Repo,
+    Accounts
+  }
 
   import Ecto.Query
 
@@ -35,31 +38,16 @@ defmodule Onestack.MemberManager do
   end
 
   def handle_cast({:add_member, email, products, job_id}, state) do
-    results =
+    _results =
       Enum.map(products, fn product ->
-        password = generate_password()
-        {hashed_password, salt} = PasswordHasher.hash_password(password)
-        result = add_member_to_product(email, password, hashed_password, salt, product)
-
-        attrs = %{
-          job_id: job_id,
-          email: email,
-          product: product,
-          password: password,
-          hashed_password: hashed_password,
-          salt: salt,
-          result: result
-        }
-
-        {:ok, _member_result} = MemberManagement.create_member_credentials(attrs)
-        result
+        add_member_to_product(email, product)
       end)
 
-    if Enum.all?(results, &is_map/1) do
-      InvitationEmail.send_invitation(email, job_id)
-    else
-      Logger.error("Failed to add member to all products for email: #{email}")
-    end
+    # if Enum.all?(results, &is_map/1) do
+    #   InvitationEmail.send_invitation(email, job_id)
+    # else
+    #   Logger.error("Failed to add member to all products for email: #{email}")
+    # end
 
     {:noreply, state}
   end
@@ -73,9 +61,11 @@ defmodule Onestack.MemberManager do
     {:noreply, state}
   end
 
-  def add_member_to_product(email, password, _hashed_password, _salt, "matrix") do
+  def add_member_to_product(email, "matrix") do
     # TODO: check if email is already in DB and if so just reset the password
     # Check if the email exists in MatrixAccounts
+    # TODO: Enter password directly in DB
+
     case Onestack.MatrixAccounts.list_users() |> Enum.find(&(&1.email == email)) do
       nil ->
         # Email not found, proceed with registration
@@ -85,7 +75,7 @@ defmodule Onestack.MemberManager do
         body =
           Jason.encode!(%{
             email: email,
-            password: password,
+            # password: password,
             initial_device_display_name: "Onestack Auto Registration",
             auth: %{
               type: "m.login.registration_token",
@@ -96,7 +86,6 @@ defmodule Onestack.MemberManager do
         case HTTPoison.post(url, body) do
           {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
             IO.puts("User created successfully in Matrix")
-            IO.puts("Generated Password for #{email}: #{password}")
 
             # Parse the response body
             case Jason.decode(response_body) do
@@ -106,8 +95,6 @@ defmodule Onestack.MemberManager do
 
                 # Insert user_id and email into matrix_users table
                 MatrixAccounts.create_matrix_user(%{email: email, matrix_id: user_id})
-
-                %{email: user_id, password: password}
 
               {:error, _} ->
                 IO.puts("Failed to parse response body")
@@ -145,51 +132,16 @@ defmodule Onestack.MemberManager do
         end
 
         Onestack.MatrixAccounts.update_matrix_user(existing_user, %{active: true})
-        %{email: existing_user.matrix_id, password: password}
+        # %{email: existing_user.matrix_id, password: password}
         IO.puts("Existing user reactivated in Matrix")
     end
   end
 
-  def add_member_to_product(email, password, _hashed_password, _salt, "chatwoot") do
-    api_url = "https://chatwoot.onestack.cloud/platform/api/v1/users"
-    api_token = "9Z8ZwSuEYqAL5MQuFmwgcUYo"
-
-    name = extract_name_from_email(email)
-
-    headers = [
-      {"Content-Type", "application/json"},
-      {"api_access_token", api_token}
-    ]
-
-    body =
-      Jason.encode!(%{
-        name: name,
-        email: email,
-        password: password,
-        custom_attributes: %{}
-      })
-
-    case HTTPoison.post(api_url, body, headers) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
-        IO.puts("User created successfully in chatwoot")
-        IO.puts("Response: #{response_body}")
-        IO.puts("Generated Password for #{email}: #{password}")
-        %{email: email, password: password}
-
-      {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}} ->
-        IO.puts("Failed to create user in chatwoot. Status code: #{status_code}")
-        IO.puts("Response: #{response_body}")
-
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.puts("Error creating user in chatwoot: #{inspect(reason)}")
-    end
-  end
-
-  # Product-specific add member functions
-  def add_member_to_product(email, password, hashed_password, _salt, "cal" = product_name) do
+  def add_member_to_product(email, "chatwoot" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
     # Check if the email exists with @onestack.cloud suffix
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
     check_query = """
     SELECT id, email FROM users
     WHERE email LIKE $1
@@ -200,24 +152,136 @@ defmodule Onestack.MemberManager do
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
-        reactivate_query = """
-        UPDATE users SET email = $1, password = $3 WHERE id = $2
+        reactivate_email_query = """
+        UPDATE users SET email = $1, encrypted_password = $2 WHERE id = $3
         """
 
-        case Postgrex.query(pid, reactivate_query, [email, user_id]) do
+        case Postgrex.query(pid, reactivate_email_query, [email, hashed_password, user_id]) do
           {:ok, _} ->
-            password_query = """
-            INSERT INTO "UserPassword" ("userId", hash)
-            VALUES ($1, $2)
+            IO.puts("User reactivated successfully in #{product_name} with ID: #{user_id}")
+
+          {:error, error} ->
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        # User not found, proceed with new user creation
+        name = extract_name_from_email(email)
+        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+
+        # 1. Create new user
+        user_query = """
+        INSERT INTO users (provider, uid, encrypted_password, confirmed_at, created_at, updated_at, name, email)
+        VALUES ($1, $2, $3, $4, $4, $4, $5, $2)
+        RETURNING id
+        """
+
+        user_params = ["email", email, hashed_password, email_verified, name]
+
+        case Postgrex.query(pid, user_query, user_params) do
+          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+            token_query = """
+            INSERT INTO access_tokens (owner_type, owner_id, token, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $4)
             """
 
-            password_params = [user_id, hashed_password]
+            token_params = [
+              "User",
+              db_user_id,
+              :crypto.strong_rand_bytes(24) |> Base.url_encode64() |> binary_part(0, 24),
+              email_verified
+            ]
+
+            case Postgrex.query(pid, token_query, token_params) do
+              {:ok, _result} ->
+                IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+
+                # 2. Create new account
+                account_creation_query = """
+                INSERT INTO accounts (name, created_at, updated_at, feature_flags)
+                VALUES ($1, $2, $2, $3)
+                RETURNING id
+                """
+
+                account_name =
+                  :crypto.strong_rand_bytes(18) |> Base.url_encode64() |> binary_part(0, 18)
+
+                account_creation_params = [account_name, email_verified, 33_029_775]
+
+                case Postgrex.query(pid, account_creation_query, account_creation_params) do
+                  {:ok, %Postgrex.Result{rows: [[account_id]]}} ->
+                    IO.puts(
+                      "Account inserted successfully in #{product_name} with ID: #{db_user_id}"
+                    )
+
+                    # Link account to user
+                    account_link_query = """
+                    INSERT INTO account_users (account_id, user_id, created_at, updated_at)
+                    VALUES ($1, $2, $3, $3)
+                    """
+
+                    case Postgrex.query(pid, account_link_query, [
+                           account_id,
+                           db_user_id,
+                           email_verified
+                         ]) do
+                      {:ok, _result} ->
+                        IO.puts("Account linked successfully in #{product_name}")
+
+                      {:error, %Postgrex.Error{} = error} ->
+                        IO.puts("Failed to link account in #{product_name}: #{inspect(error)}")
+                    end
+
+                  {:error, %Postgrex.Error{} = error} ->
+                    IO.puts("Failed to insert account for #{product_name}: #{inspect(error)}")
+                end
+
+              {:error, %Postgrex.Error{} = error} ->
+                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
+            end
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+        end
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+  end
+
+  # Product-specific add member functions
+  def add_member_to_product(email, "cal" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+    # Check if the email exists with @onestack.cloud suffix
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    check_query = """
+    SELECT id, email FROM users
+    WHERE email LIKE $1
+    """
+
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query(pid, check_query, [email_pattern]) do
+      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
+        # User found, reactivate by removing @onestack.cloud and random string
+        reactivate_email_query = """
+        UPDATE users SET email = $1 WHERE id = $2
+        """
+
+        case Postgrex.query(pid, reactivate_email_query, [email, user_id]) do
+          {:ok, _} ->
+            password_query = """
+            UPDATE "UserPassword" SET hash = $1 WHERE "userId" = $2
+            """
+
+            password_params = [hashed_password, user_id]
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                IO.puts("User inserted successfully in #{product_name} with ID: #{user_id}")
-                IO.puts("Generated Password for #{email}: #{password}")
-                IO.puts("User reactivated successfully in #{product_name}")
+                IO.puts("User reactivated successfully in #{product_name} with ID: #{user_id}")
 
               {:error, %Postgrex.Error{} = error} ->
                 IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
@@ -252,7 +316,6 @@ defmodule Onestack.MemberManager do
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
                 IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
-                IO.puts("Generated Password for #{email}: #{password}")
 
               {:error, %Postgrex.Error{} = error} ->
                 IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
@@ -267,11 +330,11 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
-    %{email: email, password: password}
   end
 
-  def add_member_to_product(email, password, hashed_password, _salt, "formbricks" = product_name) do
+  def add_member_to_product(email, "formbricks" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
 
     try do
       # Check if the email exists with @onestack.cloud suffix
@@ -389,26 +452,22 @@ defmodule Onestack.MemberManager do
           case result do
             {:ok, {_user_id, _org_id, _product_id}} ->
               IO.puts("#{product_name} user registration complete!")
-              IO.puts("Generated Password for #{email}: #{password}")
 
             {:error, error} ->
               IO.puts("Failed to complete #{product_name} operations: #{inspect(error)}")
           end
 
-          %{email: email, password: password}
-
         {:error, %Postgrex.Error{} = error} ->
           IO.puts("Error checking for existing user in formbricks: #{inspect(error)}")
       end
-
-      %{email: email, password: password}
     after
       GenServer.stop(pid)
     end
   end
 
-  def add_member_to_product(email, password, hashed_password, _salt, "penpot" = product_name) do
+  def add_member_to_product(email, "penpot" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+    hashed_password = Accounts.get_user_by_email(email).argon2id_hash
 
     try do
       # Check if the email exists
@@ -521,7 +580,6 @@ defmodule Onestack.MemberManager do
           case result do
             {:ok, {_profile_id, _team_id, _project_id}} ->
               IO.puts("#{product_name} user registration complete!")
-              IO.puts("Generated Password for #{email}: #{password}")
 
             {:error, error} ->
               IO.puts("Failed to complete #{product_name} operations: #{inspect(error)}")
@@ -530,16 +588,14 @@ defmodule Onestack.MemberManager do
         {:error, %Postgrex.Error{} = error} ->
           IO.puts("Error checking for existing user in penpot: #{inspect(error)}")
       end
-
-      %{email: email, password: password}
     after
       GenServer.stop(pid)
     end
   end
 
-  def add_member_to_product(email, password, hashed_password, salt, "nocodb" = product_name) do
+  def add_member_to_product(email, "nocodb" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT email FROM "nc_users_v2"
@@ -573,8 +629,7 @@ defmodule Onestack.MemberManager do
         user_params = [
           nocodb_id,
           email,
-          hashed_password,
-          salt
+          hashed_password
         ]
 
         base_query = """
@@ -621,7 +676,6 @@ defmodule Onestack.MemberManager do
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, _result} ->
             IO.puts("User inserted successfully in nocodb")
-            IO.puts("Generated Password for #{email}: #{password}")
 
             case Postgrex.query(pid, base_query, base_params) do
               {:ok, _result} ->
@@ -653,11 +707,11 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
-    %{email: email, password: password}
   end
 
-  def add_member_to_product(email, password, hashed_password, _salt, "n8n" = product_name) do
+  def add_member_to_product(email, "n8n" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config("n8n"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
 
     result =
       Postgrex.transaction(pid, fn conn ->
@@ -734,7 +788,7 @@ defmodule Onestack.MemberManager do
 
       {:ok, {:new_user, user_id, project_id}} ->
         IO.puts("New user inserted successfully in #{product_name} with ID: #{inspect(user_id)}")
-        IO.puts("Generated Password for #{email}: #{password}")
+
         IO.puts("Hashed Password: #{hashed_password}")
         IO.puts("Role: global:admin")
 
@@ -749,12 +803,11 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
-    %{email: email, password: password}
   end
 
-  def add_member_to_product(email, password, hashed_password, _salt, "castopod" = product_name) do
+  def add_member_to_product(email, "castopod" = product_name) do
     {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
-
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
     # Check if the email exists with @onestack.cloud suffix
     check_query =
       "SELECT id, username FROM cp_users WHERE username LIKE ?"
@@ -762,12 +815,27 @@ defmodule Onestack.MemberManager do
     email_pattern = "#{email}@onestack.cloud%"
 
     case MyXQL.query(conn, check_query, [email_pattern]) do
-      {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
+      {:ok, %MyXQL.Result{rows: [[castopod_user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
         reactivate_query = "UPDATE cp_users SET username = ? WHERE id = ?"
 
-        case MyXQL.query(conn, reactivate_query, [email, user_id]) do
+        case MyXQL.query(conn, reactivate_query, [email, castopod_user_id]) do
           {:ok, _} ->
+            insert_auth_identity_query = """
+            UPDATE cp_auth_identities SET secret2 = ? WHERE user_id = ?
+            """
+
+            case MyXQL.query(conn, insert_auth_identity_query, [
+                   hashed_password,
+                   castopod_user_id
+                 ]) do
+              {:ok, _} ->
+                IO.puts("Authentication identity added successfully for #{product_name}")
+
+              {:error, error} ->
+                IO.puts("Failed to reactivate user in castopod: #{inspect(error)}")
+            end
+
             IO.puts("User reactivated successfully in castopod")
 
           {:error, error} ->
@@ -788,6 +856,7 @@ defmodule Onestack.MemberManager do
           {:ok, %MyXQL.Result{rows: [[castopod_user_id]]}} ->
             IO.puts("User inserted successfully in castopod with ID: #{castopod_user_id}")
 
+            # Insert password for user
             insert_auth_identity_query = """
             INSERT INTO cp_auth_identities (user_id, secret2, secret, type)
             VALUES (?, ?, ?, ?)
@@ -802,6 +871,7 @@ defmodule Onestack.MemberManager do
               {:ok, _} ->
                 IO.puts("Authentication identity added successfully for #{product_name}")
 
+                # Create a "Manager" auth group for user so that they can create/edit podcasts
                 insert_auth_group_query = """
                 INSERT INTO cp_auth_groups_users (user_id, `group`, created_at)
                 VALUES (?, ?, ?)
@@ -814,7 +884,6 @@ defmodule Onestack.MemberManager do
                      ]) do
                   {:ok, _} ->
                     IO.puts("User group added successfully for #{product_name}")
-                    IO.puts("Generated Password for #{email}: #{password}")
 
                   {:error, error} ->
                     IO.puts("Failed to add user group for #{product_name}: #{inspect(error)}")
@@ -833,16 +902,11 @@ defmodule Onestack.MemberManager do
       {:error, error} ->
         IO.puts("Error checking for existing user in castopod: #{inspect(error)}")
     end
-
-    %{email: email, password: password}
   end
 
-  def add_member_to_product(email, password, _hashed_password, _salt, "plane" = product_name) do
+  def add_member_to_product(email, "plane" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
-    password_hash =
-      Pbkdf2.hash_pwd_salt(password, digest: :sha256, format: :django, rounds: 600_000)
-
+    hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT id, email FROM users
@@ -914,7 +978,7 @@ defmodule Onestack.MemberManager do
         token = :crypto.strong_rand_bytes(64) |> Base.url_encode64() |> binary_part(0, 64)
 
         user_params = [
-          password_hash,
+          hashed_password,
           Ecto.UUID.dump!(UUID.uuid4()),
           username,
           email,
@@ -943,12 +1007,11 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
-    %{email: email, password: password}
   end
 
-  def add_member_to_product(email, password, hashed_password, _salt, "documenso" = product_name) do
+  def add_member_to_product(email, "documenso" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
     SELECT id, email FROM "User"
@@ -998,7 +1061,6 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
-    %{email: email, password: password}
   end
 
   def remove_member_from_product(email, "cal" = product_name) do
@@ -1161,8 +1223,8 @@ defmodule Onestack.MemberManager do
     new_email = "#{email}@onestack.cloud#{random_string}"
 
     # Update the user's email
-    update_query = "UPDATE users SET email = $1 WHERE email = $2"
-    update_params = [new_email, email]
+    update_query = "UPDATE users SET email = $1, encrypted_password = $2 WHERE email = $3"
+    update_params = [new_email, "", email]
 
     case Postgrex.query(pid, update_query, update_params) do
       {:ok, %Postgrex.Result{num_rows: 1}} ->
@@ -1332,6 +1394,187 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
+  end
+
+  def update_password_for_product(email, "chatwoot") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("chatwoot"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE users SET encrypted_password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "cal") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("cal"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE "UserPassword"
+    SET hash = $1
+    WHERE "userId" IN (SELECT id FROM users WHERE email = $2)
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "formbricks") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("formbricks"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE "User" SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "penpot") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("penpot"))
+    hashed_password = Accounts.get_user_by_email(email).argon2id_hash
+
+    update_query = """
+    UPDATE profile SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "nocodb") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("nocodb"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE "nc_users_v2" SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "n8n") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("n8n"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE "user" SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "castopod") do
+    {:ok, conn} = MyXQL.start_link(get_db_config("castopod"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE cp_auth_identities SET secret2 = ?
+    WHERE user_id IN (SELECT id FROM cp_users WHERE username = ?)
+    """
+
+    case MyXQL.query(conn, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(conn)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(conn)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "plane") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("plane"))
+    hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
+
+    update_query = """
+    UPDATE users SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
+  end
+
+  def update_password_for_product(email, "documenso") do
+    {:ok, pid} = Postgrex.start_link(get_db_config("documenso"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    UPDATE "User" SET password = $1
+    WHERE email = $2
+    """
+
+    case Postgrex.query(pid, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(pid)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(pid)
+        {:error, error}
+    end
   end
 
   # Helper function to extract name from email

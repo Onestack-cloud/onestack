@@ -18,7 +18,8 @@
           </path>
         </svg>
         <label>
-          Woohoo! 🎉 Your stack is being prepared as we speak. Keep an eye on your inbox - your login credentials will be in your inbox within a few minutes!
+          Woohoo! 🎉 Your stack is being prepared as we speak. <br /><br />
+          Your login details for each product on your stack are the same as your Onestack credentials.
         </label>
       </div>
     </div>
@@ -27,38 +28,25 @@
         <h2 class="card-title">Order Summary</h2>
         <div class="overflow-x-auto">
           <table class="table w-full">
-            <tbody>
-              <tr>
-                <td class="font-bold">Order ID</td>
-                <td><%= @checkout_session.id %></td>
-              </tr>
-              <tr>
-                <td class="font-bold">Total Amount</td>
-                <td>
-                  <%= Money.to_string(Money.new(@checkout_session.amount_total)) %>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <h3 class="text-xl font-semibold mt-4 mb-2">Products</h3>
-        <div class="overflow-x-auto">
-          <table class="table w-full">
             <thead>
               <tr>
-                <th>Description</th>
+                <th>Item</th>
+                <th>Details</th>
                 <th>Amount</th>
               </tr>
             </thead>
             <tbody>
               <%= for item <- @checkout_session.line_items.data do %>
                 <tr>
+                  <td>Product</td>
                   <td><%= item.description %></td>
-                  <td>
-                    <%= Money.to_string(Money.new(item.amount_total)) %>
-                  </td>
+                  <td><%= Money.to_string(Money.new(item.amount_total)) %></td>
                 </tr>
               <% end %>
+              <tr class="font-bold">
+                <td colspan="2" class="text-right">Total Amount</td>
+                <td><%= Money.to_string(Money.new(@checkout_session.amount_total)) %></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -69,3 +57,42 @@
     </div>
   </div>
 </section>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.0.3/tsparticles.confetti.bundle.min.js"
+>
+</script>
+
+<script>
+  const duration = 2 * 1000,
+    animationEnd = Date.now() + duration,
+    defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+  function randomInRange(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  // Start the confetti immediately
+  const interval = setInterval(function() {
+    const timeLeft = animationEnd - Date.now();
+
+    if (timeLeft <= 0) {
+      return clearInterval(interval);
+    }
+
+    const particleCount = 50 * (timeLeft / duration);
+
+    confetti(
+      Object.assign({}, defaults, {
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      })
+    );
+    confetti(
+      Object.assign({}, defaults, {
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      })
+    );
+  }, 250);
+</script>

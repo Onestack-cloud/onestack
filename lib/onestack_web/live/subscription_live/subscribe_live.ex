@@ -141,6 +141,7 @@ defmodule OnestackWeb.SubscribeLive do
   def handle_event("add_member", %{"email" => email}, socket) do
     current_user = socket.assigns.current_user
     combined_customer = get_combined_customer(current_user.email)
+    IO.inspect(combined_customer.products)
 
     if valid_email?(email) do
       case Teams.add_team_member(current_user, email, combined_customer.products) do
@@ -263,7 +264,7 @@ defmodule OnestackWeb.SubscribeLive do
     num_users = socket.assigns.num_users
 
     case update_subscription(combined_customer.subscription_id, action, product_id, num_users) do
-      {:ok, %Stripe.SubscriptionItem{} = _updated_item} ->
+      {:ok, %{subscription: _subscription_id} = _updated_item} ->
         # Update the cache
         Onestack.StripeCache.update_cache_for_subscription(combined_customer.subscription_id)
         # Fetch the updated subscription to get the full list of products
@@ -355,6 +356,7 @@ defmodule OnestackWeb.SubscribeLive do
       end)
 
     team_members = Teams.list_team_members(%{email: admin_email})
+    team = Onestack.Teams.get_team_by_admin(%{email: admin_email})
 
     case action do
       "add" ->
@@ -371,7 +373,9 @@ defmodule OnestackWeb.SubscribeLive do
           {:ok, subscription_item} = Stripe.SubscriptionItem.create(params)
 
           product = Enum.find(StripeCache.list_products(), &(&1.id == product_id))
-          product_name = product && product.name
+          product_name = product && String.downcase(product.name)
+
+          Onestack.Teams.update_team(team, %{products: [product_name]})
 
           Enum.each(team_members, fn member ->
             Onestack.MemberManager.add_member(member, [product_name])
@@ -389,11 +393,13 @@ defmodule OnestackWeb.SubscribeLive do
           Stripe.SubscriptionItem.delete(subscription_item.id)
 
           product = Enum.find(StripeCache.list_products(), &(&1.id == product_id))
-          product_name = product && product.name
+          product_name = product && String.downcase(product.name)
 
           Enum.each(team_members, fn member ->
             Onestack.MemberManager.remove_member(member, [product_name])
           end)
+
+          Onestack.Teams.update_team(team, %{products: List.delete(team.products, product_name)})
 
           {:ok, subscription_item}
         else
@@ -429,6 +435,23 @@ defmodule OnestackWeb.SubscribeLive do
     if Enum.empty?(socket.assigns.selected_products) do
       {:error, "No products selected"}
     else
+      user_email = socket.assigns.current_user.email
+
+      customer_params =
+        case Stripe.Customer.list(%{email: user_email, limit: 1}) do
+          {:ok, %{data: [%{id: customer_id} | _]}} ->
+            # Existing customer found, use their ID
+            %{customer: customer_id}
+
+          {:ok, %{data: []}} ->
+            # No existing customer, use email
+            %{customer_email: user_email}
+
+          {:error, _error} ->
+            # Handle Stripe API error by falling back to email
+            %{customer_email: user_email}
+        end
+
       line_items =
         Enum.map(socket.assigns.selected_products, fn product_id ->
           # Fetch the price for the product
@@ -466,7 +489,7 @@ defmodule OnestackWeb.SubscribeLive do
           payment_method_collection: :always,
           customer_email: socket.assigns.current_user.email,
           subscription_data: %{
-            trial_period_days: 14
+            trial_period_days: 7
           }
         })
       end
