@@ -84,9 +84,14 @@ defmodule Onestack.Teams do
           where: t.admin_email == ^email or ^email in t.members
       )
 
-    # Extract and flatten all products from the teams
+    # Extract and flatten all products from the teams, handling nil cases
     teams
-    |> Enum.flat_map(& &1.products)
+    |> Enum.flat_map(fn team ->
+      case team.products do
+        nil -> []
+        products -> products
+      end
+    end)
     |> Enum.uniq()
   end
 

@@ -90,11 +90,8 @@ defmodule Onestack.Accounts.User do
     user_email = get_change(changeset, :email)
 
     user_products =
-      case Onestack.Teams.list_user_products(%{email: user_email}) do
-        nil -> []
-        [] -> []
-        products -> Enum.map(products, &String.downcase/1)
-      end
+      Onestack.Teams.list_user_products(%{email: user_email})
+      |> Enum.map(&String.downcase/1)
 
     if user_products != [] do
       Enum.map(user_products, fn product_name ->
