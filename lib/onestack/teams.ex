@@ -6,7 +6,134 @@ defmodule Onestack.Teams do
   import Ecto.Query, warn: false
   alias Onestack.Repo
 
-  alias Onestack.Teams.Team
+  alias Onestack.Teams.{Team, Invitation}
+  alias Onestack.Accounts.User
+
+  # Invitation-related functions
+
+  @doc """
+  Creates a new team invitation.
+  """
+  def create_invitation(attrs) do
+    %Invitation{}
+    |> Invitation.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Gets a pending invitation for the given email address.
+  Only returns invitations that:
+  - Haven't been accepted
+  - Haven't expired
+  - Match the email exactly
+  """
+  def get_pending_invitation(invitation_id) do
+    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+
+    Invitation
+    |> where([i], i.invitation_id == ^invitation_id)
+    |> where([i], is_nil(i.accepted_at))
+    |> where([i], i.expires_at > ^now)
+    |> order_by([i], desc: i.inserted_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc """
+  Accepts an invitation and adds the user to the team.
+  """
+  def accept_invitation(%Invitation{} = invitation) do
+    Repo.transaction(fn ->
+      # Mark invitation as accepted
+      invitation
+      |> Invitation.changeset(%{
+        accepted_at: NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+      })
+      |> Repo.update!()
+
+      invitation
+    end)
+  end
+
+  @doc """
+  Lists all pending invitations for a team.
+  Useful for showing pending invitations in the UI.
+  """
+  def list_pending_invitations() do
+    now = DateTime.utc_now()
+
+    Invitation
+    |> where([i], is_nil(i.accepted_at))
+    |> where([i], i.expires_at > ^now)
+    |> order_by([i], desc: i.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Deletes an invitation.
+  Useful for canceling pending invitations.
+  """
+  def delete_invitation(%Invitation{} = invitation) do
+    Repo.delete(invitation)
+  end
+
+  @doc """
+  Checks if an email has any pending invitations.
+  """
+  def has_pending_invitation?(email) do
+    case get_pending_invitation(email) do
+      nil -> false
+      %Invitation{} -> true
+    end
+  end
+
+  @doc """
+  Cleans up expired invitations.
+  You might want to run this periodically using a scheduler like Quantum.
+  """
+  def cleanup_expired_invitations do
+    now = DateTime.utc_now()
+
+    Invitation
+    |> where([i], i.expires_at < ^now)
+    |> where([i], is_nil(i.accepted_at))
+    |> Repo.delete_all()
+  end
+
+  # Helper function to validate invitation token
+  def verify_invitation_token(token) do
+    # Implement your token verification logic here
+    # This could be useful if you're using tokens in invitation URLs
+    case Phoenix.Token.verify(OnestackWeb.Endpoint, "invitation", token, max_age: 604_800) do
+      {:ok, invitation_id} -> get_invitation(invitation_id)
+      {:error, _} -> nil
+    end
+  end
+
+  # Get a single invitation by ID
+  def get_invitation(id) do
+    Repo.get(Invitation, id)
+  end
+
+  # You might also want to add these helper functions:
+
+  @doc """
+  Resends an invitation email for a pending invitation.
+  """
+  def resend_invitation(%Invitation{} = invitation) do
+    if invitation_valid?(invitation) do
+      inviter = Repo.get!(User, invitation.inviter_id)
+      product_names = OnestackWeb.SubscribeLive.get_product_names(invitation.products)
+      Onestack.Emails.send_team_invitation_email(invitation.email, inviter, product_names)
+    else
+      {:error, :invalid_invitation}
+    end
+  end
+
+  defp invitation_valid?(%Invitation{} = invitation) do
+    now = DateTime.utc_now()
+    is_nil(invitation.accepted_at) && DateTime.compare(invitation.expires_at, now) == :gt
+  end
 
   @doc """
   Returns the list of teams.
@@ -76,22 +203,20 @@ defmodule Onestack.Teams do
   @doc """
   Lists all products that a user has access to through their team memberships.
   """
-  def list_user_products(%{email: email}) do
+  def list_user_products(email) do
     # Query all teams where the user is either an admin or a member
+    IO.inspect(email)
+
     teams =
       Repo.all(
         from t in Team,
           where: t.admin_email == ^email or ^email in t.members
       )
 
-    # Extract and flatten all products from the teams, handling nil cases
+    IO.inspect(teams)
+    # Extract and flatten all products from the teams
     teams
-    |> Enum.flat_map(fn team ->
-      case team.products do
-        nil -> []
-        products -> products
-      end
-    end)
+    |> Enum.flat_map(& &1.products)
     |> Enum.uniq()
   end
 
@@ -123,10 +248,10 @@ defmodule Onestack.Teams do
       {:error, %Ecto.Changeset{}}
 
   """
-  def add_team_member(admin_user, email, products) do
+  def add_team_member(admin_user, team_member_email, products \\ []) do
     team = get_or_create_team(admin_user)
 
-    new_members = [email | team.members]
+    new_members = [team_member_email | team.members]
     new_products = Enum.uniq(team.products ++ products)
 
     team

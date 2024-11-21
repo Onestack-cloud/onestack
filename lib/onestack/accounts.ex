@@ -354,38 +354,4 @@ defmodule Onestack.Accounts do
         {:error, changeset}
     end
   end
-
-  def create_invitation(inviter, invitee_email, job_id) do
-    %Invitation{}
-    |> Invitation.changeset(%{
-      # Use job_id as the token
-      token: job_id,
-      expires_at: DateTime.utc_now() |> DateTime.add(24 * 60 * 60, :second),
-      invitee_email: invitee_email,
-      inviter_id: inviter.id
-    })
-    |> Repo.insert()
-  end
-
-  def get_valid_invitation(token) do
-    now = DateTime.utc_now()
-
-    invitation = Repo.get_by(Invitation, token: token)
-
-    cond do
-      is_nil(invitation) ->
-        {:error, :not_found}
-
-      DateTime.compare(invitation.expires_at, now) == :lt ->
-        {:error, :expired}
-
-      not is_nil(invitation.used_at) ->
-        {:error, :already_used}
-
-      true ->
-        # Mark the invitation as used
-        {:ok, updated_invitation} = Repo.update(Ecto.Changeset.change(invitation, used_at: now))
-        {:ok, updated_invitation}
-    end
-  end
 end

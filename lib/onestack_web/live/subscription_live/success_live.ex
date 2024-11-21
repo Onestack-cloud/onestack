@@ -30,17 +30,14 @@ defmodule OnestackWeb.SuccessLive do
         update_stripe_cache(checkout_session.customer, checkout_session.subscription)
         customer_email = checkout_session.customer_details.email
 
-        case Teams.get_team_by_admin(%{email: customer_email}) do
+        case Teams.get_team_by_admin_email(customer_email) do
           nil ->
             combined_customer =
               StripeCache.list_combined_customers()
               |> Enum.find(fn customer -> customer.email == customer_email end)
 
             product_names =
-              SubscribeLive.get_product_names(
-                combined_customer.products,
-                StripeCache.list_products()
-              )
+              SubscribeLive.get_product_names(combined_customer.products)
               |> Enum.map(&String.downcase/1)
 
             IO.inspect(product_names)

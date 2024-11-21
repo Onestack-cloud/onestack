@@ -30,7 +30,6 @@
           <table class="table w-full">
             <thead>
               <tr>
-                <th>Item</th>
                 <th>Details</th>
                 <th>Amount</th>
               </tr>
@@ -38,7 +37,6 @@
             <tbody>
               <%= for item <- @checkout_session.line_items.data do %>
                 <tr>
-                  <td>Product</td>
                   <td><%= item.description %></td>
                   <td><%= Money.to_string(Money.new(item.amount_total)) %></td>
                 </tr>

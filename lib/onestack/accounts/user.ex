@@ -43,7 +43,7 @@ defmodule Onestack.Accounts.User do
     user
     |> cast(attrs, [:email, :password])
     |> validate_email(opts)
-    |> validate_password(opts)
+    |> validate_password(opts, user)
   end
 
   defp validate_email(changeset, opts) do
@@ -51,10 +51,11 @@ defmodule Onestack.Accounts.User do
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> validate_length(:email, max: 160)
+    |> update_change(:email, &String.downcase/1)
     |> maybe_validate_unique_email(opts)
   end
 
-  defp validate_password(changeset, opts) do
+  defp validate_password(changeset, opts, user) do
     changeset
     |> validate_required([:password])
     |> validate_length(:password, min: 12, max: 72)
@@ -62,10 +63,10 @@ defmodule Onestack.Accounts.User do
     # |> validate_format(:password, ~r/[a-z]/, message: "at least one lower case character")
     # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
     # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
-    |> maybe_hash_password(opts)
+    |> maybe_hash_password(opts, user)
   end
 
-  defp maybe_hash_password(changeset, opts) do
+  defp maybe_hash_password(changeset, opts, user) do
     hash_password? = Keyword.get(opts, :hash_password, true)
     password = get_change(changeset, :password)
 
@@ -80,26 +81,33 @@ defmodule Onestack.Accounts.User do
       |> put_change(:argon2id_hash, elem(PasswordHasher.hash_password(password, :argon2id), 0))
       |> put_change(:pkbdf2_hash, PasswordHasher.hash_password(password, :pkbdf2))
       |> delete_change(:password)
-      |> update_passwords_for_products()
+      |> maybe_update_passwords_for_products(user)
     else
       changeset
     end
   end
 
-  defp update_passwords_for_products(changeset) do
-    user_email = get_change(changeset, :email)
+  defp maybe_update_passwords_for_products(changeset, user) do
+    IO.inspect(changeset)
+    IO.inspect(user)
 
-    user_products =
-      Onestack.Teams.list_user_products(%{email: user_email})
-      |> Enum.map(&String.downcase/1)
+    if changeset.changes[:email] && changeset.changes[:hashed_password] do
+      changeset
+    else
+      user_email = user.email
 
-    if user_products != [] do
-      Enum.map(user_products, fn product_name ->
-        MemberManager.update_password_for_product(user_email, product_name)
-      end)
+      user_products =
+        Onestack.Teams.list_user_products(user_email)
+        |> Enum.map(&String.downcase/1)
+
+      if user_products != [] do
+        Enum.map(user_products, fn product_name ->
+          MemberManager.update_password_for_product(user_email, product_name)
+        end)
+      end
+
+      changeset
     end
-
-    changeset
   end
 
   defp maybe_validate_unique_email(changeset, opts) do
@@ -143,7 +151,7 @@ defmodule Onestack.Accounts.User do
     user
     |> cast(attrs, [:password])
     |> validate_confirmation(:password, message: "does not match password")
-    |> validate_password(opts)
+    |> validate_password(opts, user)
   end
 
   @doc """

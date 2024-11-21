@@ -5,7 +5,6 @@ defmodule Onestack.MemberManager do
   alias Onestack.{
     InvitationEmail,
     MatrixAccounts,
-    MemberManagement,
     Repo,
     Accounts
   }
@@ -1396,6 +1395,9 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
+  def update_password_for_product(_email, "matrix") do
+  end
+
   def update_password_for_product(email, "chatwoot") do
     {:ok, pid} = Postgrex.start_link(get_db_config("chatwoot"))
     hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
@@ -1619,28 +1621,7 @@ defmodule Onestack.MemberManager do
     |> List.to_string()
   end
 
-  def get_job_results(job_id, clear \\ false) do
-    results =
-      MemberManagement.MemberCredentials
-      |> where(job_id: ^job_id)
-      |> Repo.all()
-      |> Enum.map(fn cred -> {cred.product, %{email: cred.email, password: cred.password}} end)
-      |> Enum.into(%{})
-
-    if clear do
-      # Schedule the deletion after 10 seconds
-      :timer.apply_after(10_000, __MODULE__, :clear_job_results, [job_id])
-    end
-
-    results
-  end
-
   # Add this new function to handle the delayed deletion
-  def clear_job_results(job_id) do
-    MemberManagement.MemberCredentials
-    |> where(job_id: ^job_id)
-    |> Repo.delete_all()
-  end
 
   def generate_job_id, do: UUID.uuid4()
 end

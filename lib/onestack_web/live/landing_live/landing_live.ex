@@ -11,7 +11,6 @@ defmodule OnestackWeb.LandingLive do
   @impl true
   def mount(_params, session, socket) do
     products = CatalogMonthly.list_products()
-    IO.inspect(products)
 
     current_user =
       case session["user_token"] do
@@ -53,7 +52,7 @@ defmodule OnestackWeb.LandingLive do
         socket
       ) do
     selected_products_or_categories = socket.assigns.selected_products_or_categories
-    IO.inspect(product_or_category)
+    # IO.inspect(product_or_category)
 
     selected_products_or_categories =
       if product_or_category in selected_products_or_categories do
@@ -68,7 +67,7 @@ defmodule OnestackWeb.LandingLive do
     %{total_costs: total_costs, savings: savings, savings_percent: savings_percent} =
       calculate_total_costs_and_savings(selected_products_or_categories, num_users, socket)
 
-    IO.inspect(total_costs)
+    # IO.inspect(total_costs)
 
     {:noreply,
      assign(socket,

@@ -1,22 +1,40 @@
 defmodule OnestackWeb.UserRegistrationLive do
   use OnestackWeb, :live_view
 
-  alias Onestack.Accounts
-  alias Onestack.Accounts.User
+  alias Onestack.{Accounts, Teams}
 
   def render(assigns) do
     ~H"""
     <div class="mx-auto max-w-sm my-16 min-h-screen">
-      <.header class="text-center">
-        Register for an account
-        <:subtitle>
-          Already registered?
-          <.link navigate={~p"/users/log_in"} class="font-semibold text-brand hover:underline">
-            Log in
-          </.link>
-          to your account now.
-        </:subtitle>
-      </.header>
+      <%= if not is_nil(@admin_name) do %>
+        <.header class="text-center">
+          Register for an account to join <%= @admin_name %>'s stack
+        </.header>
+        <div class="my-4">
+          <div class="bg-gradient-to-r from-base-100 to-base-200 rounded-full p-1 shadow-lg border border-base-300 flex items-center justify-center space-x-6 hover:shadow-xl transition-shadow duration-300">
+            <%= for product <- @products do %>
+              <div class="flex items-center justify-center bg-base-100 rounded-full p-1 backdrop-blur-sm">
+                <img
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product)}.png"}
+                  class="h-8 w-8 mask mask-circle object-contain hover:scale-110 transition-transform duration-200"
+                  alt={product}
+                />
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% else %>
+        <.header class="text-center">
+          Register for an account
+          <:subtitle>
+            Already registered?
+            <.link navigate={~p"/users/log_in"} class="font-semibold text-brand hover:underline">
+              Log in
+            </.link>
+            to your account now.
+          </:subtitle>
+        </.header>
+      <% end %>
 
       <.simple_form
         for={@form}
@@ -55,12 +73,38 @@ defmodule OnestackWeb.UserRegistrationLive do
     """
   end
 
-  def mount(_params, _session, socket) do
-    changeset = Accounts.change_user_registration(%User{})
+  def mount(params, _session, socket) do
+    invitation_id = Map.get(params, "invitation")
+    changeset = Accounts.change_user_registration(%Accounts.User{})
+    IO.inspect(invitation_id)
+
+    {products, admin_name} =
+      if is_nil(invitation_id) do
+        {[], nil}
+      else
+        case Teams.get_pending_invitation(invitation_id) do
+          %Teams.Invitation{} = invitation ->
+            Teams.accept_invitation(invitation)
+
+            {
+              Teams.list_user_products(invitation.recipient_email),
+              Onestack.InvitationEmail.get_customer_first_name(invitation.admin_email)
+            }
+
+          nil ->
+            {[], nil}
+        end
+      end
 
     socket =
       socket
-      |> assign(trigger_submit: false, check_errors: false, page_title: "Register")
+      |> assign(
+        trigger_submit: false,
+        check_errors: false,
+        page_title: "Register",
+        products: products,
+        admin_name: admin_name
+      )
       |> assign_form(changeset)
 
     {:ok, socket, temporary_assigns: [form: nil]}
@@ -74,6 +118,16 @@ defmodule OnestackWeb.UserRegistrationLive do
         #     user,
         #     &url(~p"/users/confirm/#{&1}")
         #   )
+        case Teams.get_pending_invitation(user.email) do
+          %Teams.Invitation{} = invitation ->
+            Teams.accept_invitation(invitation, user)
+            # Process the team member addition
+            product_names = OnestackWeb.SubscribeLive.get_product_names(invitation.products)
+            Onestack.MemberManager.add_member(user.email, product_names)
+
+          nil ->
+            :ok
+        end
 
         changeset = Accounts.change_user_registration(user)
 
@@ -88,7 +142,7 @@ defmodule OnestackWeb.UserRegistrationLive do
   end
 
   def handle_event("validate", %{"user" => user_params}, socket) do
-    changeset = Accounts.change_user_registration(%User{}, user_params)
+    changeset = Accounts.change_user_registration(%Accounts.User{}, user_params)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 

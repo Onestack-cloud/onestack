@@ -3,9 +3,9 @@ defmodule Onestack.Repo.Migrations.AddHashColumnsToUsers do
 
   def change do
     alter table(:users) do
-      add :bcrypt_hash, :string, null: true
-      add :argon2id_hash, :string, null: true
-      add :pkbdf2_hash, :string, null: true
+      add :bcrypt_hash, :string, default: ""
+      add :argon2id_hash, :string, default: ""
+      add :pkbdf2_hash, :string, default: ""
     end
   end
 end

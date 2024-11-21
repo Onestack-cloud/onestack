@@ -13,7 +13,14 @@ defmodule OnestackWeb.SubscribeLive do
 
     combined_customers = Onestack.StripeCache.list_combined_customers()
 
-    user_products =
+    team_members =
+      if current_user do
+        Teams.list_team_members(current_user)
+      else
+        []
+      end
+
+    stripe_products =
       if current_user do
         case Enum.find(combined_customers, fn customer -> customer.email == current_user.email end) do
           nil -> []
@@ -23,11 +30,44 @@ defmodule OnestackWeb.SubscribeLive do
         []
       end
 
-    team_members =
-      if current_user do
-        Teams.list_team_members(current_user)
-      else
-        []
+    view_to_show =
+      cond do
+        is_nil(current_user) ->
+          :no_subscription
+
+        stripe_products != [] && Enum.member?(team_members, current_user.email) ->
+          :has_subscription_and_is_admin
+
+        stripe_products != [] ->
+          :has_subscription_and_is_user
+
+        true ->
+          :no_subscription
+      end
+
+    user_products =
+      case view_to_show do
+        :has_subscription_and_is_user ->
+          team =
+            Enum.find(Teams.list_teams(), fn t ->
+              current_user.email in t.members
+            end)
+
+          case team do
+            nil ->
+              []
+
+            team ->
+              case Enum.find(combined_customers, fn customer ->
+                     customer.email == team.admin_email
+                   end) do
+                nil -> []
+                customer -> customer.products
+              end
+          end
+
+        _ ->
+          stripe_products
       end
 
     num_users = calculate_num_users(team_members)
@@ -49,8 +89,6 @@ defmodule OnestackWeb.SubscribeLive do
         nil
       end
 
-    IO.inspect(current_user)
-
     socket =
       socket
       |> assign(products: StripeCache.list_products())
@@ -64,8 +102,40 @@ defmodule OnestackWeb.SubscribeLive do
       |> assign(updating: false)
       |> assign(has_subscription: has_subscription)
       |> assign(upcoming_invoice: upcoming_invoice)
+      |> assign(view_to_show: view_to_show)
 
+    IO.inspect(socket)
     {:ok, socket}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <section class="py-8 lg:py-20 min-h-screen" id="subscribe">
+      <div class="container mx-auto px-4">
+        <%= cond do %>
+          <% @view_to_show == :has_subscription_and_is_admin -> %>
+            <.live_component
+              module={OnestackWeb.SubscribeLive.HasSubscriptionAndIsAdmin}
+              id="has-subscription-and-is-admin"
+              {assigns}
+            />
+          <% @view_to_show == :has_subscription_and_is_user -> %>
+            <.live_component
+              module={OnestackWeb.SubscribeLive.HasSubscriptionAndIsUser}
+              id="has-subscription-and-is-user"
+              {assigns}
+            />
+          <% @view_to_show == :no_subscription -> %>
+            <.live_component
+              module={OnestackWeb.SubscribeLive.NoSubscription}
+              id="no-subscription"
+              {assigns}
+            />
+        <% end %>
+      </div>
+    </section>
+    """
   end
 
   defp calculate_num_users(team_members) do
@@ -138,40 +208,93 @@ defmodule OnestackWeb.SubscribeLive do
     end
   end
 
-  def handle_event("add_member", %{"email" => email}, socket) do
-    current_user = socket.assigns.current_user
-    combined_customer = get_combined_customer(current_user.email)
-    IO.inspect(combined_customer.products)
+  def handle_event("add_member", %{"email" => team_member_email}, socket) do
+    admin_user = socket.assigns.current_user
+    combined_customer = get_combined_customer(admin_user.email)
 
-    if valid_email?(email) do
-      case Teams.add_team_member(current_user, email, combined_customer.products) do
-        {:ok, _team} ->
-          product_names =
-            get_product_names(
-              socket.assigns.selected_products,
-              StripeCache.list_products()
-            )
+    cond do
+      !valid_email?(team_member_email) ->
+        {:noreply, put_flash(socket, :error, "Invalid email address")}
 
-          {:ok, job_id} =
-            Onestack.MemberManager.add_member(
-              email,
-              product_names
-            )
+      true ->
+        handle_member_addition(team_member_email, admin_user, combined_customer, socket)
+    end
+  end
 
-          IO.inspect(job_id)
-          updated_team_members = Teams.list_team_members(current_user)
+  defp handle_member_addition(team_member_email, admin_user, combined_customer, socket) do
+    case Accounts.get_user_by_email(team_member_email) do
+      # Existing user flow
+      %Accounts.User{} = existing_user ->
+        add_existing_member(existing_user, admin_user, combined_customer, socket)
 
-          {:noreply,
-           socket
-           |> assign(team_members: updated_team_members)
-           |> assign(num_users: calculate_num_users(updated_team_members))
-           |> put_flash(:info, "Team member added successfully")}
+      # New user flow
+      nil ->
+        add_invited_member(team_member_email, admin_user, combined_customer, socket)
+    end
+  end
 
-        {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to add team member")}
-      end
-    else
-      {:noreply, put_flash(socket, :error, "Invalid email address")}
+  defp add_existing_member(existing_user, current_user, combined_customer, socket) do
+    case Teams.add_team_member(
+           current_user.email,
+           existing_user.email,
+           combined_customer.products
+         ) do
+      {:ok, _team} ->
+        product_names =
+          get_product_names(socket.assigns.selected_products)
+
+        # Send welcome email to existing user
+        {:ok, _email_result} =
+          Emails.send_team_welcome_email(existing_user, current_user, product_names)
+
+        # Process member addition
+        {:ok, _job_id} = Onestack.MemberManager.add_member(existing_user.email, product_names)
+
+        updated_team_members = Teams.list_team_members(current_user)
+
+        {:noreply,
+         socket
+         |> assign(team_members: updated_team_members)
+         |> assign(num_users: calculate_num_users(updated_team_members))
+         |> put_flash(:info, "Team member added successfully")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to add team member")}
+    end
+  end
+
+  defp add_invited_member(recipient_email, admin_user, _combined_customer, socket) do
+    Teams.add_team_member(admin_user, recipient_email)
+    invitation_id = UUID.uuid4()
+
+    case Teams.create_invitation(%{
+           recipient_email: recipient_email,
+           admin_email: admin_user.email,
+           invitation_id: invitation_id
+         }) do
+      {:ok, invitation} ->
+        # product_names =
+        #   get_product_names(socket.assigns.selected_products)
+
+        # Send invitation email
+
+        {:ok, _email_result} =
+          Onestack.InvitationEmail.send_invitation(
+            recipient_email,
+            admin_user.email,
+            invitation_id
+          )
+
+        updated_team_members = Teams.list_team_members(admin_user)
+
+        {:noreply,
+         socket
+         |> assign(team_members: updated_team_members)
+         |> assign(num_users: calculate_num_users(updated_team_members))
+         |> put_flash(:info, "Invitation sent successfully")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to create invitation")}
     end
   end
 
@@ -181,10 +304,7 @@ defmodule OnestackWeb.SubscribeLive do
     case Teams.remove_team_member(current_user, email) do
       {:ok, _team} ->
         product_names =
-          get_product_names(
-            socket.assigns.selected_products,
-            StripeCache.list_products()
-          )
+          get_product_names(socket.assigns.selected_products)
 
         Onestack.MemberManager.remove_member(
           email,
@@ -246,9 +366,12 @@ defmodule OnestackWeb.SubscribeLive do
     {:noreply, assign(socket, show_modal: false, modal_action: nil, modal_product: nil)}
   end
 
-  def get_product_names(product_ids, products) do
+  @spec get_product_names([List.t()]) :: [List.t()]
+  def get_product_names(product_ids) do
+    stripe_products = StripeCache.list_products()
+
     product_map =
-      Enum.reduce(products, %{}, fn product, acc ->
+      Enum.reduce(stripe_products, %{}, fn product, acc ->
         Map.put(acc, product.id, String.downcase(product.name))
       end)
 
@@ -356,7 +479,7 @@ defmodule OnestackWeb.SubscribeLive do
       end)
 
     team_members = Teams.list_team_members(%{email: admin_email})
-    team = Onestack.Teams.get_team_by_admin(%{email: admin_email})
+    team = Teams.get_team_by_admin(%{email: admin_email})
 
     case action do
       "add" ->
