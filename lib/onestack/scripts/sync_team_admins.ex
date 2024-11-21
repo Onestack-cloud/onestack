@@ -43,7 +43,8 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
   end
 
   defp update_team_products(team, customer) do
-    products = get_subscription_products(customer)
+    # Pass the email string instead
+    products = get_subscription_products(customer.email)
 
     case Teams.update_team(team, %{products: products}) do
       {:ok, team} ->
