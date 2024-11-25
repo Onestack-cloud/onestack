@@ -605,7 +605,7 @@ defmodule OnestackWeb.SubscribeLive do
           payment_method_types: [:card],
           line_items: line_items,
           mode: :subscription,
-          success_url: "#{base_url}/subscribe",
+          success_url: "#{base_url}/subscribe/success?session_id={CHECKOUT_SESSION_ID}",
           cancel_url: "#{base_url}/subscribe",
           allow_promotion_codes: true,
           billing_address_collection: :required,
