@@ -55,36 +55,49 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
     end
   end
 
-  defp list_stripe_customers_with_subscriptions do
+  def list_stripe_customers_with_subscriptions do
     # Get all active subscriptions
     {:ok, %{data: subscriptions}} =
       Stripe.Subscription.list(%{
-        status: "active",
-        expand: ["data.customer"]
+        # status: "active",
+        expand: ["data.customer"],
+        limit: 9999
       })
 
-    # Extract unique customers from subscriptions
+    # Extract customers with their latest subscription
     subscriptions
+    |> Enum.sort_by(& &1.created, :desc)
     |> Enum.map(& &1.customer)
-    |> Enum.uniq_by(& &1.id)
   end
 
-  defp get_subscription_products(email) do
+  def get_subscription_products(email) do
     # Get customer by email
     {:ok, %{data: customers}} =
       Stripe.Customer.list(%{
         email: email,
-        limit: 1
+        # Get more customers to sort through
+        limit: 9999
       })
+      |> case do
+        {:ok, %{data: customers}} = response ->
+          {:ok, %{data: Enum.sort_by(customers, & &1.created, :desc)}}
+
+        error ->
+          error
+      end
 
     case customers do
       [customer | _] ->
         # Get all active subscriptions for the customer
-        {:ok, %{data: subscriptions}} =
+        {:ok, %{data: all_subscriptions}} =
           Stripe.Subscription.list(%{
-            customer: customer.id,
-            status: "active"
+            customer: customer.id
           })
+
+        subscriptions =
+          Enum.filter(all_subscriptions, fn subscription ->
+            subscription.status in ["active", "trialing"]
+          end)
 
         # Extract product IDs from subscriptions
         subscriptions
