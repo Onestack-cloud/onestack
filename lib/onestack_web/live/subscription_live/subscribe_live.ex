@@ -333,7 +333,8 @@ defmodule OnestackWeb.SubscribeLive do
     cond do
       action == "remove" and length(current_products) == 1 and
           hd(current_products) == product_id ->
-        # This is the last product and we're removing it, so cancel the subscription
+        # This is the last product and we're removing it -> cancel subscription
+        # Remove all members access and delete team
         send(self(), {:cancel_subscription})
         product = Enum.find(StripeCache.list_products(), &(&1.id == product_id))
         product_name = product && product.name
@@ -343,7 +344,9 @@ defmodule OnestackWeb.SubscribeLive do
           Onestack.MemberManager.remove_member(member, [product_name])
         end)
 
-        {:noreply, assign(socket, updating: true)}
+        Teams.delete_team(Teams.get_team_by_admin(%{email: socket.assigns.current_user.email}))
+
+        {:noreply, assign(socket, updating: true, view_to_show: :no_subscription)}
 
       true ->
         # Otherwise, proceed with the update as before
@@ -437,7 +440,7 @@ defmodule OnestackWeb.SubscribeLive do
 
     case cancel_subscription(combined_customer.subscription_id) do
       {:ok, _cancelled_subscription} ->
-        Onestack.StripeCache.update_cache_for_subscription(combined_customer.subscription_id)
+        Onestack.StripeCache.delete_subscription_from_cache(combined_customer.subscription_id)
         Process.send_after(self(), :clear_flash, 3000)
 
         {:noreply,

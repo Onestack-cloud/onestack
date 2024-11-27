@@ -121,13 +121,13 @@ defmodule Onestack.Teams do
   Resends an invitation email for a pending invitation.
   """
   def resend_invitation(%Invitation{} = invitation) do
-    if invitation_valid?(invitation) do
-      inviter = Repo.get!(User, invitation.inviter_id)
-      product_names = OnestackWeb.SubscribeLive.get_product_names(invitation.products)
-      Onestack.Emails.send_team_invitation_email(invitation.email, inviter, product_names)
-    else
-      {:error, :invalid_invitation}
-    end
+    # if invitation_valid?(invitation) do
+    #   inviter = Repo.get!(User, invitation.inviter_id)
+    #   product_names = OnestackWeb.SubscribeLive.get_product_names(invitation.products)
+    #   Onestack.Emails.send_team_invitation_email(invitation.email, inviter, product_names)
+    # else
+    #   {:error, :invalid_invitation}
+    # end
   end
 
   defp invitation_valid?(%Invitation{} = invitation) do
