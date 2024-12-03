@@ -903,6 +903,62 @@ defmodule Onestack.MemberManager do
     end
   end
 
+  def add_member_to_product(email, "kimai" = product_name) do
+    {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
+    # Check if the email exists with @onestack.cloud suffix
+    check_query =
+      "SELECT id, email FROM kimai2_users WHERE email LIKE ?"
+
+    email_pattern = "#{email}"
+
+    case MyXQL.query(conn, check_query, [email_pattern]) do
+      {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
+        # User found, reactivate by removing @onestack.cloud and random string
+        reactivate_query = "UPDATE kimai2_users SET enabled = ? WHERE id = ?"
+
+        case MyXQL.query(conn, reactivate_query, [1, user_id]) do
+          {:ok, _} ->
+            IO.puts("User reactivated successfully in #{product_name}")
+
+          {:error, error} ->
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+        end
+
+      {:ok, %MyXQL.Result{rows: []}} ->
+        # User not found, proceed with new user creation
+        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+        hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+        insert_user_query = """
+        INSERT INTO kimai2_users (username, email, password, enabled, roles, totp_enabled, system_account, registration_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
+        """
+
+        username = generate_random_string(12)
+
+        case MyXQL.query(conn, insert_user_query, [
+               username,
+               email,
+               hashed_password,
+               1,
+               "a:1:{i:0;s:10:\"ROLE_ADMIN\";}",
+               0,
+               0,
+               email_verified
+             ]) do
+          {:ok, %MyXQL.Result{rows: [[user_id]]}} ->
+            IO.puts("User inserted successfully in #{product_name} with ID: #{user_id}")
+
+          {:error, error} ->
+            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+        end
+
+      {:error, error} ->
+        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+    end
+  end
+
   def add_member_to_product(email, "plane" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
     hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
@@ -1194,8 +1250,8 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
-  def remove_member_from_product(email, "castopod") do
-    {:ok, conn} = MyXQL.start_link(get_db_config("castopod"))
+  def remove_member_from_product(email, "castopod" = product_name) do
+    {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
 
     random_string = generate_random_string(12)
     new_email = "#{email}@onestack.cloud#{random_string}"
@@ -1212,6 +1268,24 @@ defmodule Onestack.MemberManager do
 
       {:error, error} ->
         IO.puts("Error updating user in castopod: #{inspect(error)}")
+    end
+  end
+
+  def remove_member_from_product(email, "kimai" = product_name) do
+    {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
+
+    # Update the user's email
+    deactivate_query = "UPDATE kimai2_users SET enabled = 0 WHERE username = ?"
+
+    case MyXQL.query(conn, deactivate_query, [email]) do
+      {:ok, %MyXQL.Result{num_rows: 1}} ->
+        IO.puts("User deactivated successfully in #{product_name}")
+
+      {:ok, %MyXQL.Result{num_rows: 0}} ->
+        IO.puts("No user found with email #{email} in #{product_name}")
+
+      {:error, error} ->
+        IO.puts("Error updating user in #{product_name}: #{inspect(error)}")
     end
   end
 

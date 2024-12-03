@@ -82,6 +82,19 @@ defmodule Onestack.Accounts do
   end
 
   @doc """
+  Lists all users.
+
+  ## Examples
+
+      iex> list_users()
+      [%User{}, ...]
+
+  """
+  def list_users() do
+    Repo.all(User)
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking user changes.
 
   ## Examples

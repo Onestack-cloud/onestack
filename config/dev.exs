@@ -3,9 +3,11 @@ import Config
 # Configure your database
 config :onestack, Onestack.Repo,
   database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file)),
-  pool_size: 5,
+  pool_size: 15,
   stacktrace: true,
-  show_sensitive_data_on_connection_error: true
+  show_sensitive_data_on_connection_error: true,
+  queue_target: 1000,
+  queue_interval: 5000
 
 # config :onestack, Onestack.Repo,
 # username: "onestack-cal",

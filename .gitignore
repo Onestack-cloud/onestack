@@ -46,3 +46,4 @@ example-apps
 apps
 packages
 .env*
+.DS_Store

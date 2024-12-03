@@ -181,6 +181,16 @@ config :onestack,
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "plane"
       ]
+    },
+    %{
+      name: "kimai",
+      db_config: [
+        hostname: "5.78.111.23",
+        port: 5332,
+        username: "root",
+        password: "REDACTED_MARIADB_PASSWORD",
+        database: "kimai"
+      ]
     }
   ]
 
