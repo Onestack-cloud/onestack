@@ -40,7 +40,7 @@
               >
                 <%= product.name %>
                 <img
-                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                   class="h-8 mask mask-squircle ml-2"
                   alt={product.name}
                 />
@@ -58,7 +58,7 @@
               >
                 <%= product.name %>
                 <img
-                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                   class="h-8 mask mask-squircle ml-2"
                   alt={product.name}
                 />

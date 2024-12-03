@@ -8,7 +8,7 @@
         <div class="card card-compact card-bordered dark:border-gray-600 dark:bg-zinc-800 shadow-xl">
           <figure class="pt-10">
             <img
-              src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+              src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
               alt={product.name}
               class="rounded-xl h-20 object-contain"
             />

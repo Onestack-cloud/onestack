@@ -35,7 +35,7 @@ defmodule OnestackWeb.SubscribeLive.HasSubscriptionAndIsAdmin do
                       >
                         <td class="flex items-center">
                           <img
-                            src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                            src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                             class="h-8 w-8 object-contain mask mask-squircle mr-2"
                             alt={product.name}
                           />
@@ -68,7 +68,7 @@ defmodule OnestackWeb.SubscribeLive.HasSubscriptionAndIsAdmin do
                         <li class="flex items-center justify-between bg-base-200 rounded-md p-2">
                           <div class="flex items-center">
                             <img
-                              src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                              src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                               class="h-6 w-6 mask mask-squircle object-contain mr-2"
                               alt={product.name}
                             />

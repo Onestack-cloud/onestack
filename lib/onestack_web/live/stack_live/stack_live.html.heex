@@ -39,7 +39,7 @@
             <%= for product <- Enum.take_random(@products, 4) do %>
               <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                 <img
-                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                   class="w-8 h-8 rounded bg-white p-1"
                 />
                 <span class="font-medium text-gray-700 dark:text-gray-200">
@@ -100,7 +100,7 @@
             <%= for product <- Enum.take_random(@products, 4) do %>
               <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                 <img
-                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                   class="w-8 h-8 rounded bg-white p-1"
                 />
                 <span class="font-medium text-gray-700 dark:text-gray-200">
@@ -159,7 +159,7 @@
             <%= for product <- Enum.take_random(@products, 4) do %>
               <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                 <img
-                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                   class="w-8 h-8 rounded bg-white p-1"
                 />
                 <span class="font-medium text-gray-700 dark:text-gray-200">
@@ -223,7 +223,7 @@
                 </div>
                 <figure class="pt-10 px-6">
                   <img
-                    src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                    src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                     alt={product.name}
                     class="rounded-xl h-16 object-contain"
                   />
@@ -270,7 +270,7 @@
                     <div class="flex items-center justify-between bg-base-200 dark:bg-zinc-700 p-3 rounded-lg">
                       <div class="flex items-center gap-3">
                         <img
-                          src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product.name)}.png"}
+                          src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
                           alt={product.name}
                           class="w-8 h-8 object-contain bg-white p-1 rounded"
                         />
