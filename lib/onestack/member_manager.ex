@@ -1613,6 +1613,25 @@ defmodule Onestack.MemberManager do
     end
   end
 
+  def update_password_for_product(email, "kimai") do
+    {:ok, conn} = MyXQL.start_link(get_db_config("kimai"))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+
+    update_query = """
+    deactivate_query = "UPDATE kimai2_users SET enabled = 1, password = ? WHERE username = ?"
+    """
+
+    case MyXQL.query(conn, update_query, [hashed_password, email]) do
+      {:ok, result} ->
+        GenServer.stop(conn)
+        {:ok, result}
+
+      {:error, error} ->
+        GenServer.stop(conn)
+        {:error, error}
+    end
+  end
+
   def update_password_for_product(email, "plane") do
     {:ok, pid} = Postgrex.start_link(get_db_config("plane"))
     hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
