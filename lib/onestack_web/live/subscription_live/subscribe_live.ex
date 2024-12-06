@@ -15,7 +15,22 @@ defmodule OnestackWeb.SubscribeLive do
 
     team_members =
       if current_user do
-        Teams.list_team_members(current_user)
+        direct_members = Teams.list_team_members(current_user)
+
+        if direct_members == [] do
+          # Check if user is member of any teams
+          team =
+            Enum.find(Teams.list_teams(), fn t ->
+              current_user.email in t.members
+            end)
+
+          case team do
+            nil -> []
+            team -> team.members
+          end
+        else
+          direct_members
+        end
       else
         []
       end
@@ -38,10 +53,11 @@ defmodule OnestackWeb.SubscribeLive do
         stripe_products != [] && Enum.member?(team_members, current_user.email) ->
           :has_subscription_and_is_admin
 
-        stripe_products != [] ->
+        stripe_products == [] && Enum.member?(team_members, current_user.email) ->
           :has_subscription_and_is_user
 
         true ->
+          IO.puts("none of the conditions were met")
           :no_subscription
       end
 
@@ -74,7 +90,7 @@ defmodule OnestackWeb.SubscribeLive do
     has_subscription = user_products != []
 
     upcoming_invoice =
-      if has_subscription do
+      if view_to_show == :has_subscription_and_is_admin do
         stripe_customer =
           Enum.find(combined_customers, fn customer -> customer.email == current_user.email end)
 
@@ -85,8 +101,6 @@ defmodule OnestackWeb.SubscribeLive do
           subscription ->
             subscription
         end
-      else
-        nil
       end
 
     socket =
