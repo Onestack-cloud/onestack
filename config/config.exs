@@ -95,8 +95,8 @@ config :onestack,
     %{
       name: "formbricks",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "formbricks"
@@ -105,8 +105,8 @@ config :onestack,
     %{
       name: "cal",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "onestack-cal"
@@ -115,8 +115,8 @@ config :onestack,
     %{
       name: "castopod",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5332,
+        hostname: "mariadb",
+        port: 3306,
         username: "root",
         password: "REDACTED_MARIADB_PASSWORD",
         database: "castopod"
@@ -125,8 +125,8 @@ config :onestack,
     %{
       name: "n8n",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "n8n"
@@ -135,8 +135,8 @@ config :onestack,
     %{
       name: "documenso",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "documenso"
@@ -145,8 +145,8 @@ config :onestack,
     %{
       name: "nocodb",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "nocodb"
@@ -155,8 +155,8 @@ config :onestack,
     %{
       name: "chatwoot",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "chatwoot"
@@ -165,8 +165,8 @@ config :onestack,
     %{
       name: "penpot",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "penpot"
@@ -175,8 +175,8 @@ config :onestack,
     %{
       name: "plane",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5433,
+        hostname: "postgres_db",
+        port: 5432,
         username: "onestack-cal",
         password: "REDACTED_POSTGRES_PASSWORD",
         database: "plane"
@@ -185,8 +185,8 @@ config :onestack,
     %{
       name: "kimai",
       db_config: [
-        hostname: "5.78.111.23",
-        port: 5332,
+        hostname: "mariadb",
+        port: 3306,
         username: "root",
         password: "REDACTED_MARIADB_PASSWORD",
         database: "kimai"
