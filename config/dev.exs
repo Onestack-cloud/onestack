@@ -106,3 +106,107 @@ config :phoenix_live_view, :debug_heex_annotations, true
 
 # Disable swoosh api client as it is only required for production adapters.
 # config :swoosh, :api_client, false
+
+config :onestack,
+  products: [
+    %{
+      name: "formbricks",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "formbricks"
+      ]
+    },
+    %{
+      name: "cal",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "onestack-cal"
+      ]
+    },
+    %{
+      name: "castopod",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 3306,
+        username: "root",
+        password: "REDACTED_MARIADB_PASSWORD",
+        database: "castopod"
+      ]
+    },
+    %{
+      name: "n8n",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "n8n"
+      ]
+    },
+    %{
+      name: "documenso",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "documenso"
+      ]
+    },
+    %{
+      name: "nocodb",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "nocodb"
+      ]
+    },
+    %{
+      name: "chatwoot",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "chatwoot"
+      ]
+    },
+    %{
+      name: "penpot",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "penpot"
+      ]
+    },
+    %{
+      name: "plane",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5432,
+        username: "onestack-cal",
+        password: "REDACTED_POSTGRES_PASSWORD",
+        database: "plane"
+      ]
+    },
+    %{
+      name: "kimai",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 3306,
+        username: "root",
+        password: "REDACTED_MARIADB_PASSWORD",
+        database: "kimai"
+      ]
+    }
+  ]

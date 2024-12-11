@@ -104,7 +104,7 @@ defmodule OnestackWeb.UserRegistrationLive do
       else
         case Teams.get_pending_invitation(invitation_id) do
           %Teams.Invitation{} = invitation ->
-            Teams.accept_invitation(invitation)
+            # Teams.accept_invitation(invitation)
 
             {
               Teams.list_user_products(invitation.recipient_email),
@@ -123,7 +123,8 @@ defmodule OnestackWeb.UserRegistrationLive do
         check_errors: false,
         page_title: "Register",
         products: products,
-        admin_name: admin_name
+        admin_name: admin_name,
+        invitation_id: invitation_id
       )
       |> assign_form(changeset)
 
@@ -131,6 +132,8 @@ defmodule OnestackWeb.UserRegistrationLive do
   end
 
   def handle_event("save", %{"user" => user_params}, socket) do
+    invitation_id = socket.assigns.invitation_id
+
     case Accounts.register_user(user_params) do
       {:ok, user} ->
         # {:ok, _} =
@@ -138,12 +141,11 @@ defmodule OnestackWeb.UserRegistrationLive do
         #     user,
         #     &url(~p"/users/confirm/#{&1}")
         #   )
-        case Teams.get_pending_invitation(user.email) do
+        case Teams.get_pending_invitation(invitation_id) do
           %Teams.Invitation{} = invitation ->
-            Teams.accept_invitation(invitation, user)
+            Teams.accept_invitation(invitation)
             # Process the team member addition
-            product_names = OnestackWeb.SubscribeLive.get_product_names(invitation.products)
-            Onestack.MemberManager.add_member(user.email, product_names)
+            Onestack.MemberManager.add_member(user.email, socket.assigns.products)
 
           nil ->
             :ok

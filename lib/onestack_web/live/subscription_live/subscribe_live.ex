@@ -1,7 +1,7 @@
 defmodule OnestackWeb.SubscribeLive do
   use OnestackWeb, :live_view
   require Logger
-  alias Onestack.{StripeCache, Teams, Accounts}
+  alias Onestack.{StripeCache, Teams, Accounts, Emails}
 
   @impl true
   def mount(_params, session, socket) do
@@ -238,8 +238,8 @@ defmodule OnestackWeb.SubscribeLive do
   defp handle_member_addition(team_member_email, admin_user, combined_customer, socket) do
     case Accounts.get_user_by_email(team_member_email) do
       # Existing user flow
-      %Accounts.User{} = existing_user ->
-        add_existing_member(existing_user, admin_user, combined_customer, socket)
+      %Accounts.User{} = team_member ->
+        add_existing_member(team_member, admin_user, combined_customer, socket)
 
       # New user flow
       nil ->
@@ -247,10 +247,10 @@ defmodule OnestackWeb.SubscribeLive do
     end
   end
 
-  defp add_existing_member(existing_user, current_user, combined_customer, socket) do
+  defp add_existing_member(team_member, admin_user, combined_customer, socket) do
     case Teams.add_team_member(
-           current_user.email,
-           existing_user.email,
+           admin_user,
+           team_member.email,
            combined_customer.products
          ) do
       {:ok, _team} ->
@@ -258,13 +258,12 @@ defmodule OnestackWeb.SubscribeLive do
           get_product_names(socket.assigns.selected_products)
 
         # Send welcome email to existing user
-        {:ok, _email_result} =
-          Emails.send_team_welcome_email(existing_user, current_user, product_names)
-
+        # TODO: Create welcome email for existing Onestack users
+        # {:ok, _email_result} = Emails.send_team_welcome_email(admin_user, current_user, product_names)
         # Process member addition
-        {:ok, _job_id} = Onestack.MemberManager.add_member(existing_user.email, product_names)
+        {:ok, _job_id} = Onestack.MemberManager.add_member(team_member.email, product_names)
 
-        updated_team_members = Teams.list_team_members(current_user)
+        updated_team_members = Teams.list_team_members(team_member)
 
         {:noreply,
          socket
@@ -286,7 +285,7 @@ defmodule OnestackWeb.SubscribeLive do
            admin_email: admin_user.email,
            invitation_id: invitation_id
          }) do
-      {:ok, invitation} ->
+      {:ok, _invitation} ->
         # product_names =
         #   get_product_names(socket.assigns.selected_products)
 

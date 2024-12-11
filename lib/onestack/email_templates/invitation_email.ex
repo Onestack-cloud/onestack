@@ -7,8 +7,9 @@ defmodule Onestack.InvitationEmail do
   alias Onestack.Mailer
 
   def get_customer_first_name(email) do
-    with {:ok, %Stripe.List{data: customers}} <- Stripe.Customer.list(%{email: email}),
-         latest_customer <- Enum.max_by(customers, & &1.created, fn -> nil end),
+    with customers <- Onestack.StripeCache.list_customers(),
+         matching_customers <- Enum.filter(customers, fn customer -> customer.email == email end),
+         latest_customer <- Enum.max_by(matching_customers, & &1.created, fn -> nil end),
          %Stripe.Customer{name: name} when not is_nil(name) <- latest_customer,
          [first_name | _] <- String.split(name) do
       first_name
