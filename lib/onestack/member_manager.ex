@@ -1118,6 +1118,60 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
+  def add_member_to_product(email, "twenty" = product_name) do
+    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
+    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
+    # Check if the email exists with @onestack.cloud suffix
+    check_query = """
+    SELECT id, email FROM "User"
+    WHERE email LIKE $1
+    """
+
+    email_pattern = "#{email}@onestack.cloud%"
+
+    case Postgrex.query(pid, check_query, [email_pattern]) do
+      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
+        # User found, reactivate by removing @onestack.cloud and random string
+        reactivate_query = """
+        UPDATE "User" SET email = $1, password = $3 WHERE id = $2
+        """
+
+        case Postgrex.query(pid, reactivate_query, [email, user_id, hashed_password]) do
+          {:ok, _} ->
+            IO.puts("User reactivated successfully in #{product_name}")
+
+          {:error, error} ->
+            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+        end
+
+      {:ok, %Postgrex.Result{rows: []}} ->
+        # User not found, proceed with new user creation
+        name = extract_name_from_email(email)
+        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+
+        user_query = """
+        INSERT INTO "User" (name, email, "emailVerified", password, "identityProvider", roles)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+        """
+
+        user_params = [name, email, email_verified, hashed_password, "DOCUMENSO", ["USER"]]
+
+        case Postgrex.query(pid, user_query, user_params) do
+          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+
+          {:error, %Postgrex.Error{} = error} ->
+            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+        end
+
+      {:error, %Postgrex.Error{} = error} ->
+        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+    end
+
+    GenServer.stop(pid)
+  end
+
   def remove_member_from_product(email, "cal" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 

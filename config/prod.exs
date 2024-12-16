@@ -128,5 +128,15 @@ config :onestack,
         password: "REDACTED_MARIADB_PASSWORD",
         database: "kimai"
       ]
+    },
+    %{
+      name: "twenty",
+      db_config: [
+        hostname: "twenty_db",
+        port: 5432,
+        username: "postgres",
+        password: "REDACTED_TWENTY_DB_PASSWORD",
+        database: "default"
+      ]
     }
   ]

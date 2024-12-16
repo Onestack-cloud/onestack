@@ -27,7 +27,7 @@ defmodule Onestack.Teams do
   - Haven't expired
   - Match the email exactly
   """
-  def get_pending_invitation(invitation_id) do
+  def get_pending_invitation(invitation_id) when is_binary(invitation_id) do
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
 
     Invitation
@@ -38,6 +38,9 @@ defmodule Onestack.Teams do
     |> limit(1)
     |> Repo.one()
   end
+
+  # Add a clause to handle nil invitation_id
+  def get_pending_invitation(nil), do: nil
 
   @doc """
   Accepts an invitation and adds the user to the team.

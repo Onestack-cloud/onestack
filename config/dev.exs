@@ -2,7 +2,7 @@ import Config
 
 # Configure your database
 config :onestack, Onestack.Repo,
-  database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file)),
+  database: Path.expand("../prod_20240802.db", Path.dirname(__ENV__.file)),
   pool_size: 15,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -52,7 +52,7 @@ config :onestack, OnestackWeb.Endpoint,
 
 config :stripity_stripe,
   api_key:
-    "REDACTED_STRIPE_TEST_SECRET_KEY",
+    "REDACTED_STRIPE_LIVE_SECRET_KEY",
   stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
 # ## SSL Support
@@ -207,6 +207,16 @@ config :onestack,
         username: "root",
         password: "REDACTED_MARIADB_PASSWORD",
         database: "kimai"
+      ]
+    },
+    %{
+      name: "twenty",
+      db_config: [
+        hostname: "94.130.19.103",
+        port: 5420,
+        username: "postgres",
+        password: "REDACTED_TWENTY_DB_PASSWORD",
+        database: "default"
       ]
     }
   ]
