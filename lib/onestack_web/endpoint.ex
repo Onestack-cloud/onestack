@@ -7,8 +7,8 @@ defmodule OnestackWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_onestack_key",
-    signing_salt: "NnzPSuuD",
-    domain: ".#{System.get_env("PHX_HOST") || "localhost"}"]
+    signing_salt: "NnzPSuuD"
+  ]
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
