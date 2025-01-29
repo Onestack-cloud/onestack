@@ -60,7 +60,8 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    session: [domain: "." <> "localhost"]
+    check_origin: ["https://#{host}"],
+    session: [domain: "." <> host]
 
   # Configure sitemap host
   config :sitemap,

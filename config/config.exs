@@ -24,7 +24,6 @@ config :onestack, OnestackWeb.Endpoint,
     formats: [html: OnestackWeb.ErrorHTML, json: OnestackWeb.ErrorJSON],
     layout: false
   ],
-  check_origin: [System.get_env("PHX_HOST", "http://localhost:4000")],
   pubsub_server: Onestack.PubSub,
   live_view: [signing_salt: "AYfWDwt/"]
 
