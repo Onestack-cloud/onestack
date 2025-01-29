@@ -3,8 +3,8 @@ defmodule OnestackWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm my-16 min-h-screen">
-      <div class="bg-base-100 p-8 rounded-xl shadow-lg border border-base-300">
+    <div class="mx-auto max-w-md my-16 min-h-screen">
+      <div class="bg-base-200 p-8 rounded-xl shadow-lg border border-base-300">
         <div class="mb-8">
           <div class="text-4xl font-bold text-center mb-2">Welcome Back</div>
           <div class="badge badge-secondary badge-lg mx-auto block w-fit">Sign In</div>

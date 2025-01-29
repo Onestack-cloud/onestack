@@ -1,0 +1,80 @@
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+  <div class="flex flex-col">
+    <div class="flex items-center justify-between mb-8">
+      <.link navigate={~p"/"} class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+        <.icon name="hero-arrow-left" class="w-4 h-4" />
+        Back to suggestions
+      </.link>
+
+      <div class="flex items-center gap-4">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+          <span class="font-semibold text-gray-900 dark:text-white"><%= @feedback.upvotes_count %></span> Upvotes
+        </div>
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+          Status: <span class="inline-flex items-center gap-x-1.5 py-1 px-2 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"><%= @feedback.status %></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-8">
+      <div class="px-4 py-5 sm:p-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4"><%= @feedback.title %></h1>
+        <p class="text-gray-600 dark:text-gray-400 mb-4"><%= @feedback.content %></p>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <time datetime={@feedback.inserted_at}><%= OnestackWeb.FeedbackLive.Index.relative_time(@feedback.inserted_at) %></time>
+          </div>
+            <.button phx-click="upvote" phx-value-id={@feedback.id} class={"max-w-[150px] flex items-center gap-1 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 #{if @feedback.has_upvoted, do: 'bg-primary-500 text-white shadow-md', else: 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-300'}"}>
+              <.icon name="hero-chevron-up" class="w-4 h-4" />
+              <%= @feedback.upvotes_count %> Upvote<%= if @feedback.upvotes_count != 1, do: "s" %>
+            </.button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+      <div class="px-4 py-5 sm:p-6">
+        <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Comments</h2>
+          <div class="mb-6">
+            <%= if @current_user do %>
+              <.form for={@comment_form} phx-submit="save-comment" class="space-y-4">
+                <div>
+                  <.input type="textarea" field={@comment_form[:content]} placeholder="Write a comment..." class="w-full" />
+                </div>
+                <div class="flex justify-end">
+                  <.button type="submit" phx-disable-with="Posting...">Post Comment</.button>
+                </div>
+              </.form>
+            <% else %>
+              <div class="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <.link navigate={~p"/users/log_in"} class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                  Sign in to comment
+                </.link>
+              </div>
+            <% end %>
+          </div>
+
+        <div id="comments" phx-update="stream" class="space-y-4">
+          <div :for={{dom_id, comment} <- @streams.comments} id={dom_id} class="flex space-x-3">
+            <div class="flex-1 space-y-1 bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-medium text-gray-900 dark:text-white"><%= comment.user.email %></h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  <time datetime={comment.inserted_at}><%= OnestackWeb.FeedbackLive.Index.relative_time(comment.inserted_at) %></time>
+                </p>
+              </div>
+              <p class="text-sm text-gray-500 dark:text-gray-300"><%= comment.content %></p>
+              <%= if @current_user && @current_user.id == comment.user_id do %>
+                <div class="flex justify-end mt-2">
+                  <%# <button phx-click="delete-comment" phx-value-id={comment.id} class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                    Delete
+                  </button> %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

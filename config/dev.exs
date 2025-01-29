@@ -2,7 +2,7 @@ import Config
 
 # Configure your database
 config :onestack, Onestack.Repo,
-  database: Path.expand("../prod_20240802.db", Path.dirname(__ENV__.file)),
+  database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file)),
   pool_size: 15,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -29,6 +29,7 @@ config :onestack, OnestackWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: 4000],
+  url: [host: "localhost", port: 4000],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -52,7 +53,7 @@ config :onestack, OnestackWeb.Endpoint,
 
 config :stripity_stripe,
   api_key:
-    "REDACTED_STRIPE_LIVE_SECRET_KEY",
+    "REDACTED_STRIPE_TEST_SECRET_KEY",
   stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
 # ## SSL Support

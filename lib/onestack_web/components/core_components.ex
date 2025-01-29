@@ -50,7 +50,7 @@ defmodule OnestackWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-900/[.6] dark:bg-gray-900/[.8] transition-opacity" aria-hidden="true" />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -66,19 +66,19 @@ defmodule OnestackWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+              class="relative hidden rounded-xl shadow-lg bg-white dark:bg-gray-800 p-4 sm:p-7 transition"
             >
-              <div class="absolute top-6 right-5">
+              <div class="absolute top-2 right-2">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  class="flex justify-center items-center w-7 h-7 text-sm rounded-lg border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                   aria-label={gettext("close")}
                 >
-                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
+                  <.icon name="hero-x-mark-solid" class="h-4 w-4" />
                 </button>
               </div>
-              <div id={"#{@id}-content"}>
+              <div id={"#{@id}-content"} class="mt-2 text-gray-800 dark:text-gray-200">
                 <%= render_slot(@inner_block) %>
               </div>
             </.focus_wrap>
@@ -219,10 +219,12 @@ defmodule OnestackWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8">
-        <%= render_slot(@inner_block, f) %>
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
-          <%= render_slot(action, f) %>
+      <div class="p-4 sm:p-7 rounded-xl">
+        <div class="space-y-5">
+          <%= render_slot(@inner_block, f) %>
+          <div :for={action <- @actions} class="mt-5 flex items-center justify-end gap-x-2">
+            <%= render_slot(action, f) %>
+          </div>
         </div>
       </div>
     </.form>
@@ -350,7 +352,7 @@ defmodule OnestackWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class="py-3 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
         multiple={@multiple}
         {@rest}
       >
@@ -366,13 +368,13 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
-      <textarea
+      <textarea rows = "3"
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem]",
-          @errors != [] && "input-error"
+          "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600",
+          "disabled:opacity-50 disabled:pointer-events-none",
+          @errors != [] && "border-red-500 dark:border-red-400"
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -395,8 +397,7 @@ defmodule OnestackWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "grow",
-          "input input-bordered w-full mt-2",
+          "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600",
           @errors == [] && "",
           @errors != [] && "input-error",
           @class
@@ -416,7 +417,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6">
+    <label for={@for} class="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -449,10 +450,10 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8">
+        <h1 class="block text-2xl font-bold text-gray-800 dark:text-white sm:text-3xl">
           <%= render_slot(@inner_block) %>
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6">
+        <p :if={@subtitle != []} class="mt-2 text-lg text-gray-600 dark:text-gray-400">
           <%= render_slot(@subtitle) %>
         </p>
       </div>

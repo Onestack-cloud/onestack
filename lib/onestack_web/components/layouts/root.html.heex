@@ -78,7 +78,7 @@
           </label>
         </div>
         <!-- Navbar Brand logo -->
-        <a href="/">
+        <a href={OnestackWeb.URLHelper.main_domain()}>
           <img
             src="/images/logo_black_text.png"
             alt="Logo"
@@ -96,9 +96,10 @@
 
       <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal menu-sm gap-2 px-1">
-          <li class="font-medium"><a href={~p"/security"}>Security</a></li>
-          <li class="font-medium"><a href={~p"/products"}>Products</a></li>
-          <li class="font-medium"><a href={~p"/roadmap"}>Roadmap</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/security")}>Security</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/products")}>Products</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/roadmap")}>Roadmap</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.subdomain_url("feedback")}>Feature Suggestions</a></li>
         </ul>
       </div>
 
@@ -143,8 +144,8 @@
             </ul>
           </div>
         <% else %>
-          <a href={~p"/users/log_in"} class="btn btn-secondary btn-sm">Login</a>
-          <a href={~p"/users/register"} class="btn btn-primary btn-sm hidden lg:flex">
+          <a href={OnestackWeb.URLHelper.main_domain_path("/users/log_in")} class="btn btn-secondary btn-sm">Login</a>
+          <a href={OnestackWeb.URLHelper.main_domain_path("/users/register")} class="btn btn-primary btn-sm hidden lg:flex">
             Get started for free
           </a>
         <% end %>
@@ -159,7 +160,7 @@
         <ul class="menu min-h-full w-80 gap-2 bg-base-100 p-4 text-base-content">
           <!-- Navbar Brand logo -->
           <li class="font-medium">
-            <a href="/" class="text-xl font-bold">
+            <a href={OnestackWeb.URLHelper.main_domain()} class="text-xl font-bold">
               <img
                 src="/images/logo_black_text.png"
                 alt="Logo"
@@ -173,9 +174,11 @@
             </a>
           </li>
 
-          <li class="font-medium"><a href={~p"/security"}>Security</a></li>
-          <li class="font-medium"><a href={~p"/products"}>Products</a></li>
-          <li class="font-medium"><a href={~p"/roadmap"}>Roadmap</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/security")}>Security</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/products")}>Products</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.main_domain_path("/roadmap")}>Roadmap</a></li>
+          <li class="font-medium"><a href={OnestackWeb.URLHelper.subdomain_url("feedback")}>Feature Suggestions</a></li>
+
 
           <%= if @current_user do %>
             <li class="font-medium"><a href={~p"/subscribe"}>My Stack</a></li>
@@ -199,7 +202,7 @@
     <aside>
       <img src={~p"/images/logo_black_text.png"} alt="Logo" class="h-8 dark:hidden" />
       <img src={~p"/images/logo_white_text.png"} alt="Logo" class="h-8 hidden dark:block" />
-      <p>Copyright © 2024 - onestack.cloud</p>
+      <p>Copyright 2024 - onestack.cloud</p>
     </aside>
     <nav class="flex flex-col">
       <h6 class="footer-title">Legal</h6>

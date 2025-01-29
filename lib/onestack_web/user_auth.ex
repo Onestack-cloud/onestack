@@ -32,16 +32,19 @@ defmodule OnestackWeb.UserAuth do
     conn
     |> renew_session()
     |> put_token_in_session(token)
-    |> maybe_write_remember_me_cookie(token, params)
+    |> maybe_write_remember_me_cookie(token)
     |> redirect(to: user_return_to || signed_in_path(conn))
   end
 
-  defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
-    put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
-  end
-
-  defp maybe_write_remember_me_cookie(conn, _token, _params) do
-    conn
+  defp maybe_write_remember_me_cookie(conn, token) do
+    # Always write the remember me cookie
+    put_resp_cookie(conn, @remember_me_cookie, token, [
+      sign: true,
+      max_age: 60 * 60 * 24 * 365, # 1 year in seconds
+      domain: ".onestack.cloud",
+      same_site: "Lax",
+      secure: true
+    ])
   end
 
   # This function renews the session ID and erases the whole

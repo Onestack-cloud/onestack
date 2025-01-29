@@ -9,7 +9,7 @@ import Config
 
 config :sitemap,
   compress: false,
-  host: "https://onestack.cloud",
+  host: System.get_env("PHX_HOST", "http://localhost:4000"),
   files_path: Path.join(["priv", "static", "sitemap"])
 
 config :onestack,
@@ -18,13 +18,13 @@ config :onestack,
 
 # Configures the endpoint
 config :onestack, OnestackWeb.Endpoint,
-  url: [host: System.get_env("PHX_HOST")],
+  url: [host: System.get_env("PHX_HOST", "http://localhost:4000")],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: OnestackWeb.ErrorHTML, json: OnestackWeb.ErrorJSON],
     layout: false
   ],
-  check_origin: ["https://onestack.cloud", "https://dev.onestack.cloud"],
+  check_origin: [System.get_env("PHX_HOST", "http://localhost:4000")],
   pubsub_server: Onestack.PubSub,
   live_view: [signing_salt: "AYfWDwt/"]
 

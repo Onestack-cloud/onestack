@@ -7,6 +7,10 @@ import Config
 # before starting your production server.
 config :onestack, OnestackWeb.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
 
+# Set production URL and host
+config :sitemap,
+  host: "https://onestack.cloud"
+
 # Configures Swoosh API Client
 config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Onestack.Finch
 

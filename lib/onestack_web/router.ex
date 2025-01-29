@@ -8,7 +8,9 @@ defmodule OnestackWeb.Router do
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {OnestackWeb.Layouts, :root}
-    plug :protect_from_forgery
+    plug :protect_from_forgery,
+      with: :exception,
+      csrf_token: [domain: OnestackWeb.URLHelper.main_domain()]
     plug :put_secure_browser_headers
     plug :fetch_current_user
   end
@@ -19,6 +21,14 @@ defmodule OnestackWeb.Router do
 
   scope "/", OnestackWeb do
     pipe_through :browser
+
+    scope host: "feedback." do
+      # Public feedback routes
+      live "/", FeedbackLive.Index, :index
+      live "/new", FeedbackLive.Index, :new
+      # live "/:id", FeedbackLive.Show, :show
+    end
+
     live "/", LandingLive, :index
     get "/privacy", PageController, :privacy_policy
     get "/security", PageController, :security
@@ -69,6 +79,7 @@ defmodule OnestackWeb.Router do
 
     post "/users/log_in", UserSessionController, :create
   end
+
 
   scope "/", OnestackWeb do
     pipe_through [:browser, :require_authenticated_user]

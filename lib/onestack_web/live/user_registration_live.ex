@@ -5,7 +5,7 @@ defmodule OnestackWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm my-16 min-h-screen">
+    <div class="mx-auto max-w-md my-16 min-h-screen">
       <div class="bg-base-200 p-8 rounded-xl shadow-lg border border-base-300">
         <div class="mb-8">
           <div class="text-4xl font-bold text-center mb-2">Create Account</div>

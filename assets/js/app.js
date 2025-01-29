@@ -22,36 +22,35 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import Alpine from "alpinejs"
+import "preline"
 
+// Initialize Alpine.js
 window.Alpine = Alpine
 Alpine.start()
 
-let Hooks = {}
-Hooks.CopyToClipboard = {
-  mounted() {
-    this.el.addEventListener("click", e => {
-      const text = document.getElementById("formatted-data").innerText
-      navigator.clipboard.writeText(text).then(() => {
-        const feedback = document.getElementById("copy-feedback")
-        feedback.classList.remove("hidden")
-        setTimeout(() => {
-          feedback.classList.add("hidden")
-        }, 2000)
-      }).catch(err => {
-        console.error('Failed to copy: ', err)
+// Define Hooks
+const Hooks = {
+  CopyToClipboard: {
+    mounted() {
+      this.el.addEventListener("click", e => {
+        const text = document.getElementById("formatted-data").innerText
+        navigator.clipboard.writeText(text).then(() => {
+          const feedback = document.getElementById("copy-feedback")
+          feedback.classList.remove("hidden")
+          setTimeout(() => {
+            feedback.classList.add("hidden")
+          }, 2000)
+        }).catch(err => {
+          console.error('Failed to copy: ', err)
+        })
       })
-    })
+    }
   }
 }
 
-
-
-
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
-  longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: Hooks,
   dom: {
     onBeforeElUpdated(from, to) {
       if (from._x_dataStack) {
@@ -74,3 +73,17 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
+
+// Initialize Preline
+const initPreline = () => {
+  const HSStaticMethods = window.HSStaticMethods;
+  if (HSStaticMethods) {
+    HSStaticMethods.autoInit();
+  }
+}
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", initPreline);
+
+// Re-initialize after LiveView updates
+window.addEventListener("phx:update", initPreline);
