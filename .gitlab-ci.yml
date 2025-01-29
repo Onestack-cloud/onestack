@@ -16,6 +16,8 @@ build:
   services:
     - "docker:dind"
   stage: build
+  only:
+    - website
   before_script:
     - echo CI_REGISTRY_IMAGE is $CI_REGISTRY_IMAGE
     - echo CI_REGISTRY is $CI_REGISTRY
