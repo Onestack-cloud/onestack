@@ -60,7 +60,10 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    check_origin: ["https://#{host}"],
+    check_origin: [
+      "https://#{host}",
+      "https://feedback.#{host}"
+    ],
     session: [domain: "." <> host]
 
   # Configure sitemap host
