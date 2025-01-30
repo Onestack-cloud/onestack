@@ -217,7 +217,7 @@ defmodule Onestack.Accounts do
   def update_user_password(user, password, attrs) do
     changeset =
       user
-      |> User.password_changeset(attrs)
+      |> User.password_changeset(attrs, hash_password: true)
       |> User.validate_current_password(password)
 
     # Get products before transaction since we need them for the update
@@ -230,14 +230,24 @@ defmodule Onestack.Accounts do
     |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, :all))
     |> Ecto.Multi.run(:update_product_passwords, fn _repo, %{user: updated_user} ->
       if user_products != [] do
-        results = Enum.map(user_products, fn product_name ->
+        results = Enum.reduce_while(user_products, [], fn product_name, acc ->
           Logger.info("Updating password for product: #{product_name}")
-          result = MemberManager.update_password_for_product(updated_user.email, product_name)
-          Logger.info("Result for #{product_name}: #{inspect(result)}")
-          result
+          case MemberManager.update_password_for_product(updated_user.email, product_name) do
+            {:ok, result} ->
+              Logger.info("Successfully updated password for #{product_name}")
+              {:cont, [{:ok, {product_name, result}} | acc]}
+            {:error, error} ->
+              Logger.error("Failed to update password for #{product_name}: #{inspect(error)}")
+              {:halt, {:error, "Failed to update password for #{product_name}: #{inspect(error)}"}}
+          end
         end)
-        Logger.info("All update results: #{inspect(results)}")
-        {:ok, results}
+
+        case results do
+          {:error, error} -> {:error, error}
+          successful_results ->
+            Logger.info("Successfully updated all product passwords: #{inspect(successful_results)}")
+            {:ok, successful_results}
+        end
       else
         {:ok, []}
       end
