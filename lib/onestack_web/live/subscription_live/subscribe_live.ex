@@ -126,6 +126,22 @@ defmodule OnestackWeb.SubscribeLive do
   def render(assigns) do
     ~H"""
     <section class="py-8 lg:py-20 min-h-screen" id="subscribe">
+      <%= if @current_user && (!@current_user.bcrypt_hash || @current_user.bcrypt_hash == "") do %>
+        <div class="container mx-auto px-4 mb-4">
+          <div class="bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-400 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-yellow-400" />
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700 dark:text-yellow-200">
+                  Please reset your password to migrate to the new Onestack single password system. Log out and use the "Forgot Password" option to set a new password.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
       <div class="container mx-auto px-4">
         <%= cond do %>
           <% @view_to_show == :has_subscription_and_is_admin -> %>
