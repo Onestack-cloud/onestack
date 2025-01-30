@@ -2,6 +2,7 @@ defmodule Onestack.Accounts do
   @moduledoc """
   The Accounts context.
   """
+  require Logger
 
   import Ecto.Query, warn: false
   alias Onestack.Repo
@@ -230,13 +231,12 @@ defmodule Onestack.Accounts do
     |> Ecto.Multi.run(:update_product_passwords, fn _repo, %{user: updated_user} ->
       if user_products != [] do
         results = Enum.map(user_products, fn product_name ->
-          IO.puts("Updating password for product: #{product_name}")
+          Logger.info("Updating password for product: #{product_name}")
           result = MemberManager.update_password_for_product(updated_user.email, product_name)
-          IO.inspect(result, label: "Result for #{product_name}")
+          Logger.info("Result for #{product_name}: #{inspect(result)}")
           result
         end)
-        IO.puts("All update results:")
-        IO.inspect(results)
+        Logger.info("All update results: #{inspect(results)}")
         {:ok, results}
       else
         {:ok, []}

@@ -8,7 +8,7 @@ defmodule Onestack.MemberManager do
     Repo,
     Accounts
   }
-
+  require Logger
   import Ecto.Query
 
   @ets_table :member_results
@@ -84,7 +84,7 @@ defmodule Onestack.MemberManager do
 
         case HTTPoison.post(url, body) do
           {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
-            IO.puts("User created successfully in Matrix")
+            Logger.info("User created successfully in Matrix")
 
             # Parse the response body
             case Jason.decode(response_body) do
@@ -96,15 +96,15 @@ defmodule Onestack.MemberManager do
                 MatrixAccounts.create_matrix_user(%{email: email, matrix_id: user_id})
 
               {:error, _} ->
-                IO.puts("Failed to parse response body")
+                Logger.error("Failed to parse response body")
             end
 
           {:ok, %HTTPoison.Response{status_code: status_code, body: response_body}} ->
-            IO.puts("Failed to create user in Matrix. Status code: #{status_code}")
-            IO.puts("Response: #{response_body}")
+            Logger.error("Failed to create user in Matrix. Status code: #{status_code}")
+            Logger.error("Response: #{response_body}")
 
           {:error, %HTTPoison.Error{reason: reason}} ->
-            IO.puts("Error creating user in Matrix: #{inspect(reason)}")
+            Logger.error("Error creating user in Matrix: #{inspect(reason)}")
         end
 
       existing_user ->
@@ -123,16 +123,16 @@ defmodule Onestack.MemberManager do
 
         case Finch.request(request, Onestack.Finch) do
           {:ok, response} ->
-            IO.puts("Response status: #{response.status}")
-            IO.puts("Response body: #{response.body}")
+            Logger.info("Response status: #{response.status}")
+            Logger.info("Response body: #{response.body}")
 
           {:error, reason} ->
-            IO.puts("Error: #{inspect(reason)}")
+            Logger.error("Error: #{inspect(reason)}")
         end
 
         Onestack.MatrixAccounts.update_matrix_user(existing_user, %{active: true})
         # %{email: existing_user.matrix_id, password: password}
-        IO.puts("Existing user reactivated in Matrix")
+        Logger.info("Existing user reactivated in Matrix")
     end
   end
 
@@ -157,10 +157,10 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, reactivate_email_query, [email, hashed_password, user_id]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name} with ID: #{user_id}")
+            Logger.info("User reactivated successfully in #{product_name} with ID: #{user_id}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -193,7 +193,7 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, token_query, token_params) do
               {:ok, _result} ->
-                IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+                Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
                 # 2. Create new account
                 account_creation_query = """
@@ -209,7 +209,7 @@ defmodule Onestack.MemberManager do
 
                 case Postgrex.query(pid, account_creation_query, account_creation_params) do
                   {:ok, %Postgrex.Result{rows: [[account_id]]}} ->
-                    IO.puts(
+                    Logger.info(
                       "Account inserted successfully in #{product_name} with ID: #{db_user_id}"
                     )
 
@@ -225,26 +225,26 @@ defmodule Onestack.MemberManager do
                            email_verified
                          ]) do
                       {:ok, _result} ->
-                        IO.puts("Account linked successfully in #{product_name}")
+                        Logger.info("Account linked successfully in #{product_name}")
 
                       {:error, %Postgrex.Error{} = error} ->
-                        IO.puts("Failed to link account in #{product_name}: #{inspect(error)}")
+                        Logger.error("Failed to link account in #{product_name}: #{inspect(error)}")
                     end
 
                   {:error, %Postgrex.Error{} = error} ->
-                    IO.puts("Failed to insert account for #{product_name}: #{inspect(error)}")
+                    Logger.error("Failed to insert account for #{product_name}: #{inspect(error)}")
                 end
 
               {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
+                Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
             end
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -280,14 +280,14 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                IO.puts("User reactivated successfully in #{product_name} with ID: #{user_id}")
+                Logger.info("User reactivated successfully in #{product_name} with ID: #{user_id}")
 
               {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
+                Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
             end
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -314,18 +314,18 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+                Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
               {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to insert password for #{product_name}: #{inspect(error)}")
+                Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
             end
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -353,10 +353,10 @@ defmodule Onestack.MemberManager do
 
           case Postgrex.query(pid, reactivate_query, [email, user_id]) do
             {:ok, _} ->
-              IO.puts("User reactivated successfully in formbricks")
+              Logger.info("User reactivated successfully in formbricks")
 
             {:error, error} ->
-              IO.puts("Failed to reactivate user in formbricks: #{inspect(error)}")
+              Logger.error("Failed to reactivate user in formbricks: #{inspect(error)}")
           end
 
         {:ok, %Postgrex.Result{rows: []}} ->
@@ -450,14 +450,14 @@ defmodule Onestack.MemberManager do
 
           case result do
             {:ok, {_user_id, _org_id, _product_id}} ->
-              IO.puts("#{product_name} user registration complete!")
+              Logger.info("#{product_name} user registration complete!")
 
             {:error, error} ->
-              IO.puts("Failed to complete #{product_name} operations: #{inspect(error)}")
+              Logger.error("Failed to complete #{product_name} operations: #{inspect(error)}")
           end
 
         {:error, %Postgrex.Error{} = error} ->
-          IO.puts("Error checking for existing user in formbricks: #{inspect(error)}")
+          Logger.error("Error checking for existing user in formbricks: #{inspect(error)}")
       end
     after
       GenServer.stop(pid)
@@ -478,7 +478,7 @@ defmodule Onestack.MemberManager do
       case Postgrex.query(pid, check_query, [email]) do
         {:ok, %Postgrex.Result{rows: [[profile_id, is_active]]}} ->
           if is_active do
-            IO.puts("User with email #{email} already exists and is active in penpot")
+            Logger.info("User with email #{email} already exists and is active in penpot")
           else
             # User found but inactive, reactivate
             reactivate_query = """
@@ -487,10 +487,10 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, reactivate_query, [profile_id]) do
               {:ok, _} ->
-                IO.puts("User reactivated successfully in penpot")
+                Logger.info("User reactivated successfully in penpot")
 
               {:error, error} ->
-                IO.puts("Failed to reactivate user in penpot: #{inspect(error)}")
+                Logger.error("Failed to reactivate user in penpot: #{inspect(error)}")
             end
           end
 
@@ -578,14 +578,14 @@ defmodule Onestack.MemberManager do
 
           case result do
             {:ok, {_profile_id, _team_id, _project_id}} ->
-              IO.puts("#{product_name} user registration complete!")
+              Logger.info("#{product_name} user registration complete!")
 
             {:error, error} ->
-              IO.puts("Failed to complete #{product_name} operations: #{inspect(error)}")
+              Logger.error("Failed to complete #{product_name} operations: #{inspect(error)}")
           end
 
         {:error, %Postgrex.Error{} = error} ->
-          IO.puts("Error checking for existing user in penpot: #{inspect(error)}")
+          Logger.error("Error checking for existing user in penpot: #{inspect(error)}")
       end
     after
       GenServer.stop(pid)
@@ -674,34 +674,34 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, _result} ->
-            IO.puts("User inserted successfully in nocodb")
+            Logger.info("User inserted successfully in nocodb")
 
             case Postgrex.query(pid, base_query, base_params) do
               {:ok, _result} ->
-                IO.puts("Base created successfully in nocodb")
+                Logger.info("Base created successfully in nocodb")
 
                 case Postgrex.query(pid, relationship_query, relationship_params) do
                   {:ok, _result} ->
-                    IO.puts("Relationship created successfully in nocodb")
+                    Logger.info("Relationship created successfully in nocodb")
 
                     case Postgrex.query(pid, notification_query, notification_params) do
                       {:ok, _result} ->
-                        IO.puts("Notification created successfully in nocodb")
+                        Logger.info("Notification created successfully in nocodb")
 
                       {:error, %Postgrex.Error{} = error} ->
-                        IO.puts("Failed to create notification in nocodb: #{inspect(error)}")
+                        Logger.error("Failed to create notification in nocodb: #{inspect(error)}")
                     end
 
                   {:error, %Postgrex.Error{} = error} ->
-                    IO.puts("Failed to create relationship in nocodb: #{inspect(error)}")
+                    Logger.error("Failed to create relationship in nocodb: #{inspect(error)}")
                 end
 
               {:error, %Postgrex.Error{} = error} ->
-                IO.puts("Failed to create base in nocodb: #{inspect(error)}")
+                Logger.error("Failed to create base in nocodb: #{inspect(error)}")
             end
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user in nocodb: #{inspect(error)}")
+            Logger.error("Failed to insert user in nocodb: #{inspect(error)}")
         end
     end
 
@@ -778,27 +778,27 @@ defmodule Onestack.MemberManager do
 
     case result do
       {:ok, {:existing_enabled, user_id}} ->
-        IO.puts("Existing user re-enabled in #{product_name} with ID: #{inspect(user_id)}")
+        Logger.info("Existing user re-enabled in #{product_name} with ID: #{inspect(user_id)}")
 
       {:ok, {:existing_active, user_id}} ->
-        IO.puts(
+        Logger.info(
           "User already exists and is active in #{product_name} with ID: #{inspect(user_id)}"
         )
 
       {:ok, {:new_user, user_id, project_id}} ->
-        IO.puts("New user inserted successfully in #{product_name} with ID: #{inspect(user_id)}")
+        Logger.info("New user inserted successfully in #{product_name} with ID: #{inspect(user_id)}")
 
-        IO.puts("Hashed Password: #{hashed_password}")
-        IO.puts("Role: global:admin")
+        Logger.info("Hashed Password: #{hashed_password}")
+        Logger.info("Role: global:admin")
 
-        IO.puts(
+        Logger.info(
           "Project inserted successfully in #{product_name} with ID: #{inspect(project_id)}"
         )
 
-        IO.puts("Project relation inserted successfully in #{product_name}")
+        Logger.info("Project relation inserted successfully in #{product_name}")
 
       {:error, error} ->
-        IO.puts("Failed to complete #{product_name} operations: #{inspect(error)}")
+        Logger.error("Failed to complete #{product_name} operations: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -829,16 +829,16 @@ defmodule Onestack.MemberManager do
                    castopod_user_id
                  ]) do
               {:ok, _} ->
-                IO.puts("Authentication identity added successfully for #{product_name}")
+                Logger.info("Authentication identity added successfully for #{product_name}")
 
               {:error, error} ->
-                IO.puts("Failed to reactivate user in castopod: #{inspect(error)}")
+                Logger.error("Failed to reactivate user in castopod: #{inspect(error)}")
             end
 
-            IO.puts("User reactivated successfully in castopod")
+            Logger.info("User reactivated successfully in castopod")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in castopod: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in castopod: #{inspect(error)}")
         end
 
       {:ok, %MyXQL.Result{rows: []}} ->
@@ -853,7 +853,7 @@ defmodule Onestack.MemberManager do
 
         case MyXQL.query(conn, insert_user_query, [email]) do
           {:ok, %MyXQL.Result{rows: [[castopod_user_id]]}} ->
-            IO.puts("User inserted successfully in castopod with ID: #{castopod_user_id}")
+            Logger.info("User inserted successfully in castopod with ID: #{castopod_user_id}")
 
             # Insert password for user
             insert_auth_identity_query = """
@@ -868,7 +868,7 @@ defmodule Onestack.MemberManager do
                    "email_password"
                  ]) do
               {:ok, _} ->
-                IO.puts("Authentication identity added successfully for #{product_name}")
+                Logger.info("Authentication identity added successfully for #{product_name}")
 
                 # Create a "Manager" auth group for user so that they can create/edit podcasts
                 insert_auth_group_query = """
@@ -882,24 +882,24 @@ defmodule Onestack.MemberManager do
                        email_verified
                      ]) do
                   {:ok, _} ->
-                    IO.puts("User group added successfully for #{product_name}")
+                    Logger.info("User group added successfully for #{product_name}")
 
                   {:error, error} ->
-                    IO.puts("Failed to add user group for #{product_name}: #{inspect(error)}")
+                    Logger.error("Failed to add user group for #{product_name}: #{inspect(error)}")
                 end
 
               {:error, error} ->
-                IO.puts(
+                Logger.error(
                   "Failed to add authentication identity for #{product_name}: #{inspect(error)}"
                 )
             end
 
           {:error, error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, error} ->
-        IO.puts("Error checking for existing user in castopod: #{inspect(error)}")
+        Logger.error("Error checking for existing user in castopod: #{inspect(error)}")
     end
   end
 
@@ -918,10 +918,10 @@ defmodule Onestack.MemberManager do
 
         case MyXQL.query(conn, reactivate_query, [1, user_id]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name}")
+            Logger.info("User reactivated successfully in #{product_name}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %MyXQL.Result{rows: []}} ->
@@ -948,14 +948,14 @@ defmodule Onestack.MemberManager do
                email_verified
              ]) do
           {:ok, %MyXQL.Result{rows: [[user_id]]}} ->
-            IO.puts("User inserted successfully in #{product_name} with ID: #{user_id}")
+            Logger.info("User inserted successfully in #{product_name} with ID: #{user_id}")
 
           {:error, error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, error} ->
-        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
   end
 
@@ -979,10 +979,10 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, reactivate_query, [email, user_id]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name}")
+            Logger.info("User reactivated successfully in #{product_name}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -1051,14 +1051,14 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            IO.inspect("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+            Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.inspect("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.inspect("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1084,10 +1084,10 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, reactivate_query, [email, user_id, hashed_password]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name}")
+            Logger.info("User reactivated successfully in #{product_name}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -1105,14 +1105,14 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+            Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1138,10 +1138,10 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, reactivate_query, [email, user_id, hashed_password]) do
           {:ok, _} ->
-            IO.puts("User reactivated successfully in #{product_name}")
+            Logger.info("User reactivated successfully in #{product_name}")
 
           {:error, error} ->
-            IO.puts("Failed to reactivate user in #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
@@ -1159,14 +1159,14 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            IO.puts("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+            Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error checking for existing user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1186,17 +1186,17 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, password_query, [user_id]) do
           {:ok, _result} ->
-            IO.puts("Password removed for #{product_name} user")
+            Logger.info("Password removed for #{product_name} user")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
+            Logger.error("Failed to remove password for #{product_name} user: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
-        IO.puts("User not found in #{product_name}")
+        Logger.info("User not found in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error querying user in #{product_name}: #{inspect(error)}")
     end
 
     random_string = generate_random_string(12)
@@ -1212,13 +1212,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1237,13 +1237,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: 1}} ->
-        IO.puts("User disabled successfully in #{product_name} for email: #{email}")
+        Logger.info("User disabled successfully in #{product_name} for email: #{email}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to disable user in #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to disable user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1263,13 +1263,13 @@ defmodule Onestack.MemberManager do
     try do
       case Postgrex.query(pid, query, params) do
         {:ok, %Postgrex.Result{num_rows: 1}} ->
-          IO.puts("User deactivated successfully in #{product_name} for email: #{email}")
+          Logger.info("User deactivated successfully in #{product_name} for email: #{email}")
 
         {:ok, %Postgrex.Result{num_rows: 0}} ->
-          IO.puts("No user found with email #{email} in #{product_name}")
+          Logger.info("No user found with email #{email} in #{product_name}")
 
         {:error, %Postgrex.Error{} = error} ->
-          IO.puts("Failed to deactivate user in #{product_name}: #{inspect(error)}")
+          Logger.error("Failed to deactivate user in #{product_name}: #{inspect(error)}")
       end
     after
       GenServer.stop(pid)
@@ -1292,13 +1292,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1315,13 +1315,13 @@ defmodule Onestack.MemberManager do
 
     case MyXQL.query(conn, update_query, [new_email, email]) do
       {:ok, %MyXQL.Result{num_rows: 1}} ->
-        IO.puts("User deactivated successfully in castopod")
+        Logger.info("User deactivated successfully in castopod")
 
       {:ok, %MyXQL.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in castopod")
+        Logger.info("No user found with email #{email} in castopod")
 
       {:error, error} ->
-        IO.puts("Error updating user in castopod: #{inspect(error)}")
+        Logger.error("Error updating user in castopod: #{inspect(error)}")
     end
   end
 
@@ -1333,13 +1333,13 @@ defmodule Onestack.MemberManager do
 
     case MyXQL.query(conn, deactivate_query, [email]) do
       {:ok, %MyXQL.Result{num_rows: 1}} ->
-        IO.puts("User deactivated successfully in #{product_name}")
+        Logger.info("User deactivated successfully in #{product_name}")
 
       {:ok, %MyXQL.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, error} ->
-        IO.puts("Error updating user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error updating user in #{product_name}: #{inspect(error)}")
     end
   end
 
@@ -1355,13 +1355,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, update_params) do
       {:ok, %Postgrex.Result{num_rows: 1}} ->
-        IO.puts("User deactivated successfully in #{product_name}")
+        Logger.info("User deactivated successfully in #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("User not found in #{product_name}")
+        Logger.info("User not found in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error updating user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error updating user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1383,13 +1383,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: 1}} ->
-        IO.puts("User deactivated successfully in #{product_name}")
+        Logger.info("User deactivated successfully in #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to update user in #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to update user in #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1411,11 +1411,11 @@ defmodule Onestack.MemberManager do
 
     case Finch.request(request, Onestack.Finch) do
       {:ok, response} ->
-        IO.puts("Response status: #{response.status}")
-        IO.puts("Response body: #{response.body}")
+        Logger.info("Response status: #{response.status}")
+        Logger.info("Response body: #{response.body}")
 
       {:error, reason} ->
-        IO.puts("Error: #{inspect(reason)}")
+        Logger.error("Error: #{inspect(reason)}")
     end
   end
 
@@ -1433,17 +1433,17 @@ defmodule Onestack.MemberManager do
 
     #     case Postgrex.query(pid, password_query, [user_id]) do
     #       {:ok, _result} ->
-    #         IO.puts("Password removed for #{product_name} user")
+    #         Logger.info("Password removed for #{product_name} user")
 
     #       {:error, %Postgrex.Error{} = error} ->
-    #         IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
+    #         Logger.error("Failed to remove password for #{product_name} user: #{inspect(error)}")
     #     end
 
     #   {:ok, %Postgrex.Result{rows: []}} ->
-    #     IO.puts("User not found in #{product_name}")
+    #     Logger.info("User not found in #{product_name}")
 
     #   {:error, %Postgrex.Error{} = error} ->
-    #     IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+    #     Logger.error("Error querying user in #{product_name}: #{inspect(error)}")
     # end
 
     random_string = generate_random_string(12)
@@ -1459,13 +1459,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1485,17 +1485,17 @@ defmodule Onestack.MemberManager do
 
         case Postgrex.query(pid, password_query, [user_id]) do
           {:ok, _result} ->
-            IO.puts("Password removed for #{product_name} user")
+            Logger.info("Password removed for #{product_name} user")
 
           {:error, %Postgrex.Error{} = error} ->
-            IO.puts("Failed to remove password for #{product_name} user: #{inspect(error)}")
+            Logger.error("Failed to remove password for #{product_name} user: #{inspect(error)}")
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
-        IO.puts("User not found in #{product_name}")
+        Logger.info("User not found in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Error querying user in #{product_name}: #{inspect(error)}")
+        Logger.error("Error querying user in #{product_name}: #{inspect(error)}")
     end
 
     random_string = generate_random_string(12)
@@ -1511,13 +1511,13 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, query, params) do
       {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        IO.puts("#{num_rows} user(s) removed successfully from #{product_name}")
+        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
 
       {:ok, %Postgrex.Result{num_rows: 0}} ->
-        IO.puts("No user found with email #{email} in #{product_name}")
+        Logger.info("No user found with email #{email} in #{product_name}")
 
       {:error, %Postgrex.Error{} = error} ->
-        IO.puts("Failed to remove user from #{product_name}: #{inspect(error)}")
+        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
     end
 
     GenServer.stop(pid)
@@ -1537,10 +1537,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for chatwoot user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for chatwoot user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1558,10 +1560,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for cal user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for cal user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1578,10 +1582,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for formbricks user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for formbricks user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1598,10 +1604,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for penpot user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for penpot user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1618,10 +1626,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for nocodb user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for nocodb user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1638,10 +1648,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for n8n user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for n8n user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1658,10 +1670,12 @@ defmodule Onestack.MemberManager do
 
     case MyXQL.query(conn, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for castopod user: #{email}")
         GenServer.stop(conn)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for castopod user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(conn)
         {:error, error}
     end
@@ -1677,10 +1691,12 @@ defmodule Onestack.MemberManager do
 
     case MyXQL.query(conn, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for kimai user: #{email}")
         GenServer.stop(conn)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for kimai user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(conn)
         {:error, error}
     end
@@ -1697,10 +1713,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for plane user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for plane user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1717,10 +1735,12 @@ defmodule Onestack.MemberManager do
 
     case Postgrex.query(pid, update_query, [hashed_password, email]) do
       {:ok, result} ->
+        Logger.info("Successfully updated password for documenso user: #{email}")
         GenServer.stop(pid)
         {:ok, result}
 
       {:error, error} ->
+        Logger.error("Failed to update password for documenso user: #{email}. Error: #{inspect(error)}")
         GenServer.stop(pid)
         {:error, error}
     end
