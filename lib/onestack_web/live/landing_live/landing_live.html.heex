@@ -189,8 +189,9 @@
       <div class="mt-6 mx-auto flex flex-wrap justify-center">
         <template x-for="item in itemsToShow" x-bind:key="item">
           <button
-            type="checkbox"
-            x-bind:class="{'btn btn-outline btn-secondary my-0.5 mx-1 toggle-btn': true, 'btn-active': selectedItems.includes(item)}"
+            type="button"
+            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-600 dark:border-input bg-background hover:bg-primary hover:text-primary-content h-9 px-3 my-1 mx-1"
+            x-bind:class="{'bg-primary text-primary-content': selectedItems.includes(item)}"
             @click="toggleItem(item)"
             x-text="item"
           />
