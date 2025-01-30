@@ -69,6 +69,9 @@ defmodule Onestack.Accounts.User do
   defp maybe_hash_password(changeset, opts, user) do
     hash_password? = Keyword.get(opts, :hash_password, true)
     password = get_change(changeset, :password)
+    IO.inspect(changeset)
+    IO.inspect(user)
+    IO.inspect(opts)
 
     if hash_password? && password && changeset.valid? do
       changeset
@@ -87,27 +90,9 @@ defmodule Onestack.Accounts.User do
     end
   end
 
-  defp maybe_update_passwords_for_products(changeset, user) do
-    IO.inspect(changeset)
-    IO.inspect(user)
-
-    if changeset.changes[:email] && changeset.changes[:hashed_password] do
-      changeset
-    else
-      user_email = user.email
-
-      user_products =
-        Onestack.Teams.list_user_products(user_email)
-        |> Enum.map(&String.downcase/1)
-
-      if user_products != [] do
-        Enum.map(user_products, fn product_name ->
-          MemberManager.update_password_for_product(user_email, product_name)
-        end)
-      end
-
-      changeset
-    end
+  defp maybe_update_passwords_for_products(changeset, _user) do
+    # Password updates are now handled in the transaction in Accounts.update_user_password/3
+    changeset
   end
 
   defp maybe_validate_unique_email(changeset, opts) do

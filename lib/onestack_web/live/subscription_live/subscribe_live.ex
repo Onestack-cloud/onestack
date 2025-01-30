@@ -1,7 +1,7 @@
 defmodule OnestackWeb.SubscribeLive do
   use OnestackWeb, :live_view
   require Logger
-  alias Onestack.{StripeCache, Teams, Accounts, Emails}
+  alias Onestack.{StripeCache, Teams, Accounts}
 
   @impl true
   def mount(_params, session, socket) do
@@ -118,7 +118,7 @@ defmodule OnestackWeb.SubscribeLive do
       |> assign(upcoming_invoice: upcoming_invoice)
       |> assign(view_to_show: view_to_show)
 
-    IO.inspect(socket)
+    # IO.inspect(socket)
     {:ok, socket}
   end
 

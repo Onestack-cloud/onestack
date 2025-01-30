@@ -7,7 +7,6 @@ defmodule Onestack.Teams do
   alias Onestack.Repo
 
   alias Onestack.Teams.{Team, Invitation}
-  alias Onestack.Accounts.User
 
   # Invitation-related functions
 
@@ -208,7 +207,6 @@ defmodule Onestack.Teams do
   """
   def list_user_products(email) do
     # Query all teams where the user is either an admin or a member
-    IO.inspect(email)
 
     teams =
       Repo.all(
@@ -216,7 +214,6 @@ defmodule Onestack.Teams do
           where: t.admin_email == ^email or ^email in t.members
       )
 
-    IO.inspect(teams)
     # Extract and flatten all products from the teams
     teams
     |> Enum.flat_map(& &1.products)

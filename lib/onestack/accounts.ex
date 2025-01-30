@@ -7,7 +7,7 @@ defmodule Onestack.Accounts do
   alias Onestack.Repo
 
   alias Onestack.Accounts.{User, UserToken, UserNotifier}
-  alias Onestack.Subscriptions.Invitation
+  alias Onestack.MemberManager
 
   ## Database getters
 
@@ -219,13 +219,34 @@ defmodule Onestack.Accounts do
       |> User.password_changeset(attrs)
       |> User.validate_current_password(password)
 
+    # Get products before transaction since we need them for the update
+    user_products =
+      Onestack.Teams.list_user_products(user.email)
+      |> Enum.map(&String.downcase/1)
+
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)
     |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, :all))
+    |> Ecto.Multi.run(:update_product_passwords, fn _repo, %{user: updated_user} ->
+      if user_products != [] do
+        results = Enum.map(user_products, fn product_name ->
+          IO.puts("Updating password for product: #{product_name}")
+          result = MemberManager.update_password_for_product(updated_user.email, product_name)
+          IO.inspect(result, label: "Result for #{product_name}")
+          result
+        end)
+        IO.puts("All update results:")
+        IO.inspect(results)
+        {:ok, results}
+      else
+        {:ok, []}
+      end
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
+      {:error, :update_product_passwords, error, _} -> {:error, error}
     end
   end
 
