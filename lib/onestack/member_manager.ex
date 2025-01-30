@@ -146,7 +146,12 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    # Handle both cases: emails already ending with @onestack.cloud and those that don't
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -261,7 +266,11 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -342,7 +351,11 @@ defmodule Onestack.MemberManager do
       WHERE email LIKE $1
       """
 
-      email_pattern = "#{email}@onestack.cloud%"
+      email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
       case Postgrex.query(pid, check_query, [email_pattern]) do
         {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -601,7 +614,11 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query!(pid, check_query, [email_pattern]) do
       %Postgrex.Result{num_rows: 1, rows: [[disabled_email]]} ->
@@ -811,7 +828,11 @@ defmodule Onestack.MemberManager do
     check_query =
       "SELECT id, username FROM cp_users WHERE username LIKE ?"
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case MyXQL.query(conn, check_query, [email_pattern]) do
       {:ok, %MyXQL.Result{rows: [[castopod_user_id, _disabled_email]]}} ->
@@ -909,7 +930,11 @@ defmodule Onestack.MemberManager do
     check_query =
       "SELECT id, email FROM kimai2_users WHERE email LIKE ?"
 
-    email_pattern = "#{email}"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case MyXQL.query(conn, check_query, [email_pattern]) do
       {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -968,7 +993,11 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -1073,7 +1102,11 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -1127,7 +1160,11 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = "#{email}@onestack.cloud%"
+    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
+      "#{email}%"  # For emails already ending in @onestack.cloud
+    else
+      "#{email}@onestack.cloud%"  # For regular emails
+    end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
