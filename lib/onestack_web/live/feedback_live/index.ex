@@ -172,4 +172,14 @@ defmodule OnestackWeb.FeedbackLive.Index do
       true -> Calendar.strftime(datetime, "%B %d, %Y")
     end
   end
+
+  defp truncate_url(url, max_length: max_length) do
+    if String.length(url) <= max_length do
+      url
+    else
+      truncated = String.slice(url, 0, max_length - 3)
+      truncated <> "..."
+    end
+  end
+
 end
