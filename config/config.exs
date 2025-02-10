@@ -9,7 +9,6 @@ import Config
 
 config :sitemap,
   compress: false,
-  host: System.get_env("PHX_HOST", "http://localhost:4000"),
   files_path: Path.join(["priv", "static", "sitemap"])
 
 config :onestack,

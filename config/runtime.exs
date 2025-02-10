@@ -62,7 +62,8 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: [
       "https://#{host}",
-      "https://feedback.#{host}"
+      "https://feedback.#{host}",
+      "https://app.#{host}"
     ],
     session: [domain: "." <> host]
 

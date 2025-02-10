@@ -1,0 +1,260 @@
+<div class="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+  <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-12">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-900 dark:text-white">
+            Products
+          </h1>
+          <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+            Manage and discover software tools for your team
+          </p>
+        </div>
+        <button class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-full hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm">
+          <.icon name="hero-plus" class="w-4 h-4" />
+          Add New Product
+        </button>
+      </div>
+
+      <!-- Summary Cards with Smooth Gradients -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-1">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-blue-600 dark:text-blue-400">Active Products</p>
+                <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                  <%= length(@active_products) %>
+                </h3>
+              </div>
+              <div class="rounded-full p-3 bg-blue-50 dark:bg-blue-900/30">
+                <.icon name="hero-cube" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <.icon name="hero-arrow-up" class="w-4 h-4 text-green-500" />
+              <span>12% more than last month</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 p-1">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-green-600 dark:text-green-400">Monthly Savings</p>
+                <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+                  <%= @total_monthly_savings %>
+                </h3>
+              </div>
+              <div class="rounded-full p-3 bg-green-50 dark:bg-green-900/30">
+                <.icon name="hero-banknotes" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <.icon name="hero-arrow-up" class="w-4 h-4 text-green-500" />
+              <span>28% increase in savings</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 p-1">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-purple-600 dark:text-purple-400">Active Users</p>
+                <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">1,234</h3>
+              </div>
+              <div class="rounded-full p-3 bg-purple-50 dark:bg-purple-900/30">
+                <.icon name="hero-users" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <.icon name="hero-arrow-up" class="w-4 h-4 text-green-500" />
+              <span>45 new this week</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-8">
+      <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="flex space-x-8" aria-label="Products">
+          <button
+            phx-click="set_tab"
+            phx-value-tab="active"
+            class={[
+              "whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm",
+              @current_tab == "active" && "border-blue-500 text-blue-600 dark:text-blue-400",
+              @current_tab != "active" && "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            ]}
+          >
+            Active Products
+            <span class={[
+              "ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium",
+              @current_tab == "active" && "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
+              @current_tab != "active" && "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
+            ]}>
+              <%= length(@active_products) %>
+            </span>
+          </button>
+
+          <button
+            phx-click="set_tab"
+            phx-value-tab="available"
+            class={[
+              "whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm",
+              @current_tab == "available" && "border-blue-500 text-blue-600 dark:text-blue-400",
+              @current_tab != "available" && "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            ]}
+          >
+            Available Products
+            <span class={[
+              "ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium",
+              @current_tab == "available" && "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
+              @current_tab != "available" && "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
+            ]}>
+              <%= length(@available_products) %>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="mt-6">
+      <%= if @current_tab == "active" do %>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <%= for product <- @active_products do %>
+            <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200">
+              <div class="absolute -top-3 -right-3 z-10">
+                <%= if product.status == :warning do %>
+                  <div class="bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
+                    Near Limit
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="p-6">
+                <div class="flex items-center gap-4 mb-6">
+                  <div class={[
+                    "relative p-3 rounded-xl",
+                    product_category_color(product.category)
+                  ]}>
+                    <.icon name={product_category_icon(product.category)} class="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                      <%= product.name %>
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      <%= product.category %>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex justify-between text-sm mb-2">
+                      <span class="text-gray-600 dark:text-gray-300">Active Users</span>
+                      <span class="font-medium text-gray-900 dark:text-white">
+                        <%= product.active_users %>/<%= product.total_seats %>
+                      </span>
+                    </div>
+                    <div class="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-gray-700">
+                      <div
+                        class={[
+                          "absolute h-full rounded-full transition-all duration-500",
+                          usage_color(product.active_users / product.total_seats)
+                        ]}
+                        style={"width: #{product.active_users / product.total_seats * 100}%"}
+                      />
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                      <div class="flex -space-x-2">
+                        <%= for _ <- 1..3 do %>
+                          <div class="w-7 h-7 rounded-full bg-gray-200 border-2 border-white dark:border-gray-800"></div>
+                        <% end %>
+                        <div class="w-7 h-7 rounded-full bg-gray-100 border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                          <span class="text-xs text-gray-600">+12</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-sm">
+                      <span class="text-green-600 dark:text-green-400 font-medium">
+                        <%= product.monthly_savings %>
+                      </span>
+                      <span class="text-gray-500 dark:text-gray-400">
+                        saved/mo
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <%= for product <- @available_products do %>
+            <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200 overflow-hidden">
+              <%= if product.trending do %>
+                <div class="absolute top-4 right-4">
+                  <div class="bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
+                    Trending
+                  </div>
+                </div>
+              <% end %>
+
+              <div class="p-6">
+                <div class="flex items-center gap-4 mb-6">
+                  <div class={[
+                    "relative p-3 rounded-xl",
+                    product_category_color(product.category)
+                  ]}>
+                    <.icon name={product_category_icon(product.category)} class="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                      <%= product.name %>
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      <%= product.category %>
+                    </p>
+                  </div>
+                </div>
+
+                <p class="text-gray-600 dark:text-gray-300 text-sm mb-6">
+                  <%= product.description %>
+                </p>
+
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-300">Starting from</span>
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      <%= "$200" %>/mo
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+
+              <div class="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700/50">
+                <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors duration-200">
+                  <.icon name="hero-plus" class="w-4 h-4" />
+                  Add to Stack
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -35,7 +35,12 @@ defmodule Onestack.PaymentsTest do
 
     test "update_payment/2 with valid data updates the payment" do
       payment = payment_fixture()
-      update_attrs = %{name: "some updated name", amount: 43, payment_intent_id: "some updated payment_intent_id"}
+
+      update_attrs = %{
+        name: "some updated name",
+        amount: 43,
+        payment_intent_id: "some updated payment_intent_id"
+      }
 
       assert {:ok, %Payment{} = payment} = Payments.update_payment(payment, update_attrs)
       assert payment.name == "some updated name"

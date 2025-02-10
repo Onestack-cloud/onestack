@@ -23,7 +23,9 @@ defmodule Onestack.SubscriptionsTest do
     test "create_subscription/1 with valid data creates a subscription" do
       valid_attrs = %{status: "some status"}
 
-      assert {:ok, %Subscription{} = subscription} = Subscriptions.create_subscription(valid_attrs)
+      assert {:ok, %Subscription{} = subscription} =
+               Subscriptions.create_subscription(valid_attrs)
+
       assert subscription.status == "some status"
     end
 
@@ -35,13 +37,18 @@ defmodule Onestack.SubscriptionsTest do
       subscription = subscription_fixture()
       update_attrs = %{status: "some updated status"}
 
-      assert {:ok, %Subscription{} = subscription} = Subscriptions.update_subscription(subscription, update_attrs)
+      assert {:ok, %Subscription{} = subscription} =
+               Subscriptions.update_subscription(subscription, update_attrs)
+
       assert subscription.status == "some updated status"
     end
 
     test "update_subscription/2 with invalid data returns error changeset" do
       subscription = subscription_fixture()
-      assert {:error, %Ecto.Changeset{}} = Subscriptions.update_subscription(subscription, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Subscriptions.update_subscription(subscription, @invalid_attrs)
+
       assert subscription == Subscriptions.get_subscription!(subscription.id)
     end
 
@@ -75,7 +82,11 @@ defmodule Onestack.SubscriptionsTest do
     end
 
     test "create_customer/1 with valid data creates a customer" do
-      valid_attrs = %{email: "some email", customer_id: "some customer_id", products: ["option1", "option2"]}
+      valid_attrs = %{
+        email: "some email",
+        customer_id: "some customer_id",
+        products: ["option1", "option2"]
+      }
 
       assert {:ok, %Customer{} = customer} = Subscriptions.create_customer(valid_attrs)
       assert customer.email == "some email"
@@ -89,7 +100,12 @@ defmodule Onestack.SubscriptionsTest do
 
     test "update_customer/2 with valid data updates the customer" do
       customer = customer_fixture()
-      update_attrs = %{email: "some updated email", customer_id: "some updated customer_id", products: ["option1"]}
+
+      update_attrs = %{
+        email: "some updated email",
+        customer_id: "some updated customer_id",
+        products: ["option1"]
+      }
 
       assert {:ok, %Customer{} = customer} = Subscriptions.update_customer(customer, update_attrs)
       assert customer.email == "some updated email"

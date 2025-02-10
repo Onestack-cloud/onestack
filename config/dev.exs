@@ -1,5 +1,10 @@
 import Config
 
+# Configure sitemap host for development
+config :sitemap,
+  host: "http://localhost:4000"
+
+
 # Configure your database
 config :onestack, Onestack.Repo,
   database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file)),
@@ -53,7 +58,7 @@ config :onestack, OnestackWeb.Endpoint,
 
 config :stripity_stripe,
   api_key:
-    "REDACTED_STRIPE_TEST_SECRET_KEY",
+    "REDACTED_STRIPE_LIVE_SECRET_KEY",
   stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
 # ## SSL Support
