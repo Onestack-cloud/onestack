@@ -3,13 +3,13 @@
   <link rel="icon" type="image/png" sizes="32x32" href={~p"/images/favicon-32x32.png"} />
   <link rel="icon" type="image/png" sizes="16x16" href={~p"/images/favicon-16x16.png"} />
   <link rel="manifest" href={~p"/site.webmanifest"} />
-  <script src="./node_modules/preline/dist/preline.js">
-  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
-  <meta property="og:type" content="Subscription Infrastructure" />
+  <meta property="og:type" content="SaaS, Simplified" />
   <meta property="og:title" content="Onestack" />
+  <script src={~p"/images/preline.js"}>
+  </script>
   <meta
     property="og:description"
     content="One place for all the software you use, making life simpler."
@@ -20,22 +20,11 @@
     property="og:image:secure_url"
     content="https://onestack.cloud/images/test_og_preview.png"
   />
-  <script>
-    const html = document.querySelector('html');
-    const isLightOrAuto = localStorage.getItem('hs_theme') === 'light' || (localStorage.getItem('hs_theme') === 'auto' && !window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const isDarkOrAuto = localStorage.getItem('hs_theme') === 'dark' || (localStorage.getItem('hs_theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-    if (isLightOrAuto && html.classList.contains('dark')) html.classList.remove('dark');
-    else if (isDarkOrAuto && html.classList.contains('light')) html.classList.remove('light');
-    else if (isDarkOrAuto && !html.classList.contains('dark')) html.classList.add('dark');
-    else if (isLightOrAuto && !html.classList.contains('light')) html.classList.add('light');
-  </script>
-
-  <body class="bg-white dark:bg-neutral-900">
+  <body>
     <div>
-      <%= @inner_content %>
-
       <.flash_group flash={@flash} />
+      <%= @inner_content %>
     </div>
   </body>
 </html>

@@ -6,10 +6,13 @@ const fs = require("fs");
 const path = require("path");
 
 module.exports = {
+  darkMode: 'media',
   content: [
     "./js/**/*.js",
     "../lib/onestack_web.ex",
     "../lib/onestack_web/**/*.*ex",
+    "node_modules/preline/dist/*.js",
+    './node_modules/flowbite/**/*.js'
   ],
   theme: {
     extend: {
@@ -17,10 +20,7 @@ module.exports = {
       //   brand: "#FD4F00",
       // },
       fontFamily: {
-        pixel_title: ["VT323", "sans-serif"],
-        sans: ["DM Sans", "sans-serif"],
-        body: ["'DM Sans'", "sans-serif"],
-      },
+        pixel_title: ["VT323", "sans-serif"],},
     },
     container: {
       center: true,
@@ -38,6 +38,8 @@ module.exports = {
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),
     require("preline/plugin"),
+    require('flowbite/plugin'),
+
     // require("daisyui"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:

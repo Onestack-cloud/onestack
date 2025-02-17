@@ -1,4 +1,4 @@
-<section class="py-8 lg:py-20 min-h-screen bg-gray-50 dark:bg-gray-900" id="products">
+<section class="py-8 lg:py-20 min-h-screen" id="products">
   <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
     <div class="max-w-2xl mx-auto text-center mb-10 lg:mb-14">
       <h2 class="text-3xl font-bold md:text-4xl md:leading-tight text-gray-800 dark:text-gray-200">
@@ -8,12 +8,12 @@
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <%= for product <- @products do %>
-        <div class="group flex flex-col h-full bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-slate-900 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+        <div class="group flex flex-col h-full bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-900 dark:border-gray-700 dark:shadow-slate-700/[.7]">
           <div class="p-4 md:p-6">
             <%!-- Tag Section --%>
             <%= if get_in(product.metadata, [:tag]) do %>
               <div class="flex items-center gap-2 mb-6">
-                <span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <span class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-gray-900 dark:text-blue-200">
                   <%= product.metadata.tag %>
                 </span>
               </div>

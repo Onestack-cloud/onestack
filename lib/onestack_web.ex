@@ -17,7 +17,7 @@ defmodule OnestackWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico sitemap robots.txt site.webmanifest)
+  def static_paths, do: ~w(assets fonts images node_modules favicon.ico sitemap robots.txt site.webmanifest videos)
 
   def router do
     quote do

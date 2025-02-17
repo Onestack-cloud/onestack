@@ -1,6 +1,8 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import "tailwindcss" source("../..");
+
+@theme {
+    --font-sans: "DM Sans", "sans-serif";
+}
 
 /* This file is for your main application CSS */
 /* @font-face {

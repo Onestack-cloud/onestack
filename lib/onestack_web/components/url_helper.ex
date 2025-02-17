@@ -4,8 +4,9 @@ defmodule OnestackWeb.URLHelper do
   """
   def main_domain do
     host = Application.get_env(:sitemap, :host)
+
     case host do
-      "http://localhost:4000" -> host
+      "http://localhost:4000" -> "localhost"
       _ -> String.trim_trailing(host, "/")
     end
   end
@@ -15,7 +16,12 @@ defmodule OnestackWeb.URLHelper do
   """
   def main_domain_path(path) do
     path = if String.starts_with?(path, "/"), do: path, else: "/" <> path
-    main_domain() <> path
+    host = Application.get_env(:sitemap, :host)
+
+    case host do
+      "http://localhost:4000" -> "http://localhost:4000" <> path
+      _ -> main_domain() <> path
+    end
   end
 
   @doc """
@@ -23,12 +29,17 @@ defmodule OnestackWeb.URLHelper do
   """
   def subdomain_url(subdomain) do
     host = Application.get_env(:sitemap, :host)
+
     case host do
-      "http://localhost:4000" -> "http://#{subdomain}.localhost:4000"
+      "http://localhost:4000" ->
+        "http://#{subdomain}.localhost:4000"
+
       _ ->
-        base_domain = host
+        base_domain =
+          host
           |> String.replace_prefix("https://", "")
           |> String.replace_prefix("http://", "")
+
         "https://#{subdomain}.#{base_domain}"
     end
   end

@@ -4,7 +4,6 @@ import Config
 config :sitemap,
   host: "http://localhost:4000"
 
-
 # Configure your database
 config :onestack, Onestack.Repo,
   database: Path.expand("../onestack_dev.db", Path.dirname(__ENV__.file)),
@@ -31,14 +30,18 @@ config :onestack, Onestack.Repo,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :onestack, OnestackWeb.Endpoint,
+  url: [host: ".localhost", port: 4000],
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
-  url: [host: "localhost", port: 4000],
+  http: [
+    ip: {127, 0, 0, 1},
+    port: 4000
+  ],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "REDACTED_SECRET_KEY_BASE",
+  session: [domain: ".localhost", key: "_onestack_key", signing_salt: "NnzPSuuD"],
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:onestack, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:onestack, ~w(--watch)]}
@@ -52,13 +55,15 @@ config :onestack, OnestackWeb.Endpoint,
     ],
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"lib/onestack_web/controllers/.*(ex|heex)$"
+      ~r"lib/onestack_web/controllers/.*(ex|heex)$",
+      ~r"lib/onestack_web/live/.*(ex|heex)$",
+      ~r"priv/gettext/.*(po)$"
     ]
   ]
 
 config :stripity_stripe,
   api_key:
-    "REDACTED_STRIPE_LIVE_SECRET_KEY",
+    "REDACTED_STRIPE_TEST_SECRET_KEY",
   stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
 
 # ## SSL Support
@@ -85,14 +90,14 @@ config :stripity_stripe,
 # different ports.
 
 # Watch static and templates for browser reloading.
-config :onestack, OnestackWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/onestack_web/(controllers|live|components)/.*(ex|heex)$"
-    ]
-  ]
+# config :onestack, OnestackWeb.Endpoint,
+#   live_reload: [
+#     patterns: [
+#       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
+#       ~r"priv/gettext/.*(po)$",
+#       ~r"lib/onestack_web/(controllers|live|components)/.*(ex|heex)$"
+#     ]
+#   ]
 
 # Enable dev routes for dashboard and mailbox
 config :onestack, dev_routes: true

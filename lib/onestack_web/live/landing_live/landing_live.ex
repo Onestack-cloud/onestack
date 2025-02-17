@@ -11,12 +11,15 @@ defmodule OnestackWeb.LandingLive do
   @impl true
   def mount(_params, session, socket) do
     products = CatalogMonthly.list_products()
+    features = CatalogMonthly.Features.all_features()
 
     current_user =
       case session["user_token"] do
         nil -> nil
         user_token -> Accounts.get_user_by_session_token(user_token)
       end
+
+    socket = assign(socket, :features, features)
 
     if current_user do
       {:ok, push_redirect(socket, to: ~p"/subscribe")}

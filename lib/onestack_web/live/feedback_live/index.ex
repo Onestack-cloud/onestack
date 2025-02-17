@@ -5,6 +5,7 @@ defmodule OnestackWeb.FeedbackLive.Index do
   @impl true
   def mount(_params, session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Onestack.PubSub, "feedbacks")
+
     current_user =
       case session["user_token"] do
         nil -> nil
@@ -28,22 +29,28 @@ defmodule OnestackWeb.FeedbackLive.Index do
     require Logger
     Logger.info("Loading feedbacks with sort: #{inspect(socket.assigns.sort)}")
 
-    feedbacks = Feedback.list_feedbacks(
-      socket.assigns.sort,
-      socket.assigns.search_query
-    )
+    feedbacks =
+      Feedback.list_feedbacks(
+        socket.assigns.sort,
+        socket.assigns.search_query
+      )
 
     Logger.info("Loaded #{length(feedbacks)} feedbacks")
 
-    feedbacks = if socket.assigns.current_user do
-      Enum.map(feedbacks, fn feedback ->
-        Map.put(feedback, :has_upvoted, Feedback.has_upvoted?(feedback, socket.assigns.current_user.id))
-      end)
-    else
-      Enum.map(feedbacks, fn feedback ->
-        Map.put(feedback, :has_upvoted, false)
-      end)
-    end
+    feedbacks =
+      if socket.assigns.current_user do
+        Enum.map(feedbacks, fn feedback ->
+          Map.put(
+            feedback,
+            :has_upvoted,
+            Feedback.has_upvoted?(feedback, socket.assigns.current_user.id)
+          )
+        end)
+      else
+        Enum.map(feedbacks, fn feedback ->
+          Map.put(feedback, :has_upvoted, false)
+        end)
+      end
 
     socket
     |> stream(:feedbacks, feedbacks, reset: true)
@@ -89,6 +96,7 @@ defmodule OnestackWeb.FeedbackLive.Index do
 
       user ->
         feedback = Onestack.Feedback.get_feedback!(id)
+
         case Onestack.Feedback.toggle_upvote(feedback, user) do
           {:ok, _} -> {:noreply, load_feedbacks(socket)}
           {:error, _} -> {:noreply, socket}
@@ -107,6 +115,7 @@ defmodule OnestackWeb.FeedbackLive.Index do
         socket
         |> put_flash(:error, "You must be logged in to create a suggestion.")
         |> redirect(to: ~p"/users/log_in")
+
       _user ->
         socket
         |> assign(:page_title, "New feature suggestion")
@@ -133,11 +142,17 @@ defmodule OnestackWeb.FeedbackLive.Index do
 
   @impl true
   def handle_info({:feedback_created, feedback}, socket) do
-    feedback = if socket.assigns.current_user do
-      Map.put(feedback, :has_upvoted, Feedback.has_upvoted?(feedback, socket.assigns.current_user.id))
-    else
-      Map.put(feedback, :has_upvoted, false)
-    end
+    feedback =
+      if socket.assigns.current_user do
+        Map.put(
+          feedback,
+          :has_upvoted,
+          Feedback.has_upvoted?(feedback, socket.assigns.current_user.id)
+        )
+      else
+        Map.put(feedback, :has_upvoted, false)
+      end
+
     {:noreply, stream_insert(socket, :feedbacks, feedback)}
   end
 
@@ -148,8 +163,10 @@ defmodule OnestackWeb.FeedbackLive.Index do
 
   defp search_feedbacks(query, nil), do: query
   defp search_feedbacks(query, ""), do: query
+
   defp search_feedbacks(query, search_query) do
     search_query = String.downcase(search_query)
+
     Enum.filter(query, fn feedback ->
       String.contains?(String.downcase(feedback.title), search_query) ||
         String.contains?(String.downcase(feedback.content), search_query)
@@ -158,12 +175,15 @@ defmodule OnestackWeb.FeedbackLive.Index do
 
   defp relative_time(datetime) do
     now = DateTime.utc_now()
-    datetime = case datetime do
-      %NaiveDateTime{} -> DateTime.from_naive!(datetime, "Etc/UTC")
-      %DateTime{} -> datetime
-    end
+
+    datetime =
+      case datetime do
+        %NaiveDateTime{} -> DateTime.from_naive!(datetime, "Etc/UTC")
+        %DateTime{} -> datetime
+      end
 
     diff = DateTime.diff(now, datetime, :second)
+
     cond do
       diff < 60 -> "just now"
       diff < 3600 -> "#{div(diff, 60)}m ago"
@@ -181,5 +201,4 @@ defmodule OnestackWeb.FeedbackLive.Index do
       truncated <> "..."
     end
   end
-
 end

@@ -8,7 +8,11 @@ defmodule OnestackWeb.Router do
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {OnestackWeb.Layouts, :topbar}
-    plug :protect_from_forgery
+
+    plug :protect_from_forgery,
+      with: :exception,
+      csrf_token: [domain: "." <> OnestackWeb.URLHelper.main_domain()]
+
     plug :put_secure_browser_headers
     plug :fetch_current_user
   end
@@ -31,6 +35,19 @@ defmodule OnestackWeb.Router do
       # live "/:id", FeedbackLive.Show, :show
     end
 
+    scope host: "app." do
+      pipe_through [:app_layout]
+
+      scope "/admin", Admin do
+        live "/members", MembersLive
+        live "/products", ProductsLive
+      end
+
+      scope "/member", Admin do
+        live "/products", ProductsLive
+      end
+    end
+
     live "/", LandingLive, :index
     get "/privacy", PageController, :privacy_policy
     get "/pricing", PageController, :pricing
@@ -43,19 +60,6 @@ defmodule OnestackWeb.Router do
     get "/sitemaps/sitemap1.xml", PageController, :sitemap1
 
     # live "/product-cost-comparison", ProductCostComparisonLive
-  end
-
-  scope host: "app." do
-    pipe_through [:browser, :app_layout]
-
-    scope "/admin", OnestackWeb.Admin do
-      live "/members", MembersLive
-      live "/products", ProductsLive
-    end
-
-    scope "/member", OnestackWeb.Admin do
-      live "/products", ProductsLive
-    end
   end
 
   # Other scopes may use custom stacks.

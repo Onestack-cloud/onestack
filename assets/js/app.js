@@ -23,7 +23,8 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 import Alpine from "alpinejs";
 // Import Preline
-import { HSStaticMethods } from "preline";
+import "preline/preline";
+import "flowbite/dist/flowbite.phoenix.js";
 
 // Initialize Preline
 window.HSStaticMethods = HSStaticMethods;
@@ -31,10 +32,25 @@ window.HSStaticMethods = HSStaticMethods;
 window.Alpine = Alpine;
 Alpine.start();
 
+const Hooks = {
+  // Reinitialize PrelineUI after LiveView updates the DOM
+  Preline: {
+    mounted() {
+      window.HSStaticMethods.autoInit();
+    },
+    updated() {
+      window.HSStaticMethods.autoInit();
+    },
+  },
+};
+
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
+
 let liveSocket = new LiveSocket("/live", Socket, {
+  hooks: Hooks,
+  longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
   dom: {
     onBeforeElUpdated(from, to) {
@@ -48,7 +64,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 // Initialize Preline on initial page load
 document.addEventListener("DOMContentLoaded", () => {
-  HSStaticMethods.autoInit();
+  window.HSStaticMethods.autoInit();
 });
 
 // Show progress bar on live navigation and form submits
