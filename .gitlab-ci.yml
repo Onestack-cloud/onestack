@@ -1,6 +1,7 @@
 stages:
   - build
   - prod_deploy
+  - dev_deploy
 
 variables:
   CI_ENV_FILE: .env
