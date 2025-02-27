@@ -41,8 +41,7 @@ defmodule OnestackWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        formats: [:html, :json],
-        layouts: [html: OnestackWeb.Layouts]
+        formats: [:html, :json]
 
       import Plug.Conn
       import OnestackWeb.Gettext
