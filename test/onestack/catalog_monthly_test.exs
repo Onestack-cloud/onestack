@@ -4,7 +4,7 @@ defmodule Onestack.CatalogMonthlyTest do
   alias Onestack.CatalogMonthly
 
   describe "products" do
-    alias Onestack.CatalogMonthly.Product
+    alias Onestack.CatalogMonthly.ComparisonProduct
 
     import Onestack.CatalogMonthlyFixtures
 
@@ -41,7 +41,7 @@ defmodule Onestack.CatalogMonthlyTest do
         open_source_currency: "some open_source_currency"
       }
 
-      assert {:ok, %Product{} = product} = CatalogMonthly.create_product(valid_attrs)
+      assert {:ok, %ComparisonProduct{} = product} = CatalogMonthly.create_product(valid_attrs)
       assert product.category == "some category"
       assert product.closed_source_name == "some closed_source_name"
       assert product.open_source_name == "some open_source_name"
@@ -70,7 +70,7 @@ defmodule Onestack.CatalogMonthlyTest do
         open_source_currency: "some updated open_source_currency"
       }
 
-      assert {:ok, %Product{} = product} = CatalogMonthly.update_product(product, update_attrs)
+      assert {:ok, %ComparisonProduct{} = product} = CatalogMonthly.update_product(product, update_attrs)
       assert product.category == "some updated category"
       assert product.closed_source_name == "some updated closed_source_name"
       assert product.open_source_name == "some updated open_source_name"
@@ -89,7 +89,7 @@ defmodule Onestack.CatalogMonthlyTest do
 
     test "delete_product/1 deletes the product" do
       product = product_fixture()
-      assert {:ok, %Product{}} = CatalogMonthly.delete_product(product)
+      assert {:ok, %ComparisonProduct{}} = CatalogMonthly.delete_product(product)
       assert_raise Ecto.NoResultsError, fn -> CatalogMonthly.get_product!(product.id) end
     end
 

@@ -11,111 +11,41 @@ defmodule OnestackWeb.SubscribeLive do
         user_token -> Accounts.get_user_by_session_token(user_token)
       end
 
-    combined_customers = Onestack.StripeCache.list_combined_customers()
+    stats = Onestack.Stats.get_user_stats(current_user)
 
-    team_members =
-      if current_user do
-        direct_members = Teams.list_team_members(current_user)
-
-        if direct_members == [] do
-          # Check if user is member of any teams
-          team =
-            Enum.find(Teams.list_teams(), fn t ->
-              current_user.email in t.members
-            end)
-
-          case team do
-            nil -> []
-            team -> team.members
-          end
-        else
-          direct_members
-        end
-      else
-        []
-      end
-
-    stripe_products =
-      if current_user do
-        case Enum.find(combined_customers, fn customer -> customer.email == current_user.email end) do
-          nil -> []
-          customer -> customer.products
-        end
-      else
-        []
-      end
+    # Assign all the stats we need
+    socket =
+      socket
+      |> assign(current_user: current_user)
+      |> assign(team_members: stats.team_members)
+      |> assign(selected_products: stats.stripe_product_ids)
+      |> assign(combined_customers: stats.combined_customers)
+      |> assign(upcoming_invoice: stats.upcoming_invoice)
+      |> assign(num_users: length(stats.team_members))
 
     view_to_show =
       cond do
         is_nil(current_user) ->
           :no_subscription
 
-        stripe_products != [] && Enum.member?(team_members, current_user.email) ->
-          :has_subscription_and_is_admin
+        # stripe_products != [] && Enum.member?(team_members, current_user.email) ->
+        #   :has_subscription_and_is_admin
 
-        stripe_products == [] && Enum.member?(team_members, current_user.email) ->
-          :has_subscription_and_is_user
+        # stripe_products == [] && Enum.member?(team_members, current_user.email) ->
+        # :has_subscription_and_is_user
 
         true ->
           IO.puts("none of the conditions were met")
           :no_subscription
       end
 
-    user_products =
-      case view_to_show do
-        :has_subscription_and_is_user ->
-          team =
-            Enum.find(Teams.list_teams(), fn t ->
-              current_user.email in t.members
-            end)
-
-          case team do
-            nil ->
-              []
-
-            team ->
-              case Enum.find(combined_customers, fn customer ->
-                     customer.email == team.admin_email
-                   end) do
-                nil -> []
-                customer -> customer.products
-              end
-          end
-
-        _ ->
-          stripe_products
-      end
-
-    num_users = calculate_num_users(team_members)
-    has_subscription = user_products != []
-
-    upcoming_invoice =
-      if view_to_show == :has_subscription_and_is_admin do
-        stripe_customer =
-          Enum.find(combined_customers, fn customer -> customer.email == current_user.email end)
-
-        case Onestack.StripeCache.get_upcoming_invoice(stripe_customer.subscription_id) do
-          nil ->
-            {:error, "Subscription not found"}
-
-          subscription ->
-            subscription
-        end
-      end
-
     socket =
       socket
       |> assign(products: StripeCache.list_products())
-      |> assign(selected_products: user_products)
-      |> assign(num_users: num_users)
-      |> assign(current_user: current_user)
-      |> assign(team_members: team_members)
       |> assign(show_modal: false)
       |> assign(modal_action: nil)
       |> assign(modal_product: nil)
       |> assign(updating: false)
-      |> assign(has_subscription: has_subscription)
-      |> assign(upcoming_invoice: upcoming_invoice)
       |> assign(view_to_show: view_to_show)
 
     # IO.inspect(socket)
@@ -146,7 +76,9 @@ defmodule OnestackWeb.SubscribeLive do
         <%= cond do %>
           <% @view_to_show == :has_subscription_and_is_admin -> %>
             <.live_component
-              module={OnestackWeb.SubscribeLive.HasSubscriptionAndIsAdmin}
+              module={
+                OnestackWeb.SubscribeLive.HasSubscriptionAndIsAdmin
+              }
               id="has-subscription-and-is-admin"
               {assigns}
             />

@@ -6,7 +6,7 @@ defmodule Onestack.CatalogMonthly do
   import Ecto.Query, warn: false
   alias Onestack.Repo
 
-  alias Onestack.CatalogMonthly.Product
+  alias Onestack.CatalogMonthly.ComparisonProduct
 
   @doc """
   Returns the list of products.
@@ -14,11 +14,11 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> list_products()
-      [%Product{}, ...]
+      [%ComparisonProduct{}, ...]
 
   """
   def list_products do
-    Repo.all(Product)
+    Repo.all(ComparisonProduct)
   end
 
   @doc """
@@ -29,13 +29,13 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> get_product!(123)
-      %Product{}
+      %ComparisonProduct{}
 
       iex> get_product!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_product!(id), do: Repo.get!(Product, id)
+  def get_product!(id), do: Repo.get!(ComparisonProduct, id)
 
   @doc """
   Creates a product.
@@ -43,15 +43,15 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> create_product(%{field: value})
-      {:ok, %Product{}}
+      {:ok, %ComparisonProduct{}}
 
       iex> create_product(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
   def create_product(attrs \\ %{}) do
-    %Product{}
-    |> Product.changeset(attrs)
+    %ComparisonProduct{}
+    |> ComparisonProduct.changeset(attrs)
     |> Repo.insert()
   end
 
@@ -61,15 +61,15 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> update_product(product, %{field: new_value})
-      {:ok, %Product{}}
+      {:ok, %ComparisonProduct{}}
 
       iex> update_product(product, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_product(%Product{} = product, attrs) do
+  def update_product(%ComparisonProduct{} = product, attrs) do
     product
-    |> Product.changeset(attrs)
+    |> ComparisonProduct.changeset(attrs)
     |> Repo.update()
   end
 
@@ -79,13 +79,13 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> delete_product(product)
-      {:ok, %Product{}}
+      {:ok, %ComparisonProduct{}}
 
       iex> delete_product(product)
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_product(%Product{} = product) do
+  def delete_product(%ComparisonProduct{} = product) do
     Repo.delete(product)
   end
 
@@ -95,10 +95,10 @@ defmodule Onestack.CatalogMonthly do
   ## Examples
 
       iex> change_product(product)
-      %Ecto.Changeset{data: %Product{}}
+      %Ecto.Changeset{data: %ComparisonProduct{}}
 
   """
-  def change_product(%Product{} = product, attrs \\ %{}) do
-    Product.changeset(product, attrs)
+  def change_product(%ComparisonProduct{} = product, attrs \\ %{}) do
+    ComparisonProduct.changeset(product, attrs)
   end
 end

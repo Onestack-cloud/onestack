@@ -161,6 +161,14 @@ defmodule Onestack.StripeCache do
     GenServer.call(__MODULE__, {:get_upcoming_invoice, subscription_id})
   end
 
+  @doc """
+  Gets the subscription item price for a specific product in a subscription.
+  Returns nil if the product is not in the subscription.
+  """
+  def get_subscription_item_price(subscription_id, product_id) do
+    GenServer.call(__MODULE__, {:get_subscription_item_price, subscription_id, product_id})
+  end
+
   @doc false
   def init(_state) do
     with {:ok, %{data: prices}} <- Price.list(%{active: true}),
@@ -241,6 +249,20 @@ defmodule Onestack.StripeCache do
   @doc false
   def handle_call(:list_customers, _from, %{customers: customers} = state) do
     {:reply, customers, state}
+  end
+
+  def handle_call({:get_subscription_item_price, subscription_id, product_id}, _from, state) do
+    subscription = Enum.find(state.subscriptions, &(&1.id == subscription_id))
+    
+    price = case subscription do
+      nil -> nil
+      sub ->
+        Enum.find_value(sub.items.data, fn item -> 
+          if item.price.product == product_id, do: item.price.unit_amount
+        end)
+    end
+
+    {:reply, price, state}
   end
 
   @doc false

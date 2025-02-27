@@ -1,13 +1,17 @@
 defmodule OnestackWeb.Router do
   use OnestackWeb, :router
-
+  import Plug.BasicAuth
   import OnestackWeb.UserAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
-    plug :put_root_layout, html: {OnestackWeb.Layouts, :topbar}
+    plug :put_root_layout, {OnestackWeb.Layouts, :root}
+
+    plug :basic_auth,
+      username: "onestack",
+      password: "REDACTED_BASIC_AUTH_PASSWORD"
 
     plug :protect_from_forgery,
       with: :exception,
@@ -21,45 +25,69 @@ defmodule OnestackWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :app_layout do
-    plug :put_root_layout, html: {OnestackWeb.Layouts, :sidebar}
-  end
-
   scope "/", OnestackWeb do
     pipe_through :browser
 
     scope host: "feedback." do
-      # Public feedback routes
-      live "/", FeedbackLive.Index, :index
-      live "/new", FeedbackLive.Index, :new
-      # live "/:id", FeedbackLive.Show, :show
+      live_session :feedback, layout: {OnestackWeb.Layouts, :topbar_live} do
+        # Public feedback routes
+        live "/", FeedbackLive.Index, :index
+        live "/new", FeedbackLive.Index, :new
+        # live "/:id", FeedbackLive.Show, :show
+      end
     end
 
     scope host: "app." do
-      pipe_through [:app_layout]
+      live_session :admin_app,
+        on_mount: [{OnestackWeb.UserAuth, :ensure_admin}],
+        layout: {OnestackWeb.Layouts, :sidebar_live} do
+        pipe_through [:require_authenticated_user]
 
-      scope "/admin", Admin do
-        live "/members", MembersLive
-        live "/products", ProductsLive
+        scope "/admin", Admin do
+          live "/teams", TeamsLive
+          live "/products", ProductsLive
+          # Ensure this matches the link path in teams_live.html.heex
+          live "/teams/invite", TeamsLive, :new
+        end
       end
 
-      scope "/member", Admin do
-        live "/products", ProductsLive
+      live_session :app,
+        on_mount: [{OnestackWeb.UserAuth, :ensure_authenticated}],
+        layout: {OnestackWeb.Layouts, :sidebar_live} do
+        live "/", RoleRedirectLive
+
+        scope "/member", Member do
+          live "/products", ProductsLive
+        end
+      end
+
+      scope host: "admin." do
+        live_session :super_admin_app,
+          on_mount: [{OnestackWeb.UserAuth, :ensure_super_admin}],
+          layout: {OnestackWeb.Layouts, :sidebar_live} do
+          live "/comparison-products", OnestackAdmin.ComparisonProductsLive, :index
+        end
       end
     end
+  end
 
-    live "/", LandingLive, :index
-    get "/privacy", PageController, :privacy_policy
-    get "/pricing", PageController, :pricing
-    get "/security", PageController, :security
-    get "/test_land", PageController, :test_land
-    get "/roadmap", PageController, :roadmap
-    live "/products", ProductLive.Index, :index
-    live "/stack", StackLive, :index
-    get "/sitemap.xml", PageController, :sitemap
-    get "/sitemaps/sitemap1.xml", PageController, :sitemap1
+  ## Topbar layouts
+  scope "/", OnestackWeb do
+    pipe_through [:browser]
 
-    # live "/product-cost-comparison", ProductCostComparisonLive
+    live_session :landing, layout: {OnestackWeb.Layouts, :topbar_live} do
+      live "/", LandingLive, :index
+      get "/privacy", PageController, :privacy_policy
+      # get "/pricing", PageController, :pricing
+      live "/pricing", PricingLive
+      get "/security", PageController, :security
+      get "/test_land", PageController, :test_land
+      get "/roadmap", PageController, :roadmap
+      live "/products", ProductLive.Index, :index
+      live "/stack", StackLive, :index
+      get "/sitemap.xml", PageController, :sitemap
+      get "/sitemaps/sitemap1.xml", PageController, :sitemap1
+    end
   end
 
   # Other scopes may use custom stacks.
@@ -90,7 +118,8 @@ defmodule OnestackWeb.Router do
     pipe_through [:browser, :redirect_if_user_is_authenticated]
 
     live_session :redirect_if_user_is_authenticated,
-      on_mount: [{OnestackWeb.UserAuth, :redirect_if_user_is_authenticated}] do
+      on_mount: [{OnestackWeb.UserAuth, :redirect_if_user_is_authenticated}],
+      layout: {OnestackWeb.Layouts, :topbar_live} do
       live "/users/register", UserRegistrationLive, :new
       live "/users/log_in", UserLoginLive, :new
       live "/users/reset_password", UserForgotPasswordLive, :new
@@ -104,10 +133,11 @@ defmodule OnestackWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user,
-      on_mount: [{OnestackWeb.UserAuth, :ensure_authenticated}] do
+      on_mount: [{OnestackWeb.UserAuth, :ensure_authenticated}],
+      layout: {OnestackWeb.Layouts, :topbar_live} do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
-      live "/subscribe", SubscribeLive, :index
+      live "/subscribe", ApplicationUiLive
       get "/checkout", PageController, :redirect_to_subscribe
       live "/subscribe/success", SuccessLive, :index
       live "/invitations/:token", InvitationLive, :index
@@ -124,7 +154,8 @@ defmodule OnestackWeb.Router do
     delete "/users/log_out", UserSessionController, :delete
 
     live_session :current_user,
-      on_mount: [{OnestackWeb.UserAuth, :mount_current_user}] do
+      on_mount: [{OnestackWeb.UserAuth, :mount_current_user}],
+      layout: {OnestackWeb.Layouts, :topbar_live} do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
     end

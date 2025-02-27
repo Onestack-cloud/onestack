@@ -17,7 +17,9 @@ defmodule OnestackWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images node_modules favicon.ico sitemap robots.txt site.webmanifest videos)
+  def static_paths,
+    do:
+      ~w(assets fonts images node_modules favicon.ico sitemap robots.txt site.webmanifest videos)
 
   def router do
     quote do
@@ -51,9 +53,7 @@ defmodule OnestackWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: {OnestackWeb.Layouts, :app}
-
+      use Phoenix.LiveView
       unquote(html_helpers())
     end
   end

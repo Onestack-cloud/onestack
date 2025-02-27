@@ -33,6 +33,14 @@ window.Alpine = Alpine;
 Alpine.start();
 
 const Hooks = {
+  ClearInput: {
+    mounted() {
+      this.handleEvent("clear-input", ({selector}) => {
+        const input = document.querySelector(selector);
+        if (input) input.value = "";
+      });
+    }
+  },
   // Reinitialize PrelineUI after LiveView updates the DOM
   Preline: {
     mounted() {

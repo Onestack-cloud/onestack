@@ -5,80 +5,159 @@ defmodule OnestackWeb.UserSettingsLive do
 
   def render(assigns) do
     ~H"""
-    <.header class="text-center my-12">
-      Account Settings
-      <:subtitle>Manage your account email address and password settings</:subtitle>
-    </.header>
+    <div class="max-w-3xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white text-center">
+        Account Settings
+      </h1>
+      <p class="mt-4 text-lg text-gray-500 dark:text-gray-400 text-center">
+        Manage your account email address and password settings
+      </p>
 
-    <div class="mx-auto max-w-sm min-h-screen text-center mt-3 gap-3 space-y-12 divide-y">
-      <div class="flex justify-center w-full">
-        <.simple_form
-          for={@email_form}
-          id="email_form"
-          phx-submit="update_email"
-          phx-change="validate_email"
-        >
-          <.input
-            class="input input-bordered"
-            field={@email_form[:email]}
-            type="email"
-            label="Email"
-            required
-          />
-          <.input
-            field={@email_form[:current_password]}
-            name="current_password"
-            id="current_password_for_email"
-            type="password"
-            label="Current password"
-            value={@email_form_current_password}
-            required
-            class="input input-bordered"
-          />
-          <:actions>
-            <div class="flex justify-center w-full">
-              <.button phx-disable-with="Changing...">Change Email</.button>
+      <div class="mt-12 space-y-16">
+        <section aria-labelledby="email-heading">
+          <h2
+            id="email-heading"
+            class="text-2xl font-bold text-gray-900 dark:text-white"
+          >
+            Email Address
+          </h2>
+          <.form
+            for={@email_form}
+            id="email_form"
+            phx-submit="update_email"
+            phx-change="validate_email"
+            class="mt-6 space-y-6"
+          >
+            <div>
+              <label
+                for="email"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                New Email
+              </label>
+              <div class="mt-1">
+                <.input
+                  field={@email_form[:email]}
+                  type="email"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
             </div>
-          </:actions>
-        </.simple_form>
-      </div>
-      <div class=" my-16">
-        <.simple_form
-          for={@password_form}
-          id="password_form"
-          action={~p"/users/log_in?_action=password_updated"}
-          method="post"
-          phx-change="validate_password"
-          phx-submit="update_password"
-          phx-trigger-action={@trigger_submit}
-        >
-          <input
-            name={@password_form[:email].name}
-            type="hidden"
-            id="hidden_user_email"
-            value={@current_email}
-          />
-          <.input field={@password_form[:password]} type="password" label="New password" required />
-          <.input
-            field={@password_form[:password_confirmation]}
-            type="password"
-            label="Confirm new password"
-          />
-          <.input
-            field={@password_form[:current_password]}
-            name="current_password"
-            type="password"
-            label="Current password"
-            id="current_password_for_password"
-            value={@current_password}
-            required
-          />
-          <:actions>
-            <div class="flex justify-center w-full">
-              <.button phx-disable-with="Changing...">Change Password</.button>
+            <div>
+              <label
+                for="current_password_for_email"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Current Password
+              </label>
+              <div class="mt-1">
+                <.input
+                  field={@email_form[:current_password]}
+                  name="current_password"
+                  id="current_password_for_email"
+                  type="password"
+                  value={@email_form_current_password}
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
             </div>
-          </:actions>
-        </.simple_form>
+            <div>
+              <.button
+                phx-disable-with="Updating..."
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              >
+                Update Email
+              </.button>
+            </div>
+          </.form>
+        </section>
+
+        <section aria-labelledby="password-heading">
+          <h2
+            id="password-heading"
+            class="text-2xl font-bold text-gray-900 dark:text-white"
+          >
+            Password
+          </h2>
+          <.form
+            for={@password_form}
+            id="password_form"
+            action={~p"/users/log_in?_action=password_updated"}
+            method="post"
+            phx-change="validate_password"
+            phx-submit="update_password"
+            phx-trigger-action={@trigger_submit}
+            class="mt-6 space-y-6"
+          >
+            <input
+              type="hidden"
+              name={@password_form[:email].name}
+              id="hidden_user_email"
+              value={@current_email}
+            />
+            <div>
+              <label
+                for="password"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                New Password
+              </label>
+              <div class="mt-1">
+                <.input
+                  field={@password_form[:password]}
+                  type="password"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                for="password_confirmation"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Confirm New Password
+              </label>
+              <div class="mt-1">
+                <.input
+                  field={@password_form[:password_confirmation]}
+                  type="password"
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                for="current_password_for_password"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Current Password
+              </label>
+              <div class="mt-1">
+                <.input
+                  field={@password_form[:current_password]}
+                  name="current_password"
+                  id="current_password_for_password"
+                  type="password"
+                  value={@current_password}
+                  required
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <.button
+                phx-disable-with="Updating..."
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              >
+                Update Password
+              </.button>
+            </div>
+          </.form>
+        </section>
       </div>
     </div>
     """

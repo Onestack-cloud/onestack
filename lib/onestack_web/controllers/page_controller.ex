@@ -1,5 +1,6 @@
 defmodule OnestackWeb.PageController do
   use OnestackWeb, :controller
+  plug :put_layout, {OnestackWeb.Layouts, :topbar_live}
 
   def home(conn, _params) do
     # The home page is often custom made,

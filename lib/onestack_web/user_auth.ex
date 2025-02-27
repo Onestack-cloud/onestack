@@ -167,6 +167,65 @@ defmodule OnestackWeb.UserAuth do
     end
   end
 
+  def on_mount(:ensure_admin, _params, session, socket) do
+    socket = mount_current_user(socket, session)
+
+    if socket.assigns.current_user do
+      teams = Onestack.Teams.list_teams()
+
+      is_admin =
+        Enum.any?(teams, fn team -> team.admin_email == socket.assigns.current_user.email end)
+
+      if is_admin do
+        {:cont, socket}
+      else
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You must be an admin to access this page.")
+          |> Phoenix.LiveView.redirect(to: ~p"/")
+
+        {:halt, socket}
+      end
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/users/log_in")
+
+      {:halt, socket}
+    end
+  end
+
+  def on_mount(:ensure_super_admin, _params, session, socket) do
+    socket = mount_current_user(socket, session)
+
+    if socket.assigns.current_user do
+      super_admin_emails = [
+        "george@onestack.cloud",
+        "ben@onestack.cloud",
+        "jawed-sketch-kite@duck.com"
+      ]
+
+      if socket.assigns.current_user.email in super_admin_emails do
+        {:cont, socket}
+      else
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You do not have access to this page.")
+          |> Phoenix.LiveView.redirect(to: ~p"/")
+
+        {:halt, socket}
+      end
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/users/log_in")
+
+      {:halt, socket}
+    end
+  end
+
   def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
@@ -178,11 +237,23 @@ defmodule OnestackWeb.UserAuth do
   end
 
   defp mount_current_user(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_user, fn ->
-      if user_token = session["user_token"] do
-        Accounts.get_user_by_session_token(user_token)
-      end
-    end)
+    socket =
+      Phoenix.Component.assign_new(socket, :current_user, fn ->
+        if user_token = session["user_token"] do
+          Accounts.get_user_by_session_token(user_token)
+        end
+      end)
+
+    if socket.assigns.current_user do
+      teams = Onestack.Teams.list_teams()
+
+      is_admin =
+        Enum.any?(teams, fn team -> team.admin_email == socket.assigns.current_user.email end)
+
+      Phoenix.Component.assign(socket, :is_admin, is_admin)
+    else
+      Phoenix.Component.assign(socket, :is_admin, false)
+    end
   end
 
   @doc """

@@ -6,7 +6,7 @@ defmodule OnestackWeb.URLHelper do
     host = Application.get_env(:sitemap, :host)
 
     case host do
-      "http://localhost:4000" -> "localhost"
+      "http://localhost:4000" -> "http://localhost:4000"
       _ -> String.trim_trailing(host, "/")
     end
   end

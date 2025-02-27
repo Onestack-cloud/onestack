@@ -19,12 +19,18 @@
               </div>
             <% end %>
 
-            <% feature = Onestack.CatalogMonthly.Features.get_feature(product.name) %>
+            <% feature =
+              Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                product.name
+              ) %>
             <%!-- Feature Icon --%>
             <div class="flex justify-center mb-6">
               <%= if feature do %>
                 <div class="h-20 w-20 flex items-center justify-center">
-                  <Lucide.render icon={feature.icon} class="h-12 w-12 text-blue-500" />
+                  <Lucide.render
+                    icon={feature.icon}
+                    class="h-12 w-12 text-blue-500"
+                  />
                 </div>
               <% end %>
             </div>

@@ -1,6 +1,6 @@
 stages:
   - build
-  - deploy
+  - prod_deploy
 
 variables:
   CI_ENV_FILE: .env
@@ -30,16 +30,30 @@ build:
     - docker push $TAG_COMMIT
     - docker push $TAG_LATEST
 
-deploy:
+prod_deploy:
   environment:
     name: production
     url: https://onestack.cloud
   only:
     - website
-  stage: deploy
+  stage: prod_deploy
   script:
     - chmod 600 $ID_SSH
     - apk update && apk add openssh-client
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_docker && docker compose pull && docker compose up -d"
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"
+
+dev_deploy:
+  environment:
+    name: development
+    url: https://dev.onestack.cloud
+  only:
+    - dev
+  stage: dev_deploy
+  script:
+    - chmod 600 $ID_SSH
+    - apk update && apk add openssh-client
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_dev_docker && docker compose pull && docker compose up -d"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"
