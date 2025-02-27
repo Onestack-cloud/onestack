@@ -75,8 +75,8 @@ defmodule Onestack.MixProject do
       {:argon2_elixir, "~> 4.0.0"},
       {:sitemap, "~> 1.1"},
       {:sshex, "~> 2.2"},
-      {:pbkdf2_elixir, "~> 2.0"},
-      {:lucide_live_view, "~> 0.1.0"}
+      {:pbkdf2_elixir, "~> 2.0"}
+      # {:lucide_live_view, "~> 0.1.0"}
     ]
   end
 
