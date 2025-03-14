@@ -24,6 +24,10 @@ defmodule OnestackWeb.PageController do
     render(conn, :security, page_title: "Security")
   end
 
+  def about(conn, _params) do
+    render(conn, :about, page_title: "About")
+  end
+
   def test_land(conn, _params) do
     render(conn, :test_land, page_title: "Test Land")
   end

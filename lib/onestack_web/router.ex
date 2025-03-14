@@ -9,15 +9,12 @@ defmodule OnestackWeb.Router do
     plug :fetch_live_flash
     plug :put_root_layout, {OnestackWeb.Layouts, :root}
 
-    plug :basic_auth,
-      username: "onestack",
-      password: "REDACTED_BASIC_AUTH_PASSWORD"
-
     plug :protect_from_forgery,
       with: :exception,
       csrf_token: [domain: "." <> OnestackWeb.URLHelper.main_domain()]
 
     plug :put_secure_browser_headers
+    # plug OnestackWeb.Plugs.SecurityHeaders
     plug :fetch_current_user
   end
 
@@ -45,7 +42,7 @@ defmodule OnestackWeb.Router do
 
         scope "/admin", Admin do
           live "/teams", TeamsLive
-          live "/products", ProductsLive
+          live "/features", ProductsLive
           # Ensure this matches the link path in teams_live.html.heex
           live "/teams/invite", TeamsLive, :new
         end
@@ -57,7 +54,7 @@ defmodule OnestackWeb.Router do
         live "/", RoleRedirectLive
 
         scope "/member", Member do
-          live "/products", ProductsLive
+          live "/features", FeaturesLive
         end
       end
 
@@ -77,16 +74,18 @@ defmodule OnestackWeb.Router do
 
     live_session :landing, layout: {OnestackWeb.Layouts, :topbar_live} do
       live "/", LandingLive, :index
+      live "/onboarding", OnboardingLive
       get "/privacy", PageController, :privacy_policy
       # get "/pricing", PageController, :pricing
       live "/pricing", PricingLive
       get "/security", PageController, :security
       get "/test_land", PageController, :test_land
       get "/roadmap", PageController, :roadmap
-      live "/products", ProductLive.Index, :index
+      live "/features", ProductLive.Index, :index
       live "/stack", StackLive, :index
       get "/sitemap.xml", PageController, :sitemap
       get "/sitemaps/sitemap1.xml", PageController, :sitemap1
+      live "/checkout_test", CheckoutTestLive
     end
   end
 
@@ -138,9 +137,9 @@ defmodule OnestackWeb.Router do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
       live "/subscribe", ApplicationUiLive
-      get "/checkout", PageController, :redirect_to_subscribe
       live "/subscribe/success", SuccessLive, :index
       live "/invitations/:token", InvitationLive, :index
+      live "/checkout/return", CheckoutReturnLive
       # live "/products/:id", ProductLive.Show, :show
       # live "/products/:id/show/edit", ProductLive.Show, :edit
       # live "/products/new", ProductLive.Index, :new

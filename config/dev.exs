@@ -64,7 +64,9 @@ config :onestack, OnestackWeb.Endpoint,
 config :stripity_stripe,
   api_key:
     "REDACTED_STRIPE_TEST_SECRET_KEY",
-  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
+  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET",
+  public_key:
+    "pk_live_51P78jNFzZpjdOGbNdvaEoWfyKALJ9l0tC9yvfMnKAkPVDIznEacjoTtyx9DIfbd2GVc0EOz8Qx6UrAlZkQPLfwk200d4KgNqm8"
 
 # ## SSL Support
 #

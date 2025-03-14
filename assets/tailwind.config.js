@@ -20,7 +20,32 @@ module.exports = {
       //   brand: "#FD4F00",
       // },
       fontFamily: {
-        pixel_title: ["VT323", "sans-serif"],},
+        pixel_title: ["VT323", "sans-serif"],
+      },
+      animation: {
+        'fadeIn': 'fadeIn 1s ease-in-out',
+        'bounce-slow': 'bounce 3s ease-in-out infinite',
+        'bounce-delayed': 'bounce 3s ease-in-out 1s infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'float-delayed': 'float 6s ease-in-out 3s infinite',
+        'pulse': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+      },
+      transitionDuration: {
+        '2000': '2000ms',
+      },
+      perspective: {
+        '1000': '1000px',
+      },
     },
     container: {
       center: true,

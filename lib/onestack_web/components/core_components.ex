@@ -132,49 +132,50 @@ defmodule OnestackWeb.CoreComponents do
       phx-value-key={@kind}
       role="alert"
       class={[
-        "fixed top-2 right-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-md",
-        "border-l-4 transition-all duration-500 ease-in-out",
-        "bg-white dark:bg-gray-800",
-        @kind == :info && "border-blue-500",
-        @kind == :error && "border-red-500"
+        "fixed mt-[calc(var(--topbar-height,12px)+0.5rem)] right-6 w-80 sm:w-96 z-50 flex items-center p-4 rounded-lg",
+        "transition-all duration-500 ease-in-out",
+        "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm",
+        "border border-gray-200 dark:border-gray-700",
+        "shadow-lg",
+        @kind == :info &&
+          "border-l-4 border-l-blue-500 shadow-blue-100/50 dark:shadow-blue-900/20",
+        @kind == :error &&
+          "border-l-4 border-l-red-500 shadow-red-100/50 dark:shadow-red-900/20",
+        "text-gray-700 dark:text-gray-300"
       ]}
       {@rest}
     >
-      <div class="flex items-center space-x-3">
-        <div class={[
-          "p-1.5 rounded-full",
-          @kind == :info &&
-            "bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-300",
-          @kind == :error &&
-            "bg-red-100 text-red-500 dark:bg-red-900 dark:text-red-300"
-        ]}>
-          <.icon
-            :if={@kind == :info}
-            name="hero-information-circle-mini"
-            class="h-4 w-4"
-          />
-          <.icon
-            :if={@kind == :error}
-            name="hero-exclamation-circle-mini"
-            class="h-4 w-4"
-          />
-        </div>
-        <div class="flex-grow">
-          <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">
-            <%= @title || "Success!" %>
-          </p>
-          <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-            <%= msg %>
-          </p>
-        </div>
-        <button
-          type="button"
-          class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200"
-          aria-label={gettext("close")}
-        >
-          <.icon name="hero-x-mark" class="h-4 w-4" />
-        </button>
+      <div class={[
+        "inline-flex items-center justify-center shrink-0 w-9 h-9 rounded-lg me-3",
+        @kind == :info &&
+          "text-blue-600 bg-blue-100/80 dark:bg-blue-900/30 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800",
+        @kind == :error &&
+          "text-red-600 bg-red-100/80 dark:bg-red-900/30 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800"
+      ]}>
+        <Lucide.render :if={@kind == :info} icon="info" class="w-4 h-4" />
+        <Lucide.render
+          :if={@kind == :error}
+          icon="circle-alert"
+          class="w-4 h-4"
+        />
+        <span class="sr-only"><%= @kind %> icon</span>
       </div>
+      <div class="ms-3 text-sm font-normal">
+        <div class="font-semibold text-sm text-gray-800 dark:text-gray-200">
+          <%= @title || "Success!" %>
+        </div>
+        <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+          <%= msg %>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="ms-auto -mx-1.5 -my-1.5 bg-white/90 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800/90 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-700"
+        aria-label={gettext("close")}
+      >
+        <span class="sr-only">Close</span>
+        <Lucide.render icon="x" class="w-3 h-3" />
+      </button>
     </div>
     """
   end
@@ -478,12 +479,9 @@ defmodule OnestackWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
-      <.icon
-        name="hero-exclamation-circle-mini"
-        class="mt-0.5 h-5 w-5 flex-none"
-      />
-      <%= render_slot(@inner_block) %>
+    <p class="mt-3 flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 phx-no-feedback:hidden">
+      <Lucide.render icon="circle-alert" class="h-4 w-4 flex-shrink-0" />
+      <span><%= render_slot(@inner_block) %></span>
     </p>
     """
   end

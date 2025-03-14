@@ -1,45 +1,410 @@
 <!-- Hero -->
 <div class="relative overflow-hidden max-w-[85rem] mx-auto">
-  <div class=" px-4 sm:px-6 lg:px-8 py-10">
-    <div class="max-w-2xl text-center mx-auto my-4">
-      <h1 class="block text-3xl font-bold text-gray-800 sm:text-4xl md:text-6xl dark:text-white">
+  <div class="px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+    <div class="max-w-2xl text-center mx-auto mb-8">
+      <h1 class="block text-3xl font-bold text-gray-800 sm:text-4xl md:text-6xl dark:text-white animate-fadeIn">
         The <span class="text-blue-600">Operating System</span>
         for your SaaS
       </h1>
       <p class="mt-3 text-lg text-gray-800 dark:text-neutral-400">
         Access and manage all your SaaS products in one place.
       </p>
-    </div>
 
-    <div class="max-w-2xl mx-auto">
-      <div class="text-center">
-        <div class="mt-3 flex flex-wrap justify-center items-center gap-x-6 gap-y-3">
-          <%= for {_name, feature} <- @features do %>
-            <button
-              data-tooltip-target={"tooltip-#{feature.display_name}"}
-              data-tooltip-placement="bottom"
-              type="button"
-              class="inline-flex justify-center items-center"
+      <div class="mt-8 flex flex-wrap justify-center gap-4">
+        <.link
+          navigate={~p"/users/register"}
+          class="py-3 px-6 inline-flex items-center gap-x-2 text-sm font-medium rounded-md bg-blue-600 text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          Get Started
+          <svg
+            class="w-4 h-4"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </.link>
+        <.link
+          navigate={~p"/features"}
+          class="py-3 px-6 inline-flex items-center gap-x-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700 transition-all"
+        >
+          Explore Features
+          <svg
+            class="w-4 h-4"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m9 18 6-6-6-6"></path>
+          </svg>
+        </.link>
+      </div>
+    </div>
+    <!-- App Mockups Interactive Display -->
+    <div class="relative max-w-6xl mx-auto mt-12 perspective-1000">
+      <div class="flex flex-col lg:flex-row items-center justify-center gap-8 mb-12">
+        <!-- Floating App Icons -->
+        <%= for {product, index} <- Enum.with_index(Onestack.CatalogMonthly.list_products()) do %>
+          <% # Calculate total number of products
+          total_products =
+            length(Onestack.CatalogMonthly.list_products())
+
+          # Define fixed positions that will be used in rotation
+          positions = [
+            "top-4 left-8",
+            "top-6 right-6",
+            "bottom-40 left-10",
+            "bottom-24 right-16",
+            "top-16 left-32",
+            "top-32 right-8",
+            "bottom-16 left-8",
+            "bottom-32 right-32"
+          ]
+
+          # Add more positions if needed based on product count
+          extended_positions =
+            positions ++
+              if total_products > 8 do
+                [
+                  "top-40 left-2",
+                  "top-24 right-24",
+                  "bottom-12 left-12",
+                  "bottom-20 right-28",
+                  "top-28 left-20",
+                  "top-12 right-12",
+                  "bottom-28 left-28",
+                  "bottom-4 right-8"
+                ]
+              else
+                []
+              end
+
+          # Calculate a deterministic position index that scales with product count
+          position_index = rem(index, length(extended_positions))
+
+          # Animations with better distribution
+          animations = [
+            "animate-bounce-slow",
+            "animate-bounce-delayed",
+            "animate-float",
+            "animate-float-delayed"
+          ]
+
+          # Generate a unique color for each product based on its index
+          colors = [
+            "text-blue-500 hover:text-blue-600"
+          ]
+
+          color_class = Enum.at(colors, rem(index, length(colors))) %>
+          <div class={"absolute #{Enum.at(extended_positions, position_index)} #{Enum.at(animations, rem(index, length(animations)))} opacity-70 hidden md:block group"}>
+            <div
+              class="w-12 h-12 rounded-md shadow-lg bg-white dark:bg-gray-800 flex items-center justify-center 
+               transform transition-all duration-300 hover:scale-110 hover:shadow-xl 
+               hover:ring-2 hover:ring-offset-2 hover:ring-offset-white dark:hover:ring-offset-gray-900 hover:ring-blue-400"
+              title={product.display_name}
             >
               <Lucide.render
-                icon={feature.icon}
-                class="w-8 h-8 text-gray-500 hover:text-blue-500 transition-colors"
+                icon={product.icon_name}
+                class={"w-6 h-6 #{color_class} transition-all duration-300 group-hover:scale-110"}
               />
-            </button>
+              <div class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-300 -bottom-2 translate-y-full bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                <%= product.display_name %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        <%!-- <div class="absolute top-4 left-8 animate-bounce-slow opacity-70 hidden md:block">
+          <img
+            src="/images/formbricks.png"
+            alt="Formbricks"
+            class="w-10 h-10 rounded-md shadow-lg"
+          />
+        </div>
+        <div class="absolute top-20 right-20 animate-bounce-delayed opacity-70 hidden md:block">
+          <img
+            src="/images/documenso.png"
+            alt="Documenso"
+            class="w-12 h-12 rounded-md shadow-lg"
+          />
+        </div>
+        <div class="absolute bottom-8 left-24 animate-float opacity-70 hidden md:block">
+          <img
+            src="/images/nocodb.png"
+            alt="NocoDB"
+            class="w-12 h-12 rounded-md shadow-lg"
+          />
+        </div>
+        <div class="absolute bottom-24 right-16 animate-float-delayed opacity-70 hidden md:block">
+          <img
+            src="/images/cal.png"
+            alt="Cal.com"
+            class="w-10 h-10 rounded-md shadow-lg"
+          />
+        </div> !--%>
+        <!-- Main Dashboard UI -->
+        <div class="relative transform transition-all duration-700 hover:scale-105 w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+          <!-- UI Header -->
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                  Your Onestack Dashboard
+                </h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  Manage all your apps from one place
+                </p>
+              </div>
+              <div class="flex items-center space-x-4">
+                <div class="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                  JD
+                </div>
+              </div>
+            </div>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      Active Apps
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      12
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-blue-100 dark:bg-blue-900/50">
+                    <svg
+                      class="w-5 h-5 text-blue-600 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="mt-1 w-full h-1 bg-blue-100 dark:bg-blue-700 rounded-full overflow-hidden">
+                  <div class="bg-blue-500 h-1 rounded-full w-[75%] animate-pulse">
+                  </div>
+                </div>
+              </div>
 
-            <div
-              id={"tooltip-#{feature.display_name}"}
-              role="tooltip"
-              class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
-            >
-              <%= feature.display_name %>
-              <div class="tooltip-arrow" data-popper-arrow></div>
+              <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-xl border border-green-200 dark:border-green-800">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-green-600 dark:text-green-400">
+                      Team Members
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      8
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-green-100 dark:bg-green-900/50">
+                    <svg
+                      class="w-5 h-5 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="mt-1 w-full h-1 bg-green-100 dark:bg-green-700 rounded-full overflow-hidden">
+                  <div class="bg-green-500 h-1 rounded-full w-[65%] animate-pulse">
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 p-4 rounded-xl border border-amber-200 dark:border-amber-800">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Monthly Savings
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      $1,250
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-amber-100 dark:bg-amber-900/50">
+                    <svg
+                      class="w-5 h-5 text-amber-600 dark:text-amber-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="mt-1 w-full h-1 bg-amber-100 dark:bg-amber-700 rounded-full overflow-hidden">
+                  <div class="bg-amber-500 h-1 rounded-full w-[85%] animate-pulse">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Product Grid -->
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Your features
+              </h4>
+              <button class="px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  >
+                  </path>
+                </svg>
+                Add Feature
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <!-- App Cards -->
+              <div class="group relative text-gray-900 bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 hover:shadow-md hover:ring-blue-300 dark:hover:ring-blue-500 transition-all duration-200 p-4 flex flex-col items-center">
+                <Lucide.render
+                  icon={
+                    Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                      "cal"
+                    ).icon
+                  }
+                  alt="Calendar Scheduling"
+                  class="w-12 h-12 mb-3 rounded-lg transition-transform group-hover:scale-110"
+                />
+                <h5 class="text-sm font-medium text-gray-900 dark:text-white text-center">
+                  Calendar scheduling
+                </h5>
+                <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                  Active
+                </span>
+              </div>
+
+              <div class="group relative text-gray-900 bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 hover:shadow-md hover:ring-blue-300 dark:hover:ring-blue-500 transition-all duration-200 p-4 flex flex-col items-center">
+                <Lucide.render
+                  icon={
+                    Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                      "formbricks"
+                    ).icon
+                  }
+                  alt="Form builder"
+                  class="w-12 h-12 mb-3 rounded-lg transition-transform group-hover:scale-110"
+                />
+                <h5 class="text-sm font-medium text-gray-900 dark:text-white text-center">
+                  Form builder
+                </h5>
+                <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                  Active
+                </span>
+              </div>
+
+              <div class="group relative text-gray-900 bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 hover:shadow-md hover:ring-blue-300 dark:hover:ring-blue-500 transition-all duration-200 p-4 flex flex-col items-center">
+                <Lucide.render
+                  icon={
+                    Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                      "plane"
+                    ).icon
+                  }
+                  alt="Project Management"
+                  class="w-12 h-12 mb-3 rounded-lg transition-transform group-hover:scale-110"
+                />
+                <h5 class="text-sm font-medium text-gray-900 dark:text-white text-center">
+                  Project management
+                </h5>
+                <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                  Active
+                </span>
+              </div>
+
+              <div class="group relative text-gray-900 bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 hover:shadow-md hover:ring-blue-300 dark:hover:ring-blue-500 transition-all duration-200 p-4 flex flex-col items-center">
+                <Lucide.render
+                  icon={
+                    Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                      "documenso"
+                    ).icon
+                  }
+                  alt="Document Signing"
+                  class="w-12 h-12 mb-3 rounded-lg transition-transform group-hover:scale-110"
+                />
+                <h5 class="text-sm font-medium text-gray-900 dark:text-white text-center">
+                  Document signing
+                </h5>
+                <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                  Active
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- App Feature Icons -->
+    <div class="max-w-3xl mx-auto mt-8">
+      <div class="text-center">
+        <p class="font-medium text-gray-500 dark:text-gray-400 mb-4">
+          Trusted by teams using these apps and more
+        </p>
+        <div class="flex flex-wrap justify-center items-center gap-6 md:gap-10">
+          <%= for {_name, feature} <- @features do %>
+            <div class="group relative transition-transform hover:scale-110">
+              <Lucide.render
+                icon={feature.icon}
+                class="w-8 h-8 text-gray-500 group-hover:text-blue-500 transition-colors"
+              />
+              <span class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs rounded-md py-1 px-2">
+                <%= feature.display_name %>
+              </span>
             </div>
           <% end %>
           <!-- View All Link -->
           <.link
-            navigate={~p"/products"}
-            class="inline-flex items-center gap-x-1 text-sm text-gray-600 decoration-2 hover:underline font-medium"
+            navigate={~p"/features"}
+            class="inline-flex items-center gap-x-1 text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors"
           >
             View all
             <svg
@@ -60,97 +425,24 @@
         </div>
       </div>
     </div>
-
-    <div class="mt-10 relative max-w-5xl mx-auto">
-      <div class="w-full object-cover h-96 sm:h-[480px] bg-[url('/videos/thumb-0.mp4')] bg-no-repeat bg-center bg-cover rounded-xl">
-      </div>
-
-      <div class="absolute inset-0 size-full">
-        <div class="flex flex-col justify-center items-center size-full">
-          <a
-            class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-800"
-            href="#"
-          >
-            <svg
-              class="shrink-0 size-4"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            Watch the demo
-          </a>
-        </div>
-      </div>
-
-      <div class="absolute bottom-12 -start-20 -z-[1] size-48 bg-gradient-to-b from-orange-500 to-white p-px rounded-lg dark:to-neutral-900">
-        <div class="bg-white size-48 rounded-lg dark:bg-neutral-900">
-        </div>
-      </div>
-
-      <div class="absolute -top-12 -end-20 -z-[1] size-48 bg-gradient-to-t from-blue-600 to-cyan-400 p-px rounded-full">
-        <div class="bg-white size-48 rounded-full dark:bg-neutral-900">
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 <!-- End Hero -->
 <div class="container max-w-6xl mx-auto px-4 py-20">
   <!-- Header Section -->
-  <div class="flex gap-24 items-center">
-    <h1 class="text-5xl font-bold text-white w-1/2">
+  <div class="flex items-center">
+    <h1 class="text-5xl font-bold dark:text-white w-1/2">
       Made for the modern business
     </h1>
-    <p class="text-gray-400 text-lg w-1/2">
+    <p class="text-gray-500 dark:text-neutral-400 text-lg w-1/2">
       Experience the future of SaaS freedom with Onestack – where you radically redefine your tech stack and finally break free from bloated subscriptions. Pay for what lights you up, skip what doesn't.
-      <a href="#" class="text-white ml-2 hover:opacity-80">
+      <.link
+        navigate={~p"/users/register"}
+        class="dark:text-white ml-2 hover:opacity-80 underline"
+      >
         Make the switch →
-      </a>
+      </.link>
     </p>
-  </div>
-  <!-- Cards Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-24">
-    <!-- Card 1 -->
-    <div class="max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
-      <a href="#">
-        <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Unleash your team's full potential
-        </h5>
-      </a>
-      <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
-        Transform your team management with lightning-fast tools that eliminate 90% of administrative overhead. Watch your team soar as they focus on what truly matters - creating exceptional work.
-      </p>
-    </div>
-    <!-- Card 2 -->
-    <div class="max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
-      <a href="#">
-        <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Revolutionary pay-per-value model
-        </h5>
-      </a>
-      <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
-        Break free from bloated software bundles. Our groundbreaking approach lets you cherry-pick exactly what powers your success, ensuring every dollar drives real value for your business.
-      </p>
-    </div>
-    <!-- Card 3 -->
-    <div class="max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
-      <a href="#">
-        <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Zero waste, infinite potential
-        </h5>
-      </a>
-      <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
-        Say goodbye to the era of unused licenses. Our dynamic scaling ensures your resources perfectly match your needs, turning waste into opportunity with every optimization.
-      </p>
-    </div>
   </div>
 </div>
 
@@ -167,813 +459,1004 @@
   <!-- End Title -->
 
       <!-- Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-6">
-    <!-- Col -->
-    <div class="space-y-4 xl:space-y-6">
-      <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+    <%= for card <- @testimonial_cards do %>
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-x-3">
               <img
-                class="inline-block size-9 rounded-full"
-                src="https://s3-alpha.figma.com/profile/6b687fac-8efb-43bc-95f0-2e7a2807ed30"
-                alt="Vosidiy Muslimbek"
+                class="w-10 h-10 rounded-full"
+                src={card.avatar_url}
+                alt={card.name}
               />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  Vosidiy Muslimbek
-                </p>
-              </div>
+              <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                <%= card.name %>
+              </p>
             </div>
-            <svg
-              class="shrink-0 size-4"
-              width="19"
-              height="18"
-              viewBox="0 0 19 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M6.875 18C8.531 18 9.875 16.656 9.875 15V12H6.875C5.219 12 3.875 13.344 3.875 15C3.875 16.656 5.219 18 6.875 18Z"
-                fill="#0ACF83"
-              >
-              </path>
-              <path
-                d="M3.875 9C3.875 7.344 5.219 6 6.875 6H9.875V12H6.875C5.219 12 3.875 10.656 3.875 9Z"
-                fill="#A259FF"
-              >
-              </path>
-              <path
-                d="M3.875 3C3.875 1.344 5.219 0 6.875 0H9.875V6H6.875C5.219 6 3.875 4.656 3.875 3Z"
-                fill="#F24E1E"
-              >
-              </path>
-              <path
-                d="M9.87501 0H12.875C14.531 0 15.875 1.344 15.875 3C15.875 4.656 14.531 6 12.875 6H9.87501V0Z"
-                fill="#FF7262"
-              >
-              </path>
-              <path
-                d="M15.875 9C15.875 10.656 14.531 12 12.875 12C11.219 12 9.87501 10.656 9.87501 9C9.87501 7.344 11.219 6 12.875 6C14.531 6 15.875 7.344 15.875 9Z"
-                fill="#1ABCFE"
-              >
-              </path>
-            </svg>
+            <img
+              class="w-6 h-6 rounded-full"
+              src={card.company_logo_url}
+            />
           </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            I don't know how to thank for such a good file, It should be paid product actually.
+          <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+            <%= card.testimonial %>
           </p>
         </div>
       </div>
-      <!-- End Card -->
-
-          <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://ph-avatars.imgix.net/5011220/9cb91dbe-4699-48fe-b4f5-9c70c69181f9"
-                alt="Thabresh Syed"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  Thabresh Syed
-                </p>
-              </div>
-            </div>
-            <svg
-              class="shrink-0 size-4"
-              viewBox="0 0 256 256"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient
-                  x1="50%"
-                  y1="0%"
-                  x2="50%"
-                  y2="100%"
-                  id="a22e"
-                >
-                  <stop stop-color="#DA552F" offset="0%"></stop>
-                  <stop stop-color="#D04B25" offset="100%"></stop>
-                </linearGradient>
-              </defs>
-              <g fill="none" fill-rule="evenodd">
-                <path
-                  d="M128 256c70.694 0 128-57.306 128-128S198.694 0 128 0 0 57.306 0 128s57.306 128 128 128z"
-                  fill="url(#a)"
-                >
-                </path>
-                <path
-                  d="M96 76.8v102.4h19.2v-32h29.056c19.296-.512 34.944-16.16 34.944-35.2 0-19.552-15.648-35.2-34.944-35.2H96zm48.493 51.2H115.2V96h29.293c8.563 0 15.507 7.168 15.507 16s-6.944 16-15.507 16z"
-                  fill="#FFF"
-                >
-                </path>
-              </g>
-            </svg>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            Preline UI is a game-changer for anyone working with UI development! As a fan of open source projects and a lover of efficiency, I couldn't be happier with what Preline UI brings to the table. This set of prebuilt UI components takes the power of the popular Tailwind CSS framework and supercharges it, making the entire UI development process a breeze.
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-
-          <!-- Card -->
-      <div class="hidden sm:block xl:hidden">
-        <!-- Card -->
-        <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-          <div class="p-4 md:p-6">
-            <div class="flex justify-between">
-              <div class="flex items-center gap-x-3 mb-5">
-                <img
-                  class="inline-block size-9 rounded-full"
-                  src="https://preline.co/assets/img/160x160/img1.jpg"
-                  alt="by a Preline UI user"
-                />
-                <div class="grow">
-                  <p class="font-semibold text-gray-800 dark:text-white">
-                    by a Preline UI user
-                  </p>
-                </div>
-              </div>
-            </div>
-            <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-              Continue what you're doing.
-              <span class="font-semibold">
-                You're such a great help to a lot of developers.
-              </span>
-              Thank you!
-            </p>
-          </div>
-        </div>
-        <!-- End Card -->
-      </div>
-    </div>
-    <!-- End Col -->
-
-        <!-- Col -->
-    <div class="space-y-4 xl:space-y-6">
-      <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://ph-avatars.imgix.net/4294070/56f597a9-2aa4-4a16-85aa-bf61693f23fe.jpeg?auto=compress&amp;codec=mozjpeg&amp;cs=strip&amp;auto=format&amp;w=40&amp;h=40&amp;fit=crop&amp;dpr=2"
-                alt="Kevin Fairbanks"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  Kevin Fairbanks
-                </p>
-              </div>
-            </div>
-            <svg
-              class="shrink-0 size-4"
-              viewBox="0 0 256 256"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient
-                  x1="50%"
-                  y1="0%"
-                  x2="50%"
-                  y2="100%"
-                  id="a"
-                >
-                  <stop stop-color="#DA552F" offset="0%"></stop>
-                  <stop stop-color="#D04B25" offset="100%"></stop>
-                </linearGradient>
-              </defs>
-              <g fill="none" fill-rule="evenodd">
-                <path
-                  d="M128 256c70.694 0 128-57.306 128-128S198.694 0 128 0 0 57.306 0 128s57.306 128 128 128z"
-                  fill="url(#a)"
-                >
-                </path>
-                <path
-                  d="M96 76.8v102.4h19.2v-32h29.056c19.296-.512 34.944-16.16 34.944-35.2 0-19.552-15.648-35.2-34.944-35.2H96zm48.493 51.2H115.2V96h29.293c8.563 0 15.507 7.168 15.507 16s-6.944 16-15.507 16z"
-                  fill="#FFF"
-                >
-                </path>
-              </g>
-            </svg>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            time saver for sure, beautiful designs wish I discovered sooner
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-
-          <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://s3-alpha.figma.com/profile/52084af6-a7ab-4c70-ae99-9346239293cf"
-                alt="Daniel"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  Daniel
-                </p>
-              </div>
-            </div>
-            <svg
-              class="shrink-0 size-4"
-              width="19"
-              height="18"
-              viewBox="0 0 19 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M6.875 18C8.531 18 9.875 16.656 9.875 15V12H6.875C5.219 12 3.875 13.344 3.875 15C3.875 16.656 5.219 18 6.875 18Z"
-                fill="#0ACF83"
-              >
-              </path>
-              <path
-                d="M3.875 9C3.875 7.344 5.219 6 6.875 6H9.875V12H6.875C5.219 12 3.875 10.656 3.875 9Z"
-                fill="#A259FF"
-              >
-              </path>
-              <path
-                d="M3.875 3C3.875 1.344 5.219 0 6.875 0H9.875V6H6.875C5.219 6 3.875 4.656 3.875 3Z"
-                fill="#F24E1E"
-              >
-              </path>
-              <path
-                d="M9.87501 0H12.875C14.531 0 15.875 1.344 15.875 3C15.875 4.656 14.531 6 12.875 6H9.87501V0Z"
-                fill="#FF7262"
-              >
-              </path>
-              <path
-                d="M15.875 9C15.875 10.656 14.531 12 12.875 12C11.219 12 9.87501 10.656 9.87501 9C9.87501 7.344 11.219 6 12.875 6C14.531 6 15.875 7.344 15.875 9Z"
-                fill="#1ABCFE"
-              >
-              </path>
-            </svg>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            Hi there, I just wanted to say congrats on developing such an excellent Figma design system. I've spent months going around in circles looking for something that is complete and easily nk I've found my foundation. It's really excellent work you've done here. I'm looking forward to seeing where you take this.
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-      <div class="hidden sm:block xl:hidden">
-        <!-- Card -->
-        <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-          <div class="p-4 md:p-6">
-            <div class="flex justify-between">
-              <div class="flex items-center gap-x-3 mb-5">
-                <img
-                  class="inline-block size-9 rounded-full"
-                  src="https://pbs.twimg.com/profile_images/1688871312926629888/6rTYMS8V_x96.jpg"
-                  alt="RichCode"
-                />
-                <div class="grow">
-                  <p class="font-semibold text-gray-800 dark:text-white">
-                    RichCode
-                  </p>
-                </div>
-              </div>
-              <svg
-                class="shrink-0 size-4 text-black dark:text-white"
-                width="48"
-                height="50"
-                viewBox="0 0 48 50"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M28.5665 20.7714L46.4356 0H42.2012L26.6855 18.0355L14.2931 0H0L18.7397 27.2728L0 49.0548H4.23464L20.6196 30.0087L33.7069 49.0548H48L28.5655 20.7714H28.5665ZM22.7666 27.5131L5.76044 3.18778H12.2646L42.2032 46.012H35.699L22.7666 27.5142V27.5131Z"
-                  fill="currentColor"
-                >
-                </path>
-              </svg>
-            </div>
-            <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-              Decide to try out @prelineUI on a new @nextjs project and have to say, it's pretty dope. Hooked on day one😄
-            </p>
-          </div>
-        </div>
-        <!-- End Card -->
-      </div>
-    </div>
-    <!-- End Col -->
-
-        <!-- Col -->
-    <div class="space-y-4 xl:space-y-6 sm:hidden xl:block">
-      <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://pbs.twimg.com/profile_images/1718709549417328640/QMgl1BaR_x96.jpg"
-                alt="Hillary Onyechekwa"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  Hillary Onyechekwa
-                </p>
-              </div>
-            </div>
-            <svg
-              class="shrink-0 size-4 text-black dark:text-white"
-              width="48"
-              height="50"
-              viewBox="0 0 48 50"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M28.5665 20.7714L46.4356 0H42.2012L26.6855 18.0355L14.2931 0H0L18.7397 27.2728L0 49.0548H4.23464L20.6196 30.0087L33.7069 49.0548H48L28.5655 20.7714H28.5665ZM22.7666 27.5131L5.76044 3.18778H12.2646L42.2032 46.012H35.699L22.7666 27.5142V27.5131Z"
-                fill="currentColor"
-              >
-              </path>
-            </svg>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            Preline UI is freaking amazing. How is it free again? I'm in love man. 😍
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-
-          <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://preline.co/assets/img/160x160/img1.jpg"
-                alt="by a Preline UI user"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  by a Preline UI user
-                </p>
-              </div>
-            </div>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            Continue what you're doing.
-            <span class="font-semibold">
-              You're such a great help to a lot of developers.
-            </span>
-            Thank you!
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-
-          <!-- Card -->
-      <div class="flex flex-col bg-white border border-gray-200 rounded-xl dark:bg-neutral-900 dark:border-neutral-700">
-        <div class="p-4 md:p-6">
-          <div class="flex justify-between">
-            <div class="flex items-center gap-x-3 mb-5">
-              <img
-                class="inline-block size-9 rounded-full"
-                src="https://pbs.twimg.com/profile_images/1688871312926629888/6rTYMS8V_x96.jpg"
-                alt="RichCode"
-              />
-              <div class="grow">
-                <p class="font-semibold text-gray-800 dark:text-white">
-                  RichCode
-                </p>
-              </div>
-            </div>
-            <svg
-              class="shrink-0 size-4 text-black dark:text-white"
-              width="48"
-              height="50"
-              viewBox="0 0 48 50"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M28.5665 20.7714L46.4356 0H42.2012L26.6855 18.0355L14.2931 0H0L18.7397 27.2728L0 49.0548H4.23464L20.6196 30.0087L33.7069 49.0548H48L28.5655 20.7714H28.5665ZM22.7666 27.5131L5.76044 3.18778H12.2646L42.2032 46.012H35.699L22.7666 27.5142V27.5131Z"
-                fill="currentColor"
-              >
-              </path>
-            </svg>
-          </div>
-          <p class="text-start leading-7 text-gray-600 dark:text-neutral-400">
-            Decide to try out @prelineUI on a new @nextjs project and have to say, it's pretty dope. Hooked on day one😄
-          </p>
-        </div>
-      </div>
-      <!-- End Card -->
-    </div>
-    <!-- End Col -->
+    <% end %>
   </div>
   <!-- End Grid -->
 </div>
-
-<section class="relative py-8 lg:py-16 " id="features">
-  <div class="absolute start-[10%] z-0">
-    <div class="pointer-events-none aspect-square w-60 rounded-full bg-gradient-to-r from-primary/10 via-violet-500/10 to-purple-500/10 blur-3xl [transform:translate3d(0,0,0)] lg:w-[600px]">
-    </div>
-  </div>
-
-  <div class="container">
-    <div class="flex flex-col items-center">
-      <h2 class="inline text-4xl font-semibold">
-        Managing SaaS has never been easier
+<!-- Interactive Examples Section -->
+<section class="relative py-12 lg:py-24" id="interactive-examples">
+  <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Section Header -->
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-gray-900 dark:text-white">
+        Experience Onestack in Action
       </h2>
-
-      <p class="mt-4 text-lg sm:text-center">
-        Take back control of your SaaS subscriptions and save hours from setting up your SaaS stack for your team.
+      <p class="mt-4 text-xl text-gray-500 dark:text-neutral-400 max-w-3xl mx-auto">
+        Discover how Onestack simplifies team management and product access with our intuitive interface
       </p>
     </div>
-
-    <div class="relative z-[2] mt-8 grid gap-8 lg:mt-32 lg:grid-cols-2 lg:gap-12">
-      <div class="overflow-hidden rounded-lg bg-secondary/20 shadow-md transition-all hover:shadow-xl">
-        <img
-          src={~p"/images/onestack_manage_light.png"}
-          alt="Manage your stack overview"
-          class="overflow-hidden rounded-ss-lg dark:hidden"
-        />
-        <img
-          src={~p"/images/onestack_manage_dark.png"}
-          alt="Manage your stack overview"
-          class="overflow-hidden rounded-ss-lg hidden dark:block"
-        />
-      </div>
-
-      <div class="lg:mt-8">
-        <div class="badge badge-primary">Control</div>
-        <h3 class="mt-2 text-3xl font-semibold">
-          Manage your stack
-        </h3>
-        <p class="mt-2 text-base font-medium">
-          Seamless account and billing management with ability to easily invite your team and modify your stack at any point.
-        </p>
-
-        <ul class="mt-4 list-inside list-disc text-base">
-          <li>One subscription</li>
-          <li>Add or remove products/members with one click</li>
-          <li>Intuitive User Interface</li>
-          <li>Ability to cancel at any-time</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="mt-8 grid gap-8 lg:mt-32 lg:grid-cols-2 lg:gap-12">
-      <div>
-        <div class="badge badge-primary">Features</div>
-        <h3 class="mt-2 text-3xl font-semibold">
-          Access to premium features
-        </h3>
-        <p class="mt-2 text-base">
-          Our SaaS platform offers seamless management, allowing you to effortlessly oversee
-          users, projects, and resources in one centralized hub. Gain real-time insights,
-          streamline workflows, and optimize resource allocation for unparalleled efficiency.
-        </p>
-
-        <ul class="mt-4 list-inside list-disc text-base">
-          <li>User-Friendly Tools</li>
-          <li>Resource Management</li>
-          <li>Task Assignment</li>
-          <li>Robust Control</li>
-        </ul>
-      </div>
-
-      <div class="order-first lg:order-last">
-        <div class="overflow-hidden rounded-lg bg-base/20 shadow-md transition-all hover:shadow-xl">
-          <img
-            src={~p"/images/one_future_light.png"}
-            alt="Onestack features"
-            class="overflow-hidden rounded-ss-lg dark:hidden"
-          />
-          <img
-            src={~p"/images/one_future_dark.png"}
-            alt="Onestack features"
-            class="overflow-hidden rounded-ss-lg hidden dark:block"
-          />
+    <!-- Team Management Demo -->
+    <div class="mb-24">
+      <div class="flex flex-col lg:flex-row items-start gap-12">
+        <div class="lg:w-1/2">
+          <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            Effortless Team Management
+          </h3>
+          <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+            Invite team members, assign roles, and control product access all from one intuitive dashboard. Onestack makes team management simple and efficient.
+          </p>
+          <ul class="space-y-3 text-gray-600 dark:text-gray-300">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Invite team members with a single click
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Assign and manage roles and permissions
+              <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                Coming Soon
+              </span>
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Track pending invitations and team activity
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Control product access for each team member
+              <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                Coming Soon
+              </span>
+            </li>
+          </ul>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="py-8 lg:py-20" id="savings">
-  <div class="container">
-    <div class="text-center">
-      <h2 class="text-4xl font-semibold" id="calculator">
-        See how much you can save
-      </h2>
-      <p class="mt-2 text-lg sm:text-center">
-        Discover your savings in seconds. Tell us your team size and software needs.
-        We'll show you our straightforward pricing: just $10 per product for every 10 users.
-        Plus, see how much you'll save compared to traditional software - both in dollars and percentage.
-        Transparent, simple, and cost-effective.
-      </p>
-    </div>
-
-    <div
-      class="mt-12 rounded-lg p-8 bg-secondary/20 text-base-content lg:px-24 lg:py-14"
-      x-data="calculator"
-    >
-      <div class="mt-6 flex justify-center">
-        <div class="tabs-boxed bg-secondary/20 tabs">
-          <button
-            class="tab lg:px-10"
-            x-bind:class="{ 'tab-active': searchType === 'products' }"
-            @click="searchType = 'products'"
-          >
-            Products
-          </button>
-          <button
-            class="tab lg:px-10"
-            x-bind:class="{ 'tab-active': searchType === 'categories' }"
-            @click="searchType = 'categories'"
-          >
-            Categories
-          </button>
-        </div>
-      </div>
-
-      <div class="mt-6 mx-auto flex flex-wrap justify-center">
-        <template x-for="item in itemsToShow" x-bind:key="item">
-          <button
-            type="button"
-            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-600 dark:border-input bg-background hover:bg-primary hover:text-primary-content h-9 px-3 my-1 mx-1"
-            x-bind:class="{'bg-primary text-primary-content': selectedItems.includes(item)}"
-            @click="toggleItem(item)"
-            x-text="item"
-          />
-        </template>
-      </div>
-
-      <div class="mt-6 justify-center">
-        <h2 class="card-title">How big is your team?</h2>
-        <div class="flex items-center justify-between">
-          <input
-            id="slider"
-            type="range"
-            min="1"
-            max="30"
-            x-model="numUsers"
-            class="range w-full"
-          />
-          <h2 class="ml-4" x-text="numUsers"></h2>
-        </div>
-      </div>
-
-      <div class="my-12 mx-auto flex justify-center">
-        <div class="stats stats-vertical md:stats-horizontal">
-          <div class="stat">
-            <div class="stat-title">Monthly savings</div>
-            <div class="stat-value">
-              $<span x-text="savings.toFixed(2)"></span>
+        <div class="lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <!-- Team UI Preview -->
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                  Team Members
+                </h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  Manage your team and control product access
+                </p>
+              </div>
+              <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  >
+                  </path>
+                </svg>
+                Invite Members
+              </button>
             </div>
-            <div class="stat-desc">
-              <span x-text="savingsPercent"></span>% saved compared to closed source
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Total Members
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      12
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-blue-50 dark:bg-blue-900/30">
+                    <svg
+                      class="w-5 h-5 text-blue-600 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Active Now
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      8
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-green-50 dark:bg-green-900/30">
+                    <svg
+                      class="w-5 h-5 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Pending Invites
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      3
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-yellow-50 dark:bg-yellow-900/30">
+                    <svg
+                      class="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="stat-actions">
-              <button class="btn btn-primary btn-sm">
-                <a href={~p"/users/register"} target="blank">
-                  Get started for free
-                </a>
+          </div>
+          <!-- Team Members Table Preview -->
+          <div class="overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr class="bg-gray-100 dark:bg-gray-800/70">
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    User
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    Role
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    Products
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-semibold text-sm">
+                        JD
+                      </div>
+                      <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                          John Doe
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                          john@example.com
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                      Admin
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex space-x-1">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                        All
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-semibold text-sm">
+                        JS
+                      </div>
+                      <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                          Jane Smith
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                          jane@example.com
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                      Member
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex space-x-1">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                        3
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Product Management Demo -->
+    <div class="mb-24">
+      <div class="flex flex-col lg:flex-row-reverse items-start gap-12">
+        <div class="lg:w-1/2">
+          <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            Discover & Manage Features
+          </h3>
+          <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+            Browse, activate, and manage all your software tools in one place. Onestack gives you complete control over your software stack.
+          </p>
+          <ul class="space-y-3 text-gray-600 dark:text-gray-300">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Activate new features with one click
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              See your monthly savings compared to closed-source alternatives
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Easily browse available and active features
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              New products added every month
+            </li>
+          </ul>
+        </div>
+        <div class="lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <!-- Products UI Preview -->
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                  Features
+                </h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  Manage and discover software tools for your team
+                </p>
+              </div>
+            </div>
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Active Features
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      8
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-blue-50 dark:bg-blue-900/30">
+                    <svg
+                      class="w-5 h-5 text-blue-600 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Total Monthly Savings
+                    </p>
+                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                      $1,250.00
+                    </h4>
+                  </div>
+                  <div class="rounded-full p-2 bg-green-50 dark:bg-green-900/30">
+                    <svg
+                      class="w-5 h-5 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      >
+                      </path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Products Tabs -->
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex space-x-8">
+              <button class="pb-4 px-1 border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-medium text-sm">
+                Active Features
+                <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium bg-blue-100 text-blue-600 dark:bg-blue-900/30">
+                  8
+                </span>
+              </button>
+              <button class="pb-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 font-medium text-sm">
+                Available Features
+                <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400">
+                  12
+                </span>
               </button>
             </div>
           </div>
-          <div class="stat">
-            <div class="stat-title">Our price</div>
-            <div class="stat-value p mb-16">
-              $<span x-text="totalCosts.openSource.toFixed(2)"></span>
+          <!-- Products Grid -->
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Product Card 1 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200 p-4">
+                <div class="flex items-center gap-4 mb-4">
+                  <svg
+                    class="w-6 h-6 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    >
+                    </path>
+                  </svg>
+                  <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Calendar
+                  </h4>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Advanced scheduling and calendar management for teams
+                </p>
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    $5/month per user
+                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                    Active
+                  </span>
+                </div>
+              </div>
+              <!-- Product Card 2 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200 p-4">
+                <div class="flex items-center gap-4 mb-4">
+                  <svg
+                    class="w-6 h-6 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    >
+                    </path>
+                  </svg>
+                  <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Document Signing
+                  </h4>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Collaborative document signing and storage solution
+                </p>
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    $7/month per user
+                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                    Active
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="py-8 lg:py-12 " id="faq">
-  <div class="container">
-    <div class="text-center">
-      <h2 class="text-4xl font-semibold text-base-content">FAQs</h2>
-      <p class="mt-2 text-lg">
-        Find solutions, tips, and more to enhance your SaaS experience.
-      </p>
-    </div>
-
-    <div class="mt-12 flex justify-center gap-6">
-      <div class="space-y-4 lg:w-1/2">
-        <div class="collapse collapse-arrow border border-base-content/10">
-          <input
-            checked="checked"
-            name="faq"
-            type="radio"
-            aria-label="open/close"
-          />
-          <div class="collapse-title text-xl font-medium">
-            How reliable is open-source software?
+    <!-- Analytics Dashboard Preview -->
+    <div class="mb-24">
+      <div class="flex flex-col lg:flex-row items-start gap-12">
+        <div class="lg:w-1/2">
+          <div class="flex items-center mb-4">
+            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mr-3">
+              Usage Analytics Dashboard
+            </h3>
+            <div class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-sm dark:bg-gray-700 dark:text-blue-400 border border-blue-400">
+              Coming Soon
+            </div>
           </div>
-          <div class="collapse-content">
-            <p class="text-base">
-              Open-source software can be highly reliable. It benefits from community scrutiny, frequent updates, and transparency.
-              Many successful businesses rely on open-source solutions for critical operations, demonstrating their dependability and robustness.
-            </p>
-          </div>
-        </div>
-        <div class="collapse collapse-arrow border border-base-content/10">
-          <input name="faq" type="radio" aria-label="open/close" />
-          <div class="collapse-title text-xl font-medium">
-            How does Onestack handle data security?
-          </div>
-          <div class="collapse-content">
-            <p class="text-base">
-              At Onestack, we prioritise data security. Our platform employs state-of-the-art encryption, strict access controls, and regular security audits to safeguard your data.
-              We are actively working towards obtaining SOC2 and ISO 27001 certifications to provide you with additional assurance.
-              For more details, please visit our
-              <a class="link" href={~p"/security"}>security</a>
-              page.
-            </p>
-          </div>
-        </div>
-        <div class="collapse collapse-arrow border border-base-content/10">
-          <input name="faq" type="radio" aria-label="open/close" />
-          <div class="collapse-title text-xl font-medium">
-            Can I remove/add products to my stack?
-          </div>
-          <div class="collapse-content">
-            <p class="text-base">
-              Modifying your product stack is straightforward. Simply log in to your account, navigate to "My Stack", and click on the products you wish to add or remove.
-              Changes take effect immediately, with any billing adjustments calculated on a pro-rata basis.
-            </p>
-          </div>
-        </div>
-        <div class="collapse collapse-arrow border border-base-content/10">
-          <input name="faq" type="radio" aria-label="open/close" />
-          <div class="collapse-title text-xl font-medium">
-            Is there a trial period for Onestack?
-          </div>
-          <div class="collapse-content">
-            <p class="text-base">
-              Yes, we offer a free trial period for you to explore and experience our platform's
-              features. Use code FREETRIAL when checking out for a 30 day free trial.
-            </p>
-          </div>
-        </div>
-        <div class="collapse collapse-arrow border border-base-content/10">
-          <input name="faq" type="radio" aria-label="open/close" />
-          <div class="collapse-title text-xl font-medium">
-            Do you offer enterprise plans?
-          </div>
-          <div class="collapse-content">
-            <p class="text-base">
-              For information about our Enterprise offerings, please
-              <a
-                class="link"
-                href="https://cal.onestack.cloud/team/onestack"
-              >
-                schedule a consultation
-              </a>
-              with our team to discuss your specific requirements.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- Modals -->
-    <!-- Modal 1 -->
-  <div
-    id="card1Modal"
-    tabindex="-1"
-    aria-hidden="true"
-    class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full"
-  >
-    <div class="relative w-full max-w-2xl max-h-full">
-      <div class="relative bg-gray-900 rounded-2xl shadow-xl">
-        <div class="flex items-start justify-between p-6 border-b border-gray-700">
-          <h3 class="text-xl font-semibold text-white">
-            Purpose-built for product development
-          </h3>
-          <button
-            type="button"
-            class="text-gray-400 bg-transparent hover:bg-gray-800 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center"
-            data-modal-hide="card1Modal"
-          >
-            <svg
-              class="w-3 h-3"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 14 14"
-            >
-              <path
+          <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+            Get deep insights into your team's software usage patterns with our upcoming analytics dashboard. Optimise your stack and eliminate waste.
+          </p>
+          <ul class="space-y-3 text-gray-600 dark:text-gray-300">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
                 stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-          </button>
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Detailed usage metrics for all products
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Unused seat notifications and recommendations
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Cost optimisation suggestions
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 mr-2 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Custom reports and alerts
+            </li>
+          </ul>
         </div>
-        <div class="p-6">
-          <p class="text-gray-400">Modal content for card 1</p>
+        <div class="lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <!-- Analytics Dashboard Preview -->
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                  Usage Analytics
+                </h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  Track and optimise your software usage
+                </p>
+              </div>
+              <div class="flex space-x-2">
+                <button class="px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600">
+                  Last 30 days
+                </button>
+                <button class="px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700">
+                  Export
+                </button>
+              </div>
+            </div>
+            <!-- Usage Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Total Active Users
+                </p>
+                <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                  42/50
+                </h4>
+                <div class="mt-1 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                  <div
+                    class="bg-blue-600 h-1.5 rounded-full"
+                    style="width: 84%"
+                  >
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Avg. Product Usage
+                </p>
+                <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                  76%
+                </h4>
+                <div class="mt-1 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                  <div
+                    class="bg-green-500 h-1.5 rounded-full"
+                    style="width: 76%"
+                  >
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Unused Seats
+                </p>
+                <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                  8
+                </h4>
+                <div class="mt-1 flex items-center">
+                  <span class="text-xs text-amber-500 font-medium">
+                    Potential monthly savings: $240
+                  </span>
+                </div>
+              </div>
+            </div>
+            <!-- Usage Graph -->
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
+              <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+                Product Usage Trends
+              </h4>
+              <div class="h-30 flex items-end space-x-2">
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[85%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Mon
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[70%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Tue
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[90%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Wed
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[75%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Thu
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[60%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Fri
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[40%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Sat
+                  </div>
+                </div>
+                <div class="relative h-full flex items-end">
+                  <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[30%]">
+                  </div>
+                  <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
+                    Sun
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Product Usage Table -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                  Product Usage Breakdown
+                </h4>
+              </div>
+              <div class="overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-800/70">
+                      <th
+                        scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                      >
+                        Product
+                      </th>
+                      <th
+                        scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                      >
+                        Active Users
+                      </th>
+                      <th
+                        scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                      >
+                        Usage Rate
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <svg
+                            class="w-5 h-5 text-blue-500 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            >
+                            </path>
+                          </svg>
+                          <span class="text-sm font-medium text-gray-900 dark:text-white">
+                            Calendar
+                          </span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        38/42
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div class="w-16 bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 mr-2">
+                            <div
+                              class="bg-green-500 h-1.5 rounded-full"
+                              style="width: 90%"
+                            >
+                            </div>
+                          </div>
+                          <span class="text-sm text-gray-500 dark:text-gray-400">
+                            90%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <svg
+                            class="w-5 h-5 text-blue-500 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            >
+                            </path>
+                          </svg>
+                          <span class="text-sm font-medium text-gray-900 dark:text-white">
+                            Document Signing
+                          </span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        32/42
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div class="w-16 bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 mr-2">
+                            <div
+                              class="bg-green-500 h-1.5 rounded-full"
+                              style="width: 76%"
+                            >
+                            </div>
+                          </div>
+                          <span class="text-sm text-gray-500 dark:text-gray-400">
+                            76%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
+    <!-- Growing Product Catalog -->
+    <div class="text-center mb-16">
+      <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        New Products Added Every Week
+      </h3>
+      <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+        Our product catalog is constantly growing. Check back regularly to discover new tools and features that can enhance your team's productivity.
+      </p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-4xl mx-auto">
+        <%= for product <- @products do %>
+          <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <% feature =
+              Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                product.onestack_product_name
+              ) %>
+            <%= if feature do %>
+              <div class="flex items-center justify-center mb-2">
+                <Lucide.render
+                  icon={feature.icon}
+                  class="w-8 h-8 text-blue-500"
+                />
+              </div>
+              <span class="text-xs font-medium text-gray-900 dark:text-white text-center">
+                <%= feature.display_name %>
+              </span>
+            <% else %>
+              <div class="w-8 h-8 text-blue-500 mb-2 flex items-center justify-center">
+                <Lucide.render
+                  icon="box"
+                  class="w-8 h-8 text-blue-500"
+                />
+              </div>
+              <span class="text-xs font-medium text-gray-900 dark:text-white text-center">
+                <%= product.name %>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-12">
+        <.link
+          navigate={~p"/features"}
+          class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Explore All Features
+          <svg
+            class="ml-2 -mr-1 w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M14 5l7 7m0 0l-7 7m7-7H3"
+            >
+            </path>
+          </svg>
+        </.link>
       </div>
     </div>
   </div>
 </section>
-
-<script>
-  function calculator() {
-    return {
-      searchType: 'categories',
-      numUsers: 1,
-      products: <%= Phoenix.HTML.raw(@prepared_products) %>,
-      selectedItems: [],
-
-      get categories() {
-        return [...new Set(this.products.map(p => p.category))];
-      },
-
-      get itemsToShow() {
-        return this.searchType === 'products'
-          ? this.products.map(p => p.closed_source_name)
-          : this.categories;
-      },
-
-      toggleItem(item) {
-        const index = this.selectedItems.indexOf(item);
-        if (index === -1) {
-          this.selectedItems.push(item);
-        } else {
-          this.selectedItems.splice(index, 1);
-        }
-      },
-
-       get prices() {
-
-        if (this.searchType === 'products') {
-          return this.getProductPrices(this.selectedItems);
-        } else {
-          return this.getAveragePrices(this.selectedItems);
-        }
-      },
-
-      getProductPrices(products) {
-        const prices = this.products.filter(p => products.includes(p.closed_source_name));
-        return prices;
-      },
-
-      getAveragePrices(categories) {
-        const prices = categories.map(category => {
-          const categoryProducts = this.products.filter(p => p.category === category);
-          const avgClosedSourcePrice = categoryProducts.reduce((sum, p) => sum + p.closed_source_user_price_aud, 0) / categoryProducts.length;
-          const avgOpenSourcePrice = categoryProducts.reduce((sum, p) => sum + p.open_source_fixed_price, 0) / categoryProducts.length;
-          return {
-            category,
-            closed_source_user_price_aud: avgClosedSourcePrice,
-            open_source_fixed_price: avgOpenSourcePrice
-          };
-        });
-        return prices;
-      },
-
-      get totalCosts() {
-        const costs = this.prices.reduce((acc, price) => {
-          const closedSourceCost = price.closed_source_user_price_aud * this.numUsers;
-          const steps = Math.floor((this.numUsers - 1) / 10) + 1;
-          const openSourceCost = price.open_source_fixed_price * steps;
-
-          return {
-            closedSource: acc.closedSource + closedSourceCost,
-            openSource: acc.openSource + openSourceCost
-          };
-        }, { closedSource: 0, openSource: 0 });
-
-        return costs;
-      },
-
-      get savings() {
-        const savingsAmount = this.totalCosts.closedSource - this.totalCosts.openSource;
-        return isNaN(savingsAmount) ? 0 : savingsAmount;
-      },
-
-      get savingsPercent() {
-        if (this.totalCosts.closedSource === 0) return "0.00";
-        const percent = (this.savings / this.totalCosts.closedSource) * 100;
-        return isNaN(percent) ? "0.00" : percent.toFixed(2);
-      }
-    };
-  }
-</script>
+<!-- End Interactive Examples Section -->

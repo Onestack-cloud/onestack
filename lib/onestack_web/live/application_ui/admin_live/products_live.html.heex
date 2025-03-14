@@ -25,7 +25,7 @@
                   Active Features
                 </p>
                 <h3 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                  <%= length(@selected_products) %>
+                  <%= length(@selected_product_names) %>
                 </h3>
               </div>
               <div class="rounded-full p-3 bg-blue-50 dark:bg-blue-900/30">
@@ -68,14 +68,24 @@
                   <% total_closed_source_cost =
                     Enum.reduce(@products, Money.new(0), fn product,
                                                             acc ->
-                      cost =
-                        calculate_monthly_savings(
-                          product,
-                          @num_users,
-                          @upcoming_invoice
-                        )
+                      if Enum.member?(
+                           @selected_product_names,
+                           String.downcase(
+                             product.onestack_product_name
+                           )
+                         ) do
+                        user_price =
+                          product.closed_source_user_price
+                          |> Decimal.new()
+                          |> Decimal.mult(Decimal.new(100))
+                          |> Decimal.to_integer()
+                          |> Money.new()
 
-                      Money.add(acc, cost)
+                        cost = Money.multiply(user_price, @num_users)
+                        Money.add(acc, cost)
+                      else
+                        acc
+                      end
                     end)
 
                   current_subscription_cost =
@@ -132,7 +142,7 @@
               @current_tab != "active" &&
                 "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
             ]}>
-              <%= length(@selected_products) %>
+              <%= length(@selected_product_names) %>
             </span>
           </button>
 
@@ -155,7 +165,7 @@
               @current_tab != "available" &&
                 "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
             ]}>
-              <%= length(@products) - length(@selected_products) %>
+              <%= length(@products) - length(@selected_product_names) %>
             </span>
           </button>
         </nav>
@@ -166,13 +176,13 @@
       <%= if @current_tab=="active" do %>
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <%= for product <- @products do %>
-            <%= if Enum.member?(@selected_products, product.id) do %>
+            <%= if Enum.member?(@selected_product_names, String.downcase(product.onestack_product_name)) do %>
               <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200">
                 <div class="absolute top-4 right-4">
                   <button
                     class="text-gray-400 hover:text-red-500 transition-colors duration-200 hover:cursor-pointer"
                     phx-click="open_modal"
-                    phx-value-product={product.id}
+                    phx-value-product={product.onestack_product_name}
                     phx-value-action="remove"
                   >
                     <Lucide.render icon="trash-2" class="w-5 h-5" />
@@ -180,13 +190,9 @@
                 </div>
                 <div class="p-6">
                   <div class="flex items-center gap-4 mb-6">
-                    <% product_metadata =
-                      Onestack.CatalogMonthly.ProductMetadata.get_metadata(
-                        product.name
-                      ) %>
-                    <%= if product_metadata do %>
+                    <%= if product do %>
                       <Lucide.render
-                        icon={product_metadata.icon}
+                        icon={product.icon_name}
                         class="w-6 h-6 text-blue-500"
                       />
                     <% else %>
@@ -198,14 +204,14 @@
                   </div>
                   <div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                      <%= if product_metadata do %>
-                        <%= product_metadata.display_name %>
+                      <%= if product do %>
+                        <%= product.display_name %>
                       <% else %>
                         <%= "no metadata found" %>
                       <% end %>
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                      <%= product.name %>
+                      <%= product.onestack_product_name %>
                     </p>
                   </div>
 
@@ -241,7 +247,7 @@
                           </div>
                         </div> !--%>
                       </div>
-                      <div class="text-sm">
+                      <%!-- <div class="text-sm">
                         <span class="text-green-600 dark:text-green-400 font-medium">
                           <%= Money.to_string(
                             calculate_monthly_savings(
@@ -254,13 +260,13 @@
                         <span class="text-gray-500 dark:text-gray-400">
                           saved/mo
                         </span>
-                      </div>
+                      </div> !--%>
                     </div>
                   </div>
                   <!-- Launch Button -->
                   <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <a
-                      href={"https://#{product.name}.onestack.cloud"}
+                      href={"https://#{product.onestack_product_name}.onestack.cloud"}
                       target="_blank"
                       rel="noopener noreferrer"
                       class="flex items-center justify-center w-full py-2.5 px-4 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
@@ -268,12 +274,7 @@
                       <Lucide.render
                         icon="external-link"
                         class="w-4 h-4 mr-2"
-                      /> Launch
-                      <%= if product_metadata do %>
-                        <%= product_metadata.display_name %>
-                      <% else %>
-                        <%= product.name %>
-                      <% end %>
+                      /> Launch <%= product.display_name %>
                     </a>
                   </div>
                 </div>
@@ -284,7 +285,7 @@
       <% else %>
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <%= for product <- @products do %>
-            <%= if !Enum.member?(@selected_products, product.id) do %>
+            <%= if !Enum.member?(@selected_product_names, String.downcase(product.onestack_product_name)) do %>
               <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:shadow-lg hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200 overflow-hidden">
                 <%= if false do %>
                   <div class="absolute top-4 right-4">
@@ -295,39 +296,20 @@
                 <% end %>
 
                 <div class="p-6">
-                  <% product_metadata =
-                    Onestack.CatalogMonthly.ProductMetadata.get_metadata(
-                      product.name
-                    ) %>
                   <div class="flex items-center gap-4 mb-6">
-                    <%= if product_metadata do %>
-                      <Lucide.render
-                        icon={product_metadata.icon}
-                        class="w-6 h-6 text-blue-500"
-                      />
-                    <% else %>
-                      <Lucide.render
-                        icon="frown"
-                        class="w-6 h-6 text-blue-500"
-                      />
-                    <% end %>
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="w-6 h-6 text-blue-500"
+                    />
                     <div>
                       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        <%= if product_metadata do %>
-                          <%= product_metadata.display_name %>
-                        <% else %>
-                          <%= product.name %>
-                        <% end %>
+                        <%= product.display_name %>
                       </h3>
                       <p class="text-sm text-gray-500 dark:text-gray-400">
-                        <%= product.name %>
+                        <%= product.onestack_product_name %>
                       </p>
                     </div>
                   </div>
-
-                  <p class="text-gray-600 dark:text-gray-300 text-sm mb-6">
-                    <%= product.description %>
-                  </p>
 
                   <%!-- <div class="space-y-4">
                     <div class="flex items-center justify-between text-sm">
@@ -345,7 +327,7 @@
                   <button
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors duration-200 hover:cursor-pointer"
                     phx-click="open_modal"
-                    phx-value-product={product.id}
+                    phx-value-product={product.onestack_product_name}
                     phx-value-action="add"
                   >
                     <Lucide.render icon="plus" class="w-4 h-4" />
@@ -442,7 +424,7 @@
                             )
                           ) %>
                         </span>
-                        per month by using this featire on Onestack.
+                        per month by using this feature on Onestack.
                       </p>
                     </div>
                   </div>
@@ -510,7 +492,9 @@
               }
               phx-click="update_subscription"
               phx-value-action={@modal_action}
-              phx-value-product={@modal_product.id}
+              phx-value-product={
+                @modal_product.onestack_product_name
+              }
               disabled={@updating}
             >
               <%= if @updating do %>

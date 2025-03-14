@@ -8,10 +8,13 @@ defmodule OnestackWeb.LandingLive do
 
   alias Onestack.CatalogMonthly
 
+  alias OnestackWeb.Live.LandingLive.TestimonialData
+
   @impl true
   def mount(_params, session, socket) do
     products = CatalogMonthly.list_products()
     features = CatalogMonthly.ProductMetadata.all_products()
+    testimonial_cards = TestimonialData.testimonial_cards()
 
     current_user =
       case session["user_token"] do
@@ -39,7 +42,8 @@ defmodule OnestackWeb.LandingLive do
        products: products,
        current_user: current_user,
        prepared_products: Jason.encode!(prepared_products),
-       features: features
+       features: features,
+       testimonial_cards: testimonial_cards
      )}
   end
 

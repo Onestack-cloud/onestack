@@ -15,18 +15,20 @@ defmodule OnestackWeb.ApplicationUiLive do
     stats = Onestack.Stats.get_user_stats(current_user)
 
     view_state =
-      determine_view_state(current_user, stats.stripe_product_ids, stats.team_members)
+      determine_view_state(current_user, stats.subscribed_products, stats.team_members)
 
     host = uri.host
     is_app_subdomain = host != nil && String.starts_with?(host, "app.")
 
     if is_app_subdomain do
+      IO.puts("is_app_subdomain")
+
       case view_state do
         :stack_admin ->
-          {:ok, socket |> push_redirect(to: "/admin/products")}
+          {:ok, socket |> push_redirect(to: "/admin/features")}
 
         :stack_user ->
-          {:ok, socket |> push_redirect(to: "/user/products")}
+          {:ok, socket |> push_redirect(to: "/user/features")}
 
         _ ->
           {:ok, socket}

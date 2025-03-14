@@ -4,8 +4,8 @@ defmodule OnestackWeb.UserLoginLive do
   def render(assigns) do
     ~H"""
     <section id="log_in" class="">
-      <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+      <div class="flex flex-col items-center mt-20 px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0  dark:border-gray-700">
           <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
             <div class="text-center">
               <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
@@ -72,7 +72,11 @@ defmodule OnestackWeb.UserLoginLive do
                 <div class="flex items-center justify-between">
                   <div class="flex items-start">
                     <div class="flex items-center h-5">
-                      <.input field={@form[:remember_me]} type="checkbox" label="" />
+                      <.input
+                        field={@form[:remember_me]}
+                        type="checkbox"
+                        label=""
+                      />
                     </div>
                     <div class="flex items-center text-md">
                       <label

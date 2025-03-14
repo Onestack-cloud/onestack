@@ -10,18 +10,18 @@ defmodule OnestackWeb.RoleRedirectLive do
 
         # Check if user is an admin
         user && socket.assigns.is_admin ->
-          ~p"/admin/products"
+          ~p"/admin/features"
 
         # Regular authenticated user
         user ->
-          ~p"/member/products"
+          ~p"/member/features"
 
         # Fallback for unauthenticated users (should not happen due to ensure_authenticated)
         true ->
           ~p"/"
       end
 
-    {:noreply, push_redirect(socket, to: redirect_path)}
+    {:ok, push_redirect(socket, to: redirect_path)}
   end
 
   def render(assigns) do

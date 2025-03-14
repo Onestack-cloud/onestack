@@ -1,8 +1,9 @@
 defmodule OnestackWeb.Layouts do
   use OnestackWeb, :html
 
-  def is_admin?(assigns) do
-    assigns[:is_admin] || false
+  defp is_admin?(assigns) do
+    teams = Onestack.Teams.list_teams()
+    Enum.any?(teams, fn team -> team.admin_email == assigns.current_user.email end)
   end
 
   embed_templates "layouts/*"
@@ -129,20 +130,20 @@ defmodule OnestackWeb.Layouts do
                     </span>
                   </.link>
                 </li>
-                <!-- Products -->
+                <!-- Features -->
                 <li>
                   <.link
-                    navigate={~p"/admin/products"}
+                    navigate={~p"/admin/features"}
                     class={[
                       "flex items-center w-full p-2 text-base transition duration-75 rounded-lg group",
                       String.contains?(
                         @current_path,
-                        "/admin/products"
+                        "/admin/features"
                       ) &&
                         "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400",
                       !String.contains?(
                         @current_path,
-                        "/admin/products"
+                        "/admin/features"
                       ) &&
                         "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                     ]}
@@ -153,12 +154,12 @@ defmodule OnestackWeb.Layouts do
                         "w-5 h-5",
                         String.contains?(
                           @current_path,
-                          "/admin/products"
+                          "/admin/features"
                         ) &&
                           "text-blue-600 dark:text-blue-400",
                         !String.contains?(
                           @current_path,
-                          "/admin/products"
+                          "/admin/features"
                         ) &&
                           "text-gray-500 dark:text-gray-400"
                       ]}
@@ -221,17 +222,17 @@ defmodule OnestackWeb.Layouts do
                 <!-- Member-only navigation items -->
                 <li>
                   <.link
-                    navigate={~p"/member/products"}
+                    navigate={~p"/member/features"}
                     class={[
                       "flex items-center w-full p-2 text-base transition duration-75 rounded-lg group",
                       String.contains?(
                         @current_path,
-                        "/member/products"
+                        "/member/features"
                       ) &&
                         "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400",
                       !String.contains?(
                         @current_path,
-                        "/member/products"
+                        "/member/features"
                       ) &&
                         "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                     ]}
@@ -242,18 +243,18 @@ defmodule OnestackWeb.Layouts do
                         "w-5 h-5",
                         String.contains?(
                           @current_path,
-                          "/member/products"
+                          "/member/features"
                         ) &&
                           "text-blue-600 dark:text-blue-400",
                         !String.contains?(
                           @current_path,
-                          "/member/products"
+                          "/member/features"
                         ) &&
                           "text-gray-500 dark:text-gray-400"
                       ]}
                     />
                     <span class="flex-1 ml-3 text-left whitespace-nowrap">
-                      My Features
+                      Features
                     </span>
                   </.link>
                 </li>
@@ -288,7 +289,7 @@ defmodule OnestackWeb.Layouts do
               </li>
               <li>
                 <a
-                  href="https://t.me/+-070bweUcNhiMWVl"
+                  href="https://community.onestack.cloud"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="flex items-center p-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 group"
@@ -326,7 +327,9 @@ defmodule OnestackWeb.Layouts do
               </li>
               <li>
                 <a
-                  href="/docs"
+                  href="https://docs.onestack.cloud"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   class="flex items-center p-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 group"
                 >
                   <Lucide.render icon="book-open-text" class="w-5 h-5" />
@@ -365,19 +368,11 @@ defmodule OnestackWeb.Layouts do
             >
               <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
                 <li>
-                  <a
-                    href="#"
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                  >
-                    My account
-                  </a>
-                </li>
-                <li>
                   <.link
                     navigate={~p"/users/settings"}
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                   >
-                    Settings
+                    Account settings
                   </.link>
                 </li>
                 <li>
@@ -479,10 +474,10 @@ defmodule OnestackWeb.Layouts do
                   <a
                     class="p-2 flex items-center text-sm text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:bg-gray-100 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
                     href={
-                      OnestackWeb.URLHelper.main_domain_path("/products")
+                      OnestackWeb.URLHelper.main_domain_path("/features")
                     }
                   >
-                    Products
+                    Features
                   </a>
                   <.link
                     class="p-2 flex items-center text-sm text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:bg-gray-100 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
@@ -493,7 +488,9 @@ defmodule OnestackWeb.Layouts do
                     Pricing
                   </.link>
                   <.link
-                    navigate={~p"/docs"}
+                    href="https://docs.onestack.cloud"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     class="p-2 flex items-center text-sm text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:bg-gray-100 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
                   >
                     Docs
@@ -580,44 +577,32 @@ defmodule OnestackWeb.Layouts do
                         </li>
                       </ul>
                     </div>
-                    <button
-                      data-collapse-toggle="navbar-user"
-                      type="button"
-                      class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-                      aria-controls="navbar-user"
-                      aria-expanded="false"
-                    >
-                      <span class="sr-only">Open main menu</span>
-                      <svg
-                        class="w-5 h-5"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 17 14"
-                      >
-                        <path
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M1 1h15M1 7h15M1 13h15"
-                        />
-                      </svg>
-                    </button>
                   </div>
                 <% else %>
-                  <a
-                    href={~p"/users/log_in"}
+                  <.link
+                    navigate={~p"/users/log_in"}
                     class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-2 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
                   >
                     Login
-                  </a>
-                  <a
-                    href={~p"/users/register"}
-                    class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-3 py-2 text-center me-2 mb-2 "
+                  </.link>
+                  <.link
+                    navigate={~p"/users/register"}
+                    class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700
+                    hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300
+                    dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2
+                    text-center me-2 mb-2
+                    border border-blue-800
+                    shadow-[0_4px_6px_-1px_rgba(0,0,0,0.2)]
+                    transition-all duration-200
+                    relative
+                    before:content-[''] before:absolute before:inset-0 before:rounded-lg
+                    before:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)]
+                    before:pointer-events-none
+                    hover:translate-y-[1px] hover:shadow-[0_2px_4px_-1px_rgba(0,0,0,0.2)]
+                    active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
                   >
                     Get started for free
-                  </a>
+                  </.link>
                 <% end %>
               </div>
               <!-- End Button Group -->
@@ -716,18 +701,48 @@ defmodule OnestackWeb.Layouts do
               </p>
               <p>
                 <a
-                  class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
-                  href="#"
+                  class="inline-flex items-center gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
+                  href="https://docs.onestack.cloud"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Docs
+                  <svg
+                    class="w-3 h-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
                 </a>
               </p>
               <p>
                 <a
-                  class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
+                  class="inline-flex items-center gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
                   href="https://kuma.onestack.cloud/status/onestack"
                 >
                   Status
+                  <svg
+                    class="w-3 h-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
                 </a>
               </p>
               <p>
@@ -752,28 +767,28 @@ defmodule OnestackWeb.Layouts do
               <p>
                 <a
                   class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
-                  href="mailto:contact@onestack.cloud"
+                  href="mailto:founders@onestack.cloud"
                 >
-                  Contact us
+                  Email us
                 </a>
               </p>
-              <p>
+              <!-- <p>
                 <a
                   class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
-                  href="#"
+                  href="https://blog.onestack.cloud"
                 >
                   Blog
                 </a>
               </p>
               <p>
-                <a
+                <.link
+                  navigate={~p"/about"}
                   class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
-                  href="#"
                 >
                   About us
-                </a>
-              </p>
-              <p>
+                </.link>
+              </p>  -->
+              <!-- <p>
                 <a
                   class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
                   href="#"
@@ -784,14 +799,14 @@ defmodule OnestackWeb.Layouts do
                   We're hiring
                 </span>
               </p>
-              <p>
+               <p>
                 <a
                   class="inline-flex gap-x-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:text-gray-200"
                   href="#"
                 >
                   Customers
                 </a>
-              </p>
+              </p> -->
             </div>
           </div>
           <!-- End Col -->
@@ -809,25 +824,13 @@ defmodule OnestackWeb.Layouts do
           <div>
             <a
               class="size-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
-              href="#"
+              href="https://github.com/Onestack-cloud"
             >
               <Lucide.render icon="github" class="shrink-0 size-4" />
             </a>
             <a
               class="size-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
-              href="#"
-            >
-              <Lucide.render icon="twitter" class="shrink-0 size-4" />
-            </a>
-            <a
-              class="size-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
-              href="#"
-            >
-              <Lucide.render icon="linkedin" class="shrink-0 size-4" />
-            </a>
-            <a
-              class="size-10 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
-              href="#"
+              href="https://linkedin.com/company/onestack-cloud"
             >
               <Lucide.render icon="linkedin" class="shrink-0 size-4" />
             </a>

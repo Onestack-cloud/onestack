@@ -1,0 +1,195 @@
+<section class="py-8 lg:py-20 min-h-screen" id="products">
+  <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+    <div class="max-w-2xl mx-auto text-center mb-8 lg:mb-10">
+      <h2 class="text-3xl font-bold md:text-4xl md:leading-tight text-gray-800 dark:text-gray-200 animate-fade-in">
+        One-click access to all the features you need from one interface
+      </h2>
+    </div>
+
+    <%!-- Products Grid --%>
+    <div
+      id="products-container"
+      phx-update="replace"
+      class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
+      <%= for {product, index} <- Enum.with_index(@products) do %>
+        <div
+          id={"product-#{product.id}"}
+          class="group relative h-full animate-fade-in"
+          style={"animation-delay: #{index * 0.05}s"}
+        >
+          <div class="perspective-1000 h-full w-full">
+            <%!-- Front Card (Visible by Default) --%>
+            <div class="shadow-fade relative grid h-full w-full overflow-clip rounded-xl bg-white border border-gray-200 dark:bg-slate-800 dark:border-gray-700 dark:shadow-slate-700/[.7] transition-all duration-300 group-hover:shadow-md">
+              <div class="flex h-full w-full flex-col p-5 md:p-6 transition-opacity duration-300 group-hover:opacity-0">
+                <%!-- Tag Section --%>
+                <%= if get_in(product.metadata, [:tag]) do %>
+                  <div class="flex justify-end mb-2">
+                    <span class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <%= product.metadata.tag %>
+                    </span>
+                  </div>
+                <% end %>
+
+                <% feature =
+                  Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                    product.name
+                  ) %>
+
+                <%!-- Product Name at Top --%>
+                <div class="text-center mb-4">
+                  <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                    <%= if feature do %>
+                      <%= feature.display_name %>
+                    <% else %>
+                      <%= product.name %>
+                    <% end %>
+                  </h3>
+                </div>
+
+                <%!-- Feature Icon --%>
+                <div class="flex justify-center mb-5">
+                  <%= if feature do %>
+                    <div class="h-20 w-20 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-full p-4 transition-transform duration-300">
+                      <Lucide.render
+                        icon={feature.icon}
+                        class="h-12 w-12 text-blue-500 dark:text-blue-400"
+                      />
+                    </div>
+                  <% end %>
+                </div>
+
+                <%!-- Feature Info --%>
+                <p class="text-gray-600 dark:text-gray-300 text-center flex-grow">
+                  <%= product.description %>
+                </p>
+              </div>
+
+              <%!-- Back Card (Revealed on Hover) --%>
+              <div class="absolute inset-0 flex h-full w-full scale-95 select-none flex-col items-center justify-center rounded-xl p-5 md:p-6 opacity-0 transition-[opacity,transform] duration-300 group-hover:scale-100 group-hover:opacity-100 bg-white dark:bg-slate-800">
+                <div class="absolute left-3 top-3 h-1.5 w-1.5 rounded-full bg-gray-200 dark:bg-gray-600">
+                </div>
+                <div class="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-gray-200 dark:bg-gray-600">
+                </div>
+                <div class="absolute bottom-3 left-3 h-1.5 w-1.5 rounded-full bg-gray-200 dark:bg-gray-600">
+                </div>
+                <div class="absolute bottom-3 right-3 h-1.5 w-1.5 rounded-full bg-gray-200 dark:bg-gray-600">
+                </div>
+
+                <%!-- Product Name --%>
+                <p class="mb-2 text-center text-base font-semibold leading-tight md:text-lg text-gray-800 dark:text-white">
+                  <%= if feature do %>
+                    <%= feature.display_name %>
+                  <% else %>
+                    <%= product.name %>
+                  <% end %>
+                </p>
+
+                <%!-- Detailed Feature Description --%>
+                <p class="text-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                  <%= product.description %>
+                </p>
+
+                <%!-- Feature Benefits --%>
+                <div class="w-full mb-4">
+                  <ul class="space-y-2">
+                    <%= if feature && feature[:benefits] do %>
+                      <%= for benefit <- feature.benefits do %>
+                        <li class="flex items-start">
+                          <Lucide.render
+                            icon="circle-check"
+                            class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                          />
+                          <span class="text-sm text-gray-700 dark:text-gray-300">
+                            <%= benefit %>
+                          </span>
+                        </li>
+                      <% end %>
+                    <% else %>
+                      <li class="flex items-start">
+                        <Lucide.render
+                          icon="circle-check"
+                          class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                          Streamline your workflow
+                        </span>
+                      </li>
+                      <li class="flex items-start">
+                        <Lucide.render
+                          icon="circle-check"
+                          class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                          Enhance productivity
+                        </span>
+                      </li>
+                      <li class="flex items-start">
+                        <Lucide.render
+                          icon="circle-check"
+                          class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                          Save time and resources
+                        </span>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      ]
+    </div>
+
+    <%!-- Suggest a Feature Section --%>
+    <div class="mt-12 lg:mt-16 text-center">
+      <div class="inline-block p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+        <div class="max-w-xl mx-auto">
+          <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">
+            Can't find what you're looking for?
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-5">
+            Have a feature idea or suggestion? We'd love to hear from you!
+          </p>
+          <a
+            href={OnestackWeb.URLHelper.subdomain_url("feedback")}
+            class="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-800"
+          >
+            <Lucide.render icon="lightbulb" class="w-5 h-5" />
+            Suggest a Feature
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%!-- Add these styles to your app.css or equivalent --%>
+<style>
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .shadow-fade {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .group:hover .shadow-fade {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+</style>

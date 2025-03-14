@@ -1,4 +1,4 @@
-defmodule Onestack.Stats do
+defmodule Onestack.Admin.Stats do
   @moduledoc """
   Context for fetching common statistics and metrics used across the application.
   """
@@ -11,7 +11,7 @@ defmodule Onestack.Stats do
   def get_user_stats(user) when not is_nil(user) do
     %{
       team_members: get_team_members(user),
-      stripe_product_ids: get_user_products(user),
+      subscribed_product_names: get_user_products(user),
       combined_customers: StripeCache.list_combined_customers(),
       upcoming_invoice: get_upcoming_invoice(user)
     }
@@ -20,13 +20,13 @@ defmodule Onestack.Stats do
   def get_user_stats(nil),
     do: %{
       team_members: [],
-      stripe_product_ids: [],
+      subscribed_product_names: [],
       combined_customers: [],
       upcoming_invoice: []
     }
 
   defp get_team_members(user) do
-    direct_members = Teams.list_team_members(user)
+    direct_members = Teams.list_team_members_by_admin(user)
 
     if direct_members == [] do
       # Check if user is member of any teams
@@ -45,11 +45,11 @@ defmodule Onestack.Stats do
   end
 
   defp get_user_products(user) do
-    combined_customers = StripeCache.list_combined_customers()
+    team = Teams.get_team_by_admin(user)
 
-    case Enum.find(combined_customers, fn customer -> customer.email == user.email end) do
+    case team do
       nil -> []
-      customer -> customer.products
+      team -> team.products
     end
   end
 

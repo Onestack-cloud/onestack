@@ -306,11 +306,11 @@ defmodule Onestack.Teams do
 
   ## Examples
 
-      iex> list_team_members(user)
+      iex> list_team_members_by_admin(user)
       ["member1@example.com", "member2@example.com"]
 
   """
-  def list_team_members(user) do
+  def list_team_members_by_admin(user) do
     case get_team_by_admin(user) do
       nil -> []
       team -> team.members

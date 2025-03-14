@@ -25,6 +25,7 @@ import Alpine from "alpinejs";
 // Import Preline
 import "preline/preline";
 import "flowbite/dist/flowbite.phoenix.js";
+import { InitCheckout } from "./init_checkout";
 
 // Initialize Preline
 window.HSStaticMethods = HSStaticMethods;
@@ -35,21 +36,13 @@ Alpine.start();
 const Hooks = {
   ClearInput: {
     mounted() {
-      this.handleEvent("clear-input", ({selector}) => {
+      this.handleEvent("clear-input", ({ selector }) => {
         const input = document.querySelector(selector);
         if (input) input.value = "";
       });
     }
   },
-  // Reinitialize PrelineUI after LiveView updates the DOM
-  Preline: {
-    mounted() {
-      window.HSStaticMethods.autoInit();
-    },
-    updated() {
-      window.HSStaticMethods.autoInit();
-    },
-  },
+  InitCheckout: InitCheckout
 };
 
 let csrfToken = document

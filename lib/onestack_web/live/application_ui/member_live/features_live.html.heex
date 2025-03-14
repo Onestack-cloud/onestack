@@ -8,7 +8,11 @@
     <!-- Header -->
     <div class="relative mb-24 text-center">
       <h1 class="text-5xl font-medium text-gray-900 dark:text-white">
-        My Apps
+        <%= if @admin_company_name && @admin_company_name != "" do %>
+          <%= String.capitalize(
+            @admin_company_name || @current_user.first_name
+          ) %>'s Stack
+        <% end %>
       </h1>
       <p class="mt-4 text-lg text-gray-500 dark:text-gray-400">
         Quick access to all your tools
@@ -17,45 +21,24 @@
     <!-- App Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
       <%= for product <- @products do %>
-        <%= if Enum.member?(@selected_products, product.id) do %>
-          <% product_metadata =
-            Onestack.CatalogMonthly.ProductMetadata.get_metadata(
-              product.name
-            ) %>
+        <%= if Enum.member?(@subscribed_products, String.downcase(product.onestack_product_name)) do %>
           <a
-            href={
-              if product_metadata,
-                do: "https://#{product.name}.onestack.cloud",
-                else: "#"
-            }
+            href={"https://#{product.onestack_product_name}.onestack.cloud"}
             target="_blank"
             rel="noopener noreferrer"
             class="group relative block transition-transform duration-200 hover:-translate-y-1"
           >
-            <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-2 ring-gray-200/80 dark:ring-gray-700/80 hover:shadow-xl hover:ring-blue-400 dark:hover:ring-blue-500 transition-all duration-200 overflow-hidden">
+            <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm rg-2 ring-gray-200/80 dark:ring-gray-700/80 hover:shadow-xl hover:ring-blue-400 dark:hover:ring-blue-500 transition-all duration-200 overflow-hidden">
               <div class="p-8">
                 <div class="flex flex-col items-center text-center space-y-4">
-                  <%= if product_metadata do %>
-                    <div class="flex-shrink-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-5 transition-colors duration-200 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50">
-                      <Lucide.render
-                        icon={product_metadata.icon}
-                        class="w-10 h-10 text-blue-600 dark:text-blue-400"
-                      />
-                    </div>
-                  <% else %>
-                    <div class="flex-shrink-0 rounded-2xl bg-gray-50 dark:bg-gray-700/30 p-5 transition-colors duration-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-700/50">
-                      <Lucide.render
-                        icon="app-window"
-                        class="w-10 h-10 text-gray-400"
-                      />
-                    </div>
-                  <% end %>
+                  <div class="flex-shrink-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-5 transition-colors duration-200 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50">
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="w-10 h-10 text-blue-600 dark:text-blue-400"
+                    />
+                  </div>
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                    <%= if product_metadata do %>
-                      <%= product_metadata.display_name %>
-                    <% else %>
-                      <%= product.name %>
-                    <% end %>
+                    <%= product.display_name %>
                   </h3>
                 </div>
 

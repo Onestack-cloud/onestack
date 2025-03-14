@@ -213,11 +213,7 @@
               <td class="whitespace-nowrap px-3 py-4">
                 <div class="flex -space-x-2">
                   <% product_names =
-                    Onestack.StripeCache.list_products()
-                    |> Enum.filter(fn product ->
-                      product.id in @stats.stripe_product_ids
-                    end)
-                    |> Enum.map(fn product -> product.name end) %>
+                    Onestack.Teams.list_user_products(member_email) %>
                   <%= for product_name <- Enum.take(product_names, 3) do %>
                     <% product_metadata =
                       Onestack.CatalogMonthly.ProductMetadata.get_metadata(
@@ -234,13 +230,13 @@
                       />
                     </.link>
                   <% end %>
-                  <%= if length(@stats.stripe_product_ids) > 3 do %>
+                  <%= if length(product_names) > 3 do %>
                     <.link
                       navigate="/admin/products"
                       class="w-8 h-8 rounded-full ring-2 ring-white dark:ring-gray-800 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
                     >
                       <span class="text-xs text-gray-600 dark:text-gray-300">
-                        +<%= length(@stats.stripe_product_ids) - 3 %>
+                        +<%= length(product_names) - 3 %>
                       </span>
                     </.link>
                   <% end %>

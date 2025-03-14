@@ -1,7 +1,7 @@
 # lib/onestack_web/live/admin/products_live.ex
 defmodule OnestackWeb.Admin.ProductsLive do
   use OnestackWeb, :live_view
-  alias Onestack.{StripeCache, Teams, Accounts, Stats}
+  alias Onestack.{StripeCache, Teams, Accounts, Admin.Stats}
   import Phoenix.Component
   use OnestackWeb.AssignCurrentPath
 
@@ -24,18 +24,18 @@ defmodule OnestackWeb.Admin.ProductsLive do
       socket
       |> assign(current_user: current_user)
       |> assign(team_members: stats.team_members)
-      |> assign(selected_products: stats.stripe_product_ids)
+      |> assign(selected_product_names: stats.subscribed_product_names)
       |> assign(combined_customers: stats.combined_customers)
       |> assign(upcoming_invoice: stats.upcoming_invoice)
       |> assign(num_users: length(stats.team_members))
-      |> assign(products: StripeCache.list_products())
+      |> assign(products: Onestack.CatalogMonthly.list_products())
       |> assign(invited_emails: [])
 
     # IO.inspect(socket)
 
     {:ok,
      assign(socket,
-       page_title: "Products",
+       page_title: "Features",
        selected_category: "all",
        search: "",
        show_product_details: nil,
@@ -60,12 +60,11 @@ defmodule OnestackWeb.Admin.ProductsLive do
 
   defp calculate_monthly_savings(product, num_users, upcoming_invoice) do
     # Get product metadata for closed source pricing
-    metadata = Onestack.CatalogMonthly.ProductMetadata.get_metadata(product.name)
 
-    if metadata && metadata.closed_source_user_price do
+    if product && product.closed_source_user_price do
       # Calculate closed source cost (converting from dollars to cents)
       closed_source_cost =
-        metadata.closed_source_user_price
+        product.closed_source_user_price
         |> Decimal.mult(Decimal.new(num_users))
         |> Decimal.mult(Decimal.new(100))
         |> Decimal.round(0)
@@ -94,11 +93,19 @@ defmodule OnestackWeb.Admin.ProductsLive do
   end
 
   @impl true
-  def handle_event("open_modal", %{"product" => product_id, "action" => action}, socket) do
-    product = Enum.find(socket.assigns.products, &(&1.id == product_id))
+  def handle_event(
+        "open_modal",
+        %{"product" => product_name, "action" => action, "value" => _value},
+        socket
+      ) do
+    product =
+      Enum.find(
+        socket.assigns.products,
+        &(String.downcase(&1.onestack_product_name) == String.downcase(product_name))
+      )
 
     if product do
-      metadata = Onestack.CatalogMonthly.ProductMetadata.get_metadata(product.name)
+      metadata = Onestack.CatalogMonthly.ProductMetadata.get_metadata(product_name)
 
       {:noreply,
        assign(socket,
@@ -118,115 +125,231 @@ defmodule OnestackWeb.Admin.ProductsLive do
   end
 
   @impl true
-  def handle_event("update_subscription", %{"action" => action, "product" => product_id}, socket) do
-    current_user = socket.assigns.current_user
-    current_products = socket.assigns.selected_products
+  def handle_event(
+        "update_subscription",
+        %{"action" => action, "product" => onestack_product_name, "value" => _value},
+        socket
+      ) do
+    current_products = socket.assigns.selected_product_names
+    onestack_product_name = String.downcase(onestack_product_name)
 
-    _combined_customer =
-      Enum.find(socket.assigns.combined_customers, &(&1.email == current_user.email))
-
-    cond do
-      action == "remove" and length(current_products) == 1 and
-          hd(current_products) == product_id ->
+    case {action, current_products} do
+      {"remove", [only_product]} when only_product == onestack_product_name ->
         # This is the last product and we're removing it -> cancel subscription
-        send(self(), {:cancel_subscription})
-        product = Enum.find(StripeCache.list_products(), &(&1.id == product_id))
-        product_name = product && product.name
-        team_members = Teams.list_team_members(%{email: socket.assigns.current_user.email})
+        active_subscription_id =
+          find_customer_with_active_subscription(socket.assigns.current_user.email)
 
-        Enum.each(team_members, fn member ->
-          Onestack.MemberManager.remove_member(member, [product_name])
+        send(self(), {:cancel_subscription, active_subscription_id})
+
+        # Remove member from team and delete team
+        current_user = socket.assigns.current_user
+        team_member_emails = Teams.list_team_members_by_admin(%{email: current_user.email})
+
+        Enum.each(team_member_emails, fn email ->
+          Onestack.MemberManager.remove_member_from_product(email, onestack_product_name)
         end)
 
-        Teams.delete_team(Teams.get_team_by_admin(%{email: socket.assigns.current_user.email}))
+        Teams.delete_team(Teams.get_team_by_admin(%{email: current_user.email}))
 
         {:noreply, assign(socket, updating: true)}
 
-      true ->
-        # Otherwise, proceed with the update as before
-        send(self(), {:run_update_subscription, action, product_id})
+      _ ->
+        # Otherwise, proceed with the update
+        send(self(), {:run_update_subscription, action, onestack_product_name})
         {:noreply, assign(socket, updating: true)}
     end
   end
 
   @impl true
-  def handle_info({:run_update_subscription, action, product_id}, socket) do
+  def handle_info({:run_update_subscription, action, onestack_product_name}, socket) do
     current_user = socket.assigns.current_user
-    combined_customer = get_combined_customer(current_user.email)
 
-    if combined_customer do
-      case update_subscription(
-             combined_customer.subscription_id,
-             action,
-             product_id,
-             socket.assigns.num_users
-           ) do
-        {:ok, _updated_subscription} ->
-          # Update the cache
-          Onestack.StripeCache.update_cache_for_subscription(combined_customer.subscription_id)
+    case find_customer_with_active_subscription(current_user.email) do
+      {:ok, subscription_id} ->
+        handle_subscription_update(subscription_id, action, onestack_product_name, socket)
 
-          # Get fresh stats to update all subscription-related data
-          stats = Stats.get_user_stats(current_user)
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(updating: false)
+         |> put_flash(:error, error_message_for(reason))}
+    end
+  end
 
-          action_text = if action == "add", do: "added to", else: "removed from"
-          Process.send_after(self(), :clear_flash, 3000)
+  defp find_customer_with_active_subscription(email) do
+    case Stripe.Customer.list(%{email: email}) do
+      {:ok, %{data: []}} ->
+        {:error, :no_customer}
 
-          {:noreply,
-           socket
-           |> assign(updating: false)
-           |> assign(show_modal: false)
-           |> assign(modal_product: nil)
-           |> assign(modal_action: nil)
-           |> assign(selected_products: stats.stripe_product_ids)
-           |> assign(combined_customers: stats.combined_customers)
-           |> assign(upcoming_invoice: stats.upcoming_invoice)
-           |> assign(team_members: stats.team_members)
-           |> assign(num_users: length(stats.team_members))
-           |> put_flash(:info, "Product #{action_text} subscription successfully")}
+      {:ok, %{data: customers}} ->
+        find_active_subscription(customers)
 
-        {:error, :price_not_found} ->
-          {:noreply,
-           socket
-           |> assign(updating: false)
-           |> put_flash(:error, "Could not find price for the product")}
+      {:error, error} ->
+        {:error, error}
+    end
+  end
 
-        {:error, :item_not_found} ->
-          {:noreply,
-           socket
-           |> assign(updating: false)
-           |> put_flash(:error, "Product not found in subscription")}
-
-        {:error, %Stripe.Error{} = error} ->
-          {:noreply,
-           socket
-           |> assign(updating: false)
-           |> put_flash(:error, "Failed to update subscription: #{error.message}")}
+  defp find_active_subscription(customers) do
+    # Try to find a customer with an active subscription
+    Enum.reduce_while(customers, {:error, :no_subscription}, fn customer, acc ->
+      case Stripe.Subscription.list(%{customer: customer.id, status: "active", limit: 1}) do
+        {:ok, %{data: [subscription | _]}} ->
+          {:halt, {:ok, subscription.id}}
 
         _ ->
-          {:noreply,
-           socket
-           |> assign(updating: false)
-           |> put_flash(:error, "Failed to update subscription")}
+          {:cont, acc}
       end
-    else
-      {:noreply,
-       socket
-       |> assign(updating: false)
-       |> put_flash(:error, "No active subscription found")}
+    end)
+  end
+
+  defp handle_subscription_update(subscription_id, action, onestack_product_name, socket) do
+    case update_subscription_with_product(
+           subscription_id,
+           action,
+           onestack_product_name,
+           socket
+         ) do
+      {:ok, _updated_subscription} ->
+        # Get fresh stats to update all subscription-related data
+        stats = Stats.get_user_stats(socket.assigns.current_user)
+        action_text = if action == "add", do: "added to", else: "removed from"
+        Process.send_after(self(), :clear_flash, 3000)
+
+        {:noreply,
+         socket
+         |> assign(updating: false)
+         |> assign(show_modal: false)
+         |> assign(modal_product: nil)
+         |> assign(modal_action: nil)
+         |> assign(selected_product_names: stats.subscribed_product_names)
+         |> assign(combined_customers: stats.combined_customers)
+         |> assign(upcoming_invoice: stats.upcoming_invoice)
+         |> assign(team_members: stats.team_members)
+         |> assign(num_users: length(stats.team_members))
+         |> put_flash(:info, "Product #{action_text} subscription successfully")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(updating: false)
+         |> put_flash(:error, error_message_for(reason))}
+    end
+  end
+
+  defp update_subscription_with_product(subscription_id, action, onestack_product_name, socket) do
+    with {:ok, subscription} <- Stripe.Subscription.retrieve(subscription_id),
+         {:ok, new_price} <- create_new_price_for_subscription(subscription, action, socket),
+         {:ok, updated_subscription} <- update_subscription_with_price(subscription, new_price) do
+      # Update team products
+      team_member_emails = Teams.list_team_members_by_admin(socket.assigns.current_user)
+
+      case action do
+        "add" ->
+          add_product_to_team(onestack_product_name, socket.assigns.current_user)
+
+          Enum.each(team_member_emails, fn email ->
+            Onestack.MemberManager.add_member_to_product(email, onestack_product_name)
+          end)
+
+        "remove" ->
+          remove_product_from_team(onestack_product_name, socket.assigns.current_user)
+
+          Enum.each(team_member_emails, fn email ->
+            Onestack.MemberManager.remove_member_from_product(email, onestack_product_name)
+          end)
+      end
+
+      {:ok, updated_subscription}
+    end
+  end
+
+  defp create_new_price_for_subscription(subscription, action, socket) do
+    # Get current products count and calculate new count
+    current_items = subscription.items.data
+    current_product_count = length(current_items)
+
+    new_product_count =
+      case action do
+        "add" -> current_product_count + 1
+        "remove" -> current_product_count - 1
+        _ -> current_product_count
+      end
+
+    # Determine plan type based on number of users
+    plan_type = if socket.assigns.num_users > 1, do: "team", else: "individual"
+
+    # Calculate new price using graduated pricing
+    new_price_dollars =
+      Onestack.CatalogMonthly.calculate_subscription_price(new_product_count, plan_type) *
+        socket.assigns.num_users
+
+    # Convert to cents for Stripe
+    new_price_cents = new_price_dollars * 100
+
+    # Get subscription item and product ID
+    subscription_item = List.first(subscription.items.data)
+    product_id = subscription_item.price.product
+
+    # Create new price
+    price_params = %{
+      unit_amount: new_price_cents,
+      currency: "usd",
+      recurring: %{
+        interval: "month"
+      },
+      product: product_id,
+      lookup_key: "custom_#{subscription.id}_#{System.system_time(:second)}"
+    }
+
+    Stripe.Price.create(price_params)
+  end
+
+  defp update_subscription_with_price(subscription, price) do
+    subscription_item_id = List.first(subscription.items.data).id
+
+    update_params = %{
+      items: [
+        %{
+          id: subscription_item_id,
+          price: price.id
+        }
+      ],
+      metadata:
+        Map.merge(subscription.metadata || %{}, %{
+          "custom_price_updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }),
+      proration_behavior: "create_prorations"
+    }
+
+    Stripe.Subscription.update(subscription.id, update_params)
+  end
+
+  defp add_product_to_team(onestack_product_name, current_user) do
+    team = Teams.get_team_by_admin(%{email: current_user.email})
+    updated_products = [onestack_product_name | team.products] |> Enum.uniq()
+    Teams.update_team(team, %{products: updated_products})
+  end
+
+  defp remove_product_from_team(onestack_product_name, current_user) do
+    team = Teams.get_team_by_admin(%{email: current_user.email})
+    updated_products = Enum.reject(team.products, &(&1 == onestack_product_name))
+    Teams.update_team(team, %{products: updated_products})
+  end
+
+  defp error_message_for(reason) do
+    case reason do
+      :no_customer -> "No Stripe customer found for this user"
+      :no_subscription -> "No active subscription found for any customer with this email"
+      :price_not_found -> "Could not find price for the product"
+      :item_not_found -> "Product not found in subscription"
+      %Stripe.Error{} = error -> "Failed to update subscription: #{error.message}"
+      _ -> "Failed to update subscription"
     end
   end
 
   @impl true
-  def handle_params(_params, uri, socket) do
-    {:noreply, socket |> assign(current_path: URI.parse(uri).path)}
-  end
-
-  @impl true
-  def handle_info({:cancel_subscription}, socket) do
-    current_user = socket.assigns.current_user
-    combined_customer = get_combined_customer(current_user.email)
-
-    case cancel_subscription(combined_customer.subscription_id) do
+  def handle_info({:cancel_subscription, subscription_id}, socket) do
+    case Stripe.Subscription.cancel(subscription_id) do
       {:ok, _canceled_subscription} ->
         {:noreply,
          socket
@@ -234,7 +357,7 @@ defmodule OnestackWeb.Admin.ProductsLive do
          |> assign(show_modal: false)
          |> assign(modal_product: nil)
          |> assign(modal_action: nil)
-         |> assign(selected_products: [])}
+         |> assign(selected_product_names: [])}
 
       {:error, _error} ->
         {:noreply,
@@ -247,65 +370,6 @@ defmodule OnestackWeb.Admin.ProductsLive do
   @impl true
   def handle_info(:clear_flash, socket) do
     {:noreply, clear_flash(socket)}
-  end
-
-  defp get_combined_customer(email) do
-    Enum.find(StripeCache.list_combined_customers(), &(&1.email == email))
-  end
-
-  defp cancel_subscription(subscription_id) do
-  end
-
-  defp update_subscription(subscription_id, action, product_id, num_users) do
-    {:ok, subscription} = Stripe.Subscription.retrieve(subscription_id)
-    current_items = subscription.items.data
-    quantity = ceil(num_users / 10)
-
-    case action do
-      "add" ->
-        # Find the price for the product
-        case find_price_for_product(product_id) do
-          nil ->
-            {:error, :price_not_found}
-
-          price_id ->
-            # Add the new item
-            Stripe.Subscription.update(subscription_id, %{
-              items: [
-                %{
-                  price: price_id,
-                  quantity: quantity
-                }
-                | Enum.map(current_items, fn item ->
-                    %{id: item.id, quantity: quantity}
-                  end)
-              ],
-              proration_behavior: "create_prorations"
-            })
-        end
-
-      "remove" ->
-        # Find the item to remove
-        case Enum.find(current_items, &(&1.price.product == product_id)) do
-          nil ->
-            {:error, :item_not_found}
-
-          item ->
-            # Remove the item
-            Stripe.Subscription.update(subscription_id, %{
-              items: [
-                %{id: item.id, deleted: true}
-                | Enum.map(Enum.reject(current_items, &(&1.id == item.id)), fn item ->
-                    %{id: item.id, quantity: quantity}
-                  end)
-              ],
-              proration_behavior: "create_prorations"
-            })
-        end
-
-      _ ->
-        {:error, :invalid_action}
-    end
   end
 
   defp usage_color(percentage) when percentage >= 0.9, do: "bg-red-500"

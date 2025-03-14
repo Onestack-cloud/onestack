@@ -14,7 +14,7 @@ defmodule OnestackWeb.ProductLive.Index do
     {:ok,
      socket
      |> assign(:selected_product_categories, [])
-     |> assign(:products, StripeCache.list_products())
+     |> assign(:products, Onestack.CatalogMonthly.list_products())
      |> assign(:current_user, current_user)}
   end
 

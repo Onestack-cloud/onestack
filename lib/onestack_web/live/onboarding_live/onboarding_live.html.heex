@@ -1,0 +1,495 @@
+<main class="flex flex-col min-h-screen">
+  <div class="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div class="w-full max-w-3xl border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm bg-gray-50 dark:bg-gray-900">
+      <!-- Stepper -->
+      <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-center">
+        <ol class="flex items-center justify-center w-full">
+          <%= for step <- 1..@total_steps do %>
+            <li class="flex items-center">
+              <div class={[
+                "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium border-2 shrink-0",
+                case step do
+                  s when s < @current_step ->
+                    "bg-blue-600 dark:bg-blue-700 text-white border-blue-600 dark:border-blue-700"
+
+                  s when s == @current_step ->
+                    "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-500 border-blue-600 dark:border-blue-500"
+
+                  _ ->
+                    "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+                end
+              ]}>
+                <%= if step < @current_step do %>
+                  <svg
+                    class="w-5 h-5"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                <% else %>
+                  <%= step %>
+                <% end %>
+              </div>
+
+              <div class={[
+                "ms-2 text-sm font-medium",
+                if step <= @current_step do
+                  "text-gray-900 dark:text-white"
+                else
+                  "text-gray-500 dark:text-gray-400"
+                end
+              ]}>
+                <%= case step do %>
+                  <% 1 -> %>
+                    Account
+                  <% 2 -> %>
+                    Products
+                  <% 3 -> %>
+                    Payment
+                <% end %>
+              </div>
+
+              <%= if step < @total_steps do %>
+                <div class="w-full flex items-center">
+                  <div class={[
+                    "flex-1 h-0.5 mx-4",
+                    if step < @current_step do
+                      "bg-blue-600 dark:bg-blue-700"
+                    else
+                      "bg-gray-300 dark:bg-gray-600"
+                    end
+                  ]}>
+                  </div>
+                </div>
+              <% end %>
+            </li>
+          <% end %>
+        </ol>
+      </div>
+      <!-- Step Content -->
+      <div class="p-10 sm:p-7">
+        <%= case @current_step do %>
+          <% 1 -> %>
+            <!-- Step 1: Account Creation -->
+            <div class="text-center mb-6">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">
+                Create Your Account
+              </h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Already have an account?
+                <.link
+                  navigate={~p"/users/log_in"}
+                  class="text-blue-600 decoration-2 hover:underline focus:outline-none focus:underline font-medium dark:text-blue-500"
+                >
+                  Log in
+                </.link>
+              </p>
+            </div>
+
+            <.simple_form
+              for={@form}
+              id="registration_form"
+              phx-submit="save_registration"
+              class="grid gap-y-4"
+            >
+              <.error
+                :if={@check_errors}
+                class="text-sm text-red-600 mt-2"
+              >
+                Oops, something went wrong! Please check the errors below.
+              </.error>
+
+              <.input
+                field={@form[:email]}
+                type="email"
+                label="Email"
+                required
+                autocomplete="username email"
+                id="email_signip"
+                placeholder="your@email.com"
+              />
+              <.input
+                field={@form[:first_name]}
+                type="text"
+                label="First Name"
+                required
+                autocomplete="given-name"
+                id="first_name"
+                placeholder="John"
+              />
+              <.input
+                field={@form[:last_name]}
+                type="text"
+                label="Last Name"
+                required
+                autocomplete="family-name"
+                id="last_name"
+                placeholder="Doe"
+              />
+              <.input
+                field={@form[:company_name]}
+                type="text"
+                label="Company Name"
+                required
+                autocomplete="organization"
+                id="company_name"
+                placeholder="Acme Inc."
+              />
+              <.input
+                field={@form[:password]}
+                type="password"
+                label="Password"
+                required
+                placeholder="••••••••"
+                autocomplete="new-password"
+              />
+
+              <div class="flex justify-end mt-4">
+                <.button
+                  type="submit"
+                  phx-disable-with="Creating account..."
+                >
+                  Continue
+                </.button>
+              </div>
+            </.simple_form>
+          <% 2 -> %>
+            <!-- Step 2: Product Selection -->
+            <div class="text-center mb-6">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">
+                Select Your Plan
+              </h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Choose the plan and features you want to include in your subscription
+              </p>
+            </div>
+
+            <div class="flex justify-center mb-8">
+              <div class="inline-flex rounded-xl border border-gray-200 dark:border-gray-600 p-1.5 bg-gray-50 dark:bg-gray-800 relative w-full max-w-md mx-auto">
+                <!-- Animated Background -->
+                <div class={[
+                  "absolute h-[calc(100%-12px)] top-1.5 transition-all duration-500 ease-in-out",
+                  @selected_plan == "individual" && "left-1.5",
+                  @selected_plan == "team" && "left-[50%]",
+                  "w-[calc(50%-3px)] bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg"
+                ]} />
+                <!-- Individual Button -->
+                <button
+                  phx-click="set_plan"
+                  phx-value-plan="individual"
+                  class={[
+                    "relative z-10 px-4 py-3 rounded-lg transition-colors duration-500 w-1/2",
+                    @selected_plan == "individual" && "text-white",
+                    @selected_plan != "individual" &&
+                      "hover:cursor-pointer text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 hover:text-gray-600 dark:text-gray-200 hover:cursor-pointer"
+                  ]}
+                >
+                  <div class="flex items-center justify-center">
+                    <svg
+                      class="mr-2 h-5 w-5 inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
+                      </path>
+                      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
+                      </path>
+                      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0">
+                      </path>
+                      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5">
+                      </path>
+                    </svg>
+                    <span>Individual</span>
+                  </div>
+                  <span class="absolute -bottom-6 left-0 right-0 text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                    For solo users
+                  </span>
+                </button>
+                <!-- Team Button -->
+                <button
+                  phx-click="set_plan"
+                  phx-value-plan="team"
+                  class={[
+                    "relative z-10 px-6 py-3 rounded-lg transition-colors duration-500 w-1/2",
+                    @selected_plan == "team" && "text-white",
+                    @selected_plan != "team" &&
+                      "hover:cursor-pointer text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 hover:text-gray-600 dark:text-gray-200 hover:cursor-pointer"
+                  ]}
+                >
+                  <div class="flex items-center justify-center">
+                    <svg
+                      class="mr-2 h-5 w-5 inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z">
+                      </path>
+                      <path d="M8 7V5c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2">
+                      </path>
+                    </svg>
+                    <span>Team</span>
+                  </div>
+                  <span class="absolute -bottom-6 left-0 right-0 text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                    For 2+ users
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-4">
+                Create your own stack
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 mb-4">
+                Select the features you need.
+              </p>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <%= for product <- @products do %>
+                  <div class="flex items-center">
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-50 dark:hover:bg-gray-100 dark:hover:bg-gray-800 dark:bg-gray-800 transition-colors duration-200 cursor-pointer w-full [&:has(input:checked)]:bg-blue-50 dark:[&:has(input:checked)]:bg-blue-900/30 [&:has(input:checked)]:border-blue-500 dark:[&:has(input:checked)]:border-blue-400">
+                      <input
+                        type="checkbox"
+                        name="product_access[]"
+                        value={product.id}
+                        checked={product.id in @selected_products}
+                        phx-click="toggle_product"
+                        phx-value-product={product.id}
+                        class="sr-only peer"
+                      />
+                      <div class="flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200 peer-checked:text-blue-400 group-has-[input:checked]:bg-blue-500 group-has-[input:checked]:text-blue">
+                        <Lucide.render
+                          icon={product.icon_name}
+                          class="w-6 h-6"
+                        />
+                      </div>
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-600 dark:text-gray-300 transition-colors duration-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 group-has-[input:checked]:text-blue-600 dark:group-has-[input:checked]:text-blue-400">
+                        <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
+                          product.feature_description
+                        ) %>
+                      </span>
+                    </label>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+            <!-- Order Summary -->
+            <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Order Summary
+              </h3>
+
+              <%= if Enum.empty?(@selected_products) do %>
+                <p class="text-gray-500 dark:text-gray-400 italic">
+                  No products selected
+                </p>
+              <% else %>
+                <div class="space-y-2 mb-4">
+                  <%= for {product_id, index} <- Enum.with_index(@selected_products) do %>
+                    <% product = Map.get(@products_by_id, product_id) %>
+                    <%= if product do %>
+                      <div class="flex justify-between">
+                        <span class="text-gray-700 dark:text-gray-300">
+                          <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
+                            product.feature_description
+                          ) %> <%= if @selected_plan ==
+                                        "team",
+                                      do: "× #{@num_users}" %>
+                        </span>
+                        <span class="font-medium text-gray-900 dark:text-white">
+                          $<%= if @selected_plan == "team",
+                            do:
+                              get_product_price(
+                                index,
+                                @selected_plan
+                              ) *
+                                @num_users,
+                            else:
+                              get_product_price(
+                                index,
+                                @selected_plan
+                              ) %>
+                        </span>
+                      </div>
+                    <% end %>
+                  <% end %>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-gray-900 dark:text-white">
+                      Total (Monthly)
+                    </span>
+                    <span class="text-gray-900 dark:text-white">
+                      $<%= Enum.reduce(
+                        @selected_products,
+                        0,
+                        fn product_id, acc ->
+                          product =
+                            Map.get(@products_by_id, product_id)
+
+                          if product do
+                            if @selected_plan == "team" do
+                              acc +
+                                get_product_price(
+                                  Enum.find_index(
+                                    @selected_products,
+                                    &(&1 == product_id)
+                                  ),
+                                  @selected_plan
+                                ) *
+                                  @num_users
+                            else
+                              acc +
+                                get_product_price(
+                                  Enum.find_index(
+                                    @selected_products,
+                                    &(&1 == product_id)
+                                  ),
+                                  @selected_plan
+                                )
+                            end
+                          else
+                            acc
+                          end
+                        end
+                      ) %>
+                    </span>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="flex justify-between mt-6">
+              <.button
+                type="button"
+                phx-click="prev_step"
+                class="bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+              >
+                Back
+              </.button>
+              <.button
+                type="button"
+                phx-click="save_product_selection"
+                disabled={Enum.empty?(@selected_products)}
+              >
+                Continue to Payment
+              </.button>
+            </div>
+          <% 3 -> %>
+            <!-- Step 3: Payment Details -->
+            <div class="text-center mb-6">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">
+                Payment Details
+              </h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Complete your subscription by providing payment information
+              </p>
+            </div>
+            <!-- Order Summary -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Order Summary
+              </h3>
+
+              <div class="space-y-2 mb-4">
+                <%= for {product_id, index} <- Enum.with_index(@selected_products) do %>
+                  <% product = Map.get(@products_by_id, product_id) %>
+                  <%= if product do %>
+                    <div class="flex justify-between">
+                      <span class="text-gray-700 dark:text-gray-300">
+                        <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
+                          product.feature_description
+                        ) %><%= if @selected_plan == "team",
+                          do: " × #{@num_users}" %>
+                      </span>
+                      <span class="font-medium text-gray-900 dark:text-white">
+                        $<%= if @selected_plan == "team",
+                          do:
+                            get_product_price(index, @selected_plan) *
+                              @num_users,
+                          else:
+                            get_product_price(index, @selected_plan) %>
+                      </span>
+                    </div>
+                  <% end %>
+                <% end %>
+              </div>
+
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                <div class="flex justify-between font-semibold">
+                  <span class="text-gray-900 dark:text-white">
+                    Total (Monthly)
+                  </span>
+                  <span class="text-gray-900 dark:text-white">
+                    $<%= calculate_total(
+                      @selected_products,
+                      @selected_plan
+                    ) * @num_users %>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <!-- Payment Form -->
+            <%= if @client_secret do %>
+              <form
+                id="checkout-form"
+                phx-hook="InitCheckout"
+                data-secret={@client_secret}
+                class="rounded-lg shadow-sm"
+              >
+                <div id="email-errors"></div>
+                <div id="payment-element"></div>
+                <div id="billing-address"></div>
+                <.button id="pay-button" class="w-full mt-6">
+                  Complete Payment
+                </.button>
+                <div id="confirm-errors"></div>
+              </form>
+            <% else %>
+              <div class="text-center p-4">
+                <div
+                  class="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"
+                  role="status"
+                >
+                  <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2 text-gray-600 dark:text-gray-400">
+                  Preparing payment form...
+                </p>
+              </div>
+            <% end %>
+
+            <div class="flex justify-between mt-6">
+              <.button
+                type="button"
+                phx-click="prev_step"
+                class="bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+              >
+                Back
+              </.button>
+            </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</main>
