@@ -383,48 +383,6 @@
         </div>
       </div>
     </div>
-    <!-- App Feature Icons -->
-    <div class="max-w-3xl mx-auto mt-8">
-      <div class="text-center">
-        <p class="font-medium text-gray-500 dark:text-gray-400 mb-4">
-          Trusted by teams using these apps and more
-        </p>
-        <div class="flex flex-wrap justify-center items-center gap-6 md:gap-10">
-          <%= for {_name, feature} <- @features do %>
-            <div class="group relative transition-transform hover:scale-110">
-              <Lucide.render
-                icon={feature.icon}
-                class="w-8 h-8 text-gray-500 group-hover:text-blue-500 transition-colors"
-              />
-              <span class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs rounded-md py-1 px-2">
-                <%= feature.display_name %>
-              </span>
-            </div>
-          <% end %>
-          <!-- View All Link -->
-          <.link
-            navigate={~p"/features"}
-            class="inline-flex items-center gap-x-1 text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors"
-          >
-            View all
-            <svg
-              class="flex-shrink-0 w-4 h-4"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
-          </.link>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 <!-- End Hero -->
