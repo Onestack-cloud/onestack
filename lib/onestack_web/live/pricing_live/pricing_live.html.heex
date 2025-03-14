@@ -361,67 +361,6 @@
                 </div>
               </div>
             </div>
-            <!-- Social Proof Section -->
-            <div class="mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-8 max-w-3xl mx-auto w-full">
-              <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Trusted by innovative teams
-                </h3>
-                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Lucide.render
-                    icon="star"
-                    class="h-4 w-4 text-yellow-400"
-                  />
-                  <span>4.9/5 rating from 1000+ reviews</span>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
-                <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-6 shadow-md">
-                  <div class="flex items-center gap-4 mb-4">
-                    <div class="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                      <Lucide.render
-                        icon="briefcase"
-                        class="h-6 w-6 text-blue-400"
-                      />
-                    </div>
-                    <div>
-                      <h4 class="font-medium text-gray-900 dark:text-gray-100">
-                        Acme Corp
-                      </h4>
-                      <p class="text-sm text-gray-600 dark:text-gray-300">
-                        Software Development
-                      </p>
-                    </div>
-                  </div>
-                  <p class="text-sm text-gray-600 dark:text-gray-200">
-                    "Onestack simplified our entire workflow. What used to take hours now takes minutes."
-                  </p>
-                </div>
-
-                <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-6 shadow-md">
-                  <div class="flex items-center gap-4 mb-4">
-                    <div class="h-12 w-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                      <Lucide.render
-                        icon="building"
-                        class="h-6 w-6 text-purple-400"
-                      />
-                    </div>
-                    <div>
-                      <h4 class="font-medium text-gray-900 dark:text-gray-100">
-                        TechStart Inc
-                      </h4>
-                      <p class="text-sm text-gray-600 dark:text-gray-300">
-                        Technology
-                      </p>
-                    </div>
-                  </div>
-                  <p class="text-sm text-gray-600 dark:text-gray-200">
-                    "The consolidated billing and single sign-on alone made this worth it."
-                  </p>
-                </div>
-              </div>
-            </div>
             <!-- FAQ Section -->
             <div class="mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-8 max-w-3xl mx-auto w-full">
               <h3 class="text-lg font-medium mb-6 text-gray-900 dark:text-gray-100">
@@ -627,8 +566,8 @@
               <div class="inline-block group">
                 <div class="relative">
                   <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
-                  <button
-                    phx-click="start_trial"
+                  <.link
+                    navigate={~p"/users/register"}
                     class="hover:cursor-pointer relative inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-all duration-200 group-hover:scale-[1.02]"
                   >
                     <div class="relative">
@@ -638,7 +577,7 @@
                       />
                     </div>
                     Start your free trial
-                  </button>
+                  </.link>
                 </div>
               </div>
               <div class="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
