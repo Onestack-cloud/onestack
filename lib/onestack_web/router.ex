@@ -9,6 +9,10 @@ defmodule OnestackWeb.Router do
     plug :fetch_live_flash
     plug :put_root_layout, {OnestackWeb.Layouts, :root}
 
+    plug :basic_auth,
+      username: "onestack",
+      password: "REDACTED_BASIC_AUTH_PASSWORD"
+
     plug :protect_from_forgery,
       with: :exception,
       csrf_token: [domain: "." <> OnestackWeb.URLHelper.main_domain()]
