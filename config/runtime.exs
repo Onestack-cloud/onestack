@@ -63,7 +63,8 @@ if config_env() == :prod do
     check_origin: [
       "https://#{host}",
       "https://feedback.#{host}",
-      "https://app.#{host}"
+      "https://app.#{host}",
+      "https://admin.#{host}"
     ],
     session: [domain: "." <> host]
 
