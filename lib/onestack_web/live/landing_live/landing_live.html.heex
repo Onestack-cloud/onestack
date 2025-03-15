@@ -4,10 +4,10 @@
     <div class="max-w-2xl text-center mx-auto mb-8">
       <h1 class="block text-3xl font-bold text-gray-800 sm:text-4xl md:text-6xl dark:text-white animate-fadeIn">
         The <span class="text-blue-600">Operating System</span>
-        for your SaaS
+        for your business tools
       </h1>
       <p class="mt-3 text-lg text-gray-800 dark:text-neutral-400">
-        Access and manage all your SaaS products in one place.
+        Access and manage all your tools in one place.
       </p>
 
       <div class="mt-8 flex flex-wrap justify-center gap-4">
@@ -381,19 +381,25 @@
 <!-- End Hero -->
 <div class="container max-w-6xl mx-auto px-4 py-20">
   <!-- Header Section -->
-  <div class="flex items-center">
-    <h1 class="text-5xl font-bold dark:text-white w-1/2">
-      Made for the modern business
-    </h1>
-    <p class="text-gray-500 dark:text-neutral-400 text-lg w-1/2">
-      Experience the future of SaaS freedom with Onestack – where you radically redefine your tech stack and finally break free from bloated subscriptions. Pay for what lights you up, skip what doesn't.
-      <.link
-        navigate={~p"/users/register"}
-        class="dark:text-white ml-2 hover:opacity-80 underline"
-      >
-        Make the switch →
-      </.link>
-    </p>
+  <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+    <div class="w-full md:w-1/2">
+      <h1 class="text-4xl md:text-5xl font-bold dark:text-white text-center md:text-left mb-4 md:mb-0">
+        Made for the modern business
+      </h1>
+    </div>
+    <div class="w-full md:w-1/2">
+      <p class="text-gray-500 dark:text-neutral-400 text-base md:text-lg text-center md:text-left">
+        Experience the future of SaaS freedom with Onestack – where you radically redefine your tech stack and finally break free from bloated subscriptions. Pay for what lights you up, skip what doesn't.
+      </p>
+      <div class="text-center md:text-left mt-4">
+        <.link
+          navigate={~p"/users/register"}
+          class="dark:text-white hover:opacity-80 underline inline-block"
+        >
+          Make the switch →
+        </.link>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -455,16 +461,16 @@
     <div class="mb-24">
       <div class="flex flex-col lg:flex-row items-start gap-12">
         <div class="lg:w-1/2">
-          <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-4">
             Effortless Team Management
           </h3>
-          <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+          <p class="text-base lg:text-lg text-gray-600 dark:text-gray-300 mb-6">
             Invite team members, assign roles, and control product access all from one intuitive dashboard. Onestack makes team management simple and efficient.
           </p>
-          <ul class="space-y-3 text-gray-600 dark:text-gray-300">
-            <li class="flex items-center">
+          <ul class="space-y-4 text-sm lg:text-base text-gray-600 dark:text-gray-300">
+            <li class="flex items-start">
               <svg
-                class="w-5 h-5 mr-2 text-green-500"
+                class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -478,11 +484,11 @@
                 >
                 </path>
               </svg>
-              Invite team members with a single click
+              <span>Invite team members with a single click</span>
             </li>
-            <li class="flex items-center">
+            <li class="flex items-start">
               <svg
-                class="w-5 h-5 mr-2 text-green-500"
+                class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -496,14 +502,16 @@
                 >
                 </path>
               </svg>
-              Assign and manage roles and permissions
-              <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                Coming Soon
+              <span>
+                Assign and manage roles and permissions
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                  Coming Soon
+                </span>
               </span>
             </li>
-            <li class="flex items-center">
+            <li class="flex items-start">
               <svg
-                class="w-5 h-5 mr-2 text-green-500"
+                class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -517,11 +525,13 @@
                 >
                 </path>
               </svg>
-              Track pending invitations and team activity
+              <span>
+                Track pending invitations and team activity
+              </span>
             </li>
-            <li class="flex items-center">
+            <li class="flex items-start">
               <svg
-                class="w-5 h-5 mr-2 text-green-500"
+                class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -535,26 +545,28 @@
                 >
                 </path>
               </svg>
-              Control product access for each team member
-              <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                Coming Soon
+              <span>
+                Control product access for each team member
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                  Coming Soon
+                </span>
               </span>
             </li>
           </ul>
         </div>
         <div class="lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           <!-- Team UI Preview -->
-          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+          <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+              <div class="mb-4 sm:mb-0">
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Team Members
                 </h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
                   Manage your team and control product access
                 </p>
               </div>
-              <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+              <button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors">
                 <svg
                   class="w-4 h-4"
                   fill="none"
@@ -573,8 +585,7 @@
                 Invite Members
               </button>
             </div>
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                   <div>
@@ -1010,16 +1021,16 @@
     <!-- Analytics Dashboard Preview -->
     <div class="mb-24">
       <div class="flex flex-col lg:flex-row items-start gap-12">
-        <div class="lg:w-1/2">
-          <div class="flex items-center mb-4">
-            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mr-3">
+        <div class="w-full lg:w-1/2">
+          <div class="flex flex-wrap items-center mb-4">
+            <h3 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mr-3 mb-2 sm:mb-0">
               Usage Analytics Dashboard
             </h3>
             <div class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-sm dark:bg-gray-700 dark:text-blue-400 border border-blue-400">
               Coming Soon
             </div>
           </div>
-          <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+          <p class="text-base sm:text-lg text-gray-600 dark:text-gray-300 mb-6">
             Get deep insights into your team's software usage patterns with our upcoming analytics dashboard. Optimise your stack and eliminate waste.
           </p>
           <ul class="space-y-3 text-gray-600 dark:text-gray-300">
@@ -1097,12 +1108,11 @@
             </li>
           </ul>
         </div>
-        <div class="lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-          <!-- Analytics Dashboard Preview -->
-          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+        <div class="w-full lg:w-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 mt-8 lg:mt-0">
+          <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div class="mb-4 sm:mb-0">
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Usage Analytics
                 </h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -1118,8 +1128,7 @@
                 </button>
               </div>
             </div>
-            <!-- Usage Overview -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Total Active Users
@@ -1164,55 +1173,54 @@
                 </div>
               </div>
             </div>
-            <!-- Usage Graph -->
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
               <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
                 Product Usage Trends
               </h4>
-              <div class="h-30 flex items-end space-x-2">
-                <div class="relative h-full flex items-end">
+              <div class="h-30 flex items-end space-x-2 overflow-x-auto">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[85%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Mon
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[70%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Tue
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[90%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Wed
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[75%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Thu
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[60%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Fri
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[40%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
                     Sat
                   </div>
                 </div>
-                <div class="relative h-full flex items-end">
+                <div class="relative h-full flex items-end flex-shrink-0">
                   <div class="w-10 bg-blue-100 dark:bg-blue-700 rounded-t-md h-[30%]">
                   </div>
                   <div class="absolute bottom-0 w-full text-center text-xs text-gray-300 mt-1">
@@ -1221,14 +1229,13 @@
                 </div>
               </div>
             </div>
-            <!-- Product Usage Table -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white">
                   Product Usage Breakdown
                 </h4>
               </div>
-              <div class="overflow-hidden">
+              <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead>
                     <tr class="bg-gray-50 dark:bg-gray-800/70">
