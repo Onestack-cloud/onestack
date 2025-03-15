@@ -5,91 +5,130 @@ defmodule OnestackWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-md my-16 min-h-screen">
-      <div class="bg-base-200 p-8 rounded-xl shadow-lg border border-base-300">
-        <div class="mb-8">
-          <div class="text-4xl font-bold text-center mb-2">Create Account</div>
-          <div class="badge badge-primary badge-lg mx-auto block w-fit">New User Registration</div>
-        </div>
+    <main id="log_in" class="w-full flex min-h-screen justify-center items-center mx-auto p-6">
+      <div class="w-full max-w-md">
+        <div class="mt-7 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-neutral-900 dark:border-neutral-700">
+          <div class="p-4 sm:p-7">
+            <div class="text-center">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">Create Account</h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Already have an account?
+                <.link
+                  navigate={~p"/users/log_in"}
+                  class="text-blue-600 decoration-2 hover:underline focus:outline-none focus:underline font-medium dark:text-blue-500"
+                >
+                  Log in
+                </.link>
+              </p>
+            </div>
 
-        <%= if not is_nil(@admin_name) do %>
-          <div class="alert alert-info mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="stroke-current shrink-0 w-6 h-6"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              >
-              </path>
-            </svg>
-            <span>You're joining <%= @admin_name %>'s stack</span>
-          </div>
-
-          <div class="my-4">
-            <div class="bg-gradient-to-r from-base-100 to-base-200 rounded-full p-1 shadow-lg border border-base-300 flex items-center justify-center space-x-6 hover:shadow-xl transition-shadow duration-300">
-              <%= for product <- @products do %>
-                <div class="flex items-center justify-center bg-base-100 rounded-full p-1 backdrop-blur-sm">
-                  <img
-                    src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product)}.png"}
-                    class="h-8 w-8 mask mask-circle object-contain hover:scale-110 transition-transform duration-200"
-                    alt={product}
-                  />
+            <%= if not is_nil(@admin_name) do %>
+              <div class="mt-4 p-4 bg-blue-50 text-blue-800 rounded-lg dark:bg-blue-900/50 dark:text-blue-400">
+                <div class="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    class="stroke-current shrink-0 w-6 h-6 me-2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    >
+                    </path>
+                  </svg>
+                  <span>You're joining <%= @admin_name %>'s stack</span>
                 </div>
-              <% end %>
+              </div>
+
+              <div class="mt-5">
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-neutral-800 dark:to-neutral-700 rounded-full p-1 shadow-sm border border-gray-200 dark:border-neutral-600 flex items-center justify-center space-x-6">
+                  <%= for product <- @products do %>
+                    <div class="flex items-center justify-center bg-white dark:bg-neutral-800 rounded-full p-1">
+                      <img
+                        src={"https://onestack-images.pages.dev/#{URI.encode_www_form(product)}.png"}
+                        class="h-8 w-8 rounded-full object-contain hover:scale-110 transition-transform duration-200"
+                        alt={product}
+                      />
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="mt-5">
+              <.simple_form
+                for={@form}
+                id="registration_form"
+                phx-submit="save"
+                phx-change="validate"
+                phx-trigger-action={@trigger_submit}
+                action={~p"/users/log_in?_action=registered"}
+                method="post"
+                class="grid gap-y-4"
+              >
+                <.error :if={@check_errors} class="text-sm text-red-600 mt-2">
+                  Oops, something went wrong! Please check the errors below.
+                </.error>
+
+                <.input
+                  field={@form[:email]}
+                  type="email"
+                  label="Email"
+                  required
+                  autocomplete="username email"
+                  id="email"
+                  placeholder="your@email.com"
+                />
+                <.input
+                  field={@form[:first_name]}
+                  type="text"
+                  label="First Name"
+                  required
+                  autocomplete="given-name"
+                  id="first_name"
+                  placeholder="John"
+                />
+                <.input
+                  field={@form[:last_name]}
+                  type="text"
+                  label="Last Name"
+                  required
+                  autocomplete="family-name"
+                  id="last_name"
+                  placeholder="Doe"
+                />
+                <.input
+                  field={@form[:company_name]}
+                  type="text"
+                  label="Company Name"
+                  required
+                  autocomplete="organization"
+                  id="company_name"
+                  placeholder="Acme Inc."
+                />
+                <.input
+                  field={@form[:password]}
+                  type="password"
+                  label="Password"
+                  required
+                  placeholder="••••••••"
+                  autocomplete="new-password"
+                />
+
+                <:actions>
+                  <.button phx-disable-with="Creating account...">
+                    Create Account
+                  </.button>
+                </:actions>
+              </.simple_form>
             </div>
           </div>
-        <% end %>
-
-        <.simple_form
-          for={@form}
-          id="registration_form"
-          phx-submit="save"
-          phx-change="validate"
-          phx-trigger-action={@trigger_submit}
-          action={~p"/users/log_in?_action=registered"}
-          method="post"
-        >
-          <.error :if={@check_errors}>
-            Oops, something went wrong! Please check the errors below.
-          </.error>
-
-          <.input
-            field={@form[:email]}
-            type="email"
-            label="Email"
-            required
-            autocomplete="username email"
-            id="email"
-            placeholder="Email"
-          />
-          <.input
-            field={@form[:password]}
-            type="password"
-            label="Password"
-            required
-            autocomplete="new-password"
-          />
-          <:actions>
-            <.button phx-disable-with="Creating account..." class="w-full btn-primary">
-              Create Account
-            </.button>
-          </:actions>
-        </.simple_form>
-
-        <div class="text-center mt-6 text-sm">
-          Already have an account?
-          <.link navigate={~p"/users/log_in"} class="font-semibold text-primary hover:underline">
-            Log in
-          </.link>
         </div>
       </div>
-    </div>
+    </main>
     """
   end
 

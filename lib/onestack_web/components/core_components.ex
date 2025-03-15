@@ -50,7 +50,11 @@ defmodule OnestackWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-900/[.6] dark:bg-gray-900/[.8] transition-opacity" aria-hidden="true" />
+      <div
+        id={"#{@id}-bg"}
+        class="fixed inset-0 bg-gray-900/[.6] dark:bg-gray-900/[.8] transition-opacity"
+        aria-hidden="true"
+      />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -219,12 +223,10 @@ defmodule OnestackWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="p-4 sm:p-7 rounded-xl">
-        <div class="space-y-5">
-          <%= render_slot(@inner_block, f) %>
-          <div :for={action <- @actions} class="mt-5 flex items-center justify-end gap-x-2">
-            <%= render_slot(action, f) %>
-          </div>
+      <div class="space-y-8">
+        <%= render_slot(@inner_block, f) %>
+        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
+          <%= render_slot(action, f) %>
         </div>
       </div>
     </.form>
@@ -250,7 +252,7 @@ defmodule OnestackWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 btn btn-primary py-2 px-3",
+        "phx-submit-loading:opacity-75 w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none",
         @class
       ]}
       {@rest}
@@ -327,20 +329,24 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div class="form-control" phx-feedback-for={@name}>
-      <label class="label cursor-pointer flex items-center gap-4 text-sm leading-6">
-        <input type="hidden" name={@name} value="false" />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          class="checkbox focus:ring-0"
-          {@rest}
-        />
-        <%= @label %>
-      </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="flex items-center">
+        <div class="flex">
+          <input type="hidden" name={@name} value="false" />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            checked={@checked}
+            class="shrink-0 mt-0.5 border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+            {@rest}
+          />
+        </div>
+        <div class="ms-3">
+          <label class="text-sm dark:text-white"><%= @label %></label>
+        </div>
+        <.error :for={msg <- @errors}><%= msg %></.error>
+      </div>
     </div>
     """
   end
@@ -368,7 +374,8 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
-      <textarea rows = "3"
+      <textarea
+        rows="3"
         id={@id}
         name={@name}
         class={[
@@ -390,13 +397,16 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <div>
+        <.label for={@id}><%= @label %></.label>
+      </div>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
+          "grow",
           "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600",
           @errors == [] && "",
           @errors != [] && "input-error",
@@ -417,7 +427,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
+    <label for={@for} class="block text-sm mb-2 dark:text-white">
       <%= render_slot(@inner_block) %>
     </label>
     """

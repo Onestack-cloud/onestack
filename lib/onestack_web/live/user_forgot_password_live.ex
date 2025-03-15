@@ -5,25 +5,42 @@ defmodule OnestackWeb.UserForgotPasswordLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm my-16 min-h-screen">
-      <.header class="text-center">
-        Forgot your password?
-        <:subtitle>We'll send a password reset link to your inbox</:subtitle>
-      </.header>
-
-      <.simple_form for={@form} id="reset_password_form" phx-submit="send_email">
-        <.input field={@form[:email]} type="email" placeholder="Email" required />
-        <:actions>
-          <.button phx-disable-with="Sending..." class="w-full">
-            Send password reset instructions
-          </.button>
-        </:actions>
-      </.simple_form>
-      <p class="text-center text-sm mt-4">
-        <.link href={~p"/users/register"}>Register</.link>
-        | <.link href={~p"/users/log_in"}>Log in</.link>
-      </p>
-    </div>
+    <main id="forgot_password" class="w-full flex h-full justify-center items-center mx-auto p-6">
+      <div class="w-full max-w-md">
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-neutral-900 dark:border-neutral-700">
+          <div class="p-4 sm:p-7">
+            <div class="text-center">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">Forgot password?</h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Remember your password?
+                <.link
+                  navigate={~p"/users/log_in"}
+                  class="text-blue-600 decoration-2 hover:underline focus:outline-none focus:underline font-medium dark:text-blue-500"
+                >
+                  Sign in here
+                </.link>
+              </p>
+            </div>
+            <div class="mt-5">
+              <.simple_form for={@form} id="reset_password_form" phx-submit="send_email">
+                <.input
+                  field={@form[:email]}
+                  type="email"
+                  placeholder="your@email.com"
+                  label="Email address"
+                  required
+                />
+                <:actions>
+                  <.button phx-disable-with="Sending..." class="w-full">
+                    Send password reset instructions
+                  </.button>
+                </:actions>
+              </.simple_form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
     """
   end
 

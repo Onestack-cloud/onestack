@@ -1,49 +1,59 @@
-<section class="py-8 lg:py-20" id="home">
-  <div class="container">
-    <div class="grid gap-12 lg:grid-cols-2">
-      <div>
-        <h1 class="text-4xl font-extrabold tracking-tighter lg:text-6xl lg:leading-none">
-          All-in-one <span class="text-primary">software platform</span> for your business
-        </h1>
-        <p class="mt-8 text-lg">
-          Onestack provides and manages essential business software in one place by hosting the best open-source alternatives to popular proprietary software tools.
-          Reduce your software costs by 90% and simplify your SaaS management effortlessly.
-        </p>
-        <div class="mt-16 inline-flex gap-3">
-          <button class="btn btn-primary">
-            <a href={~p"/users/register"} target="blank">
-              Get started for free
-            </a>
-          </button>
+<%!-- <section class="py-8 lg:py-20" id="home">
+  <div class="container"> --%>
+<!-- Hero -->
+<div class="relative overflow-hidden">
+  <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="max-w-2xl text-center mx-auto">
+      <h1 class="static-word block text-3xl font-bold text-gray-800 sm:text-4xl md:text-5xl dark:text-white">
+        One [stack, invoice, platform]
+      </h1>
+      <p class="mt-3 text-lg text-gray-800 dark:text-neutral-400">
+        Build your business here. Take it anywhere.
+      </p>
+    </div>
+    <div class="mt-10 relative max-w-5xl mx-auto">
+      <div class="w-full object-cover h-96 sm:h-[480px] bg-[url('https://prod-instant.tella.tv/cm4qmt1kh000c0al04q17157w/2024-12-17T02:29:25.479Z/1280x720/8400000/thumb-0.mp4?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcm9kLWluc3RhbnQudGVsbGEudHYvY200cW10MWtoMDAwYzBhbDA0cTE3MTU3dy8yMDI0LTEyLTE3VDAyOjI5OjI1LjQ3OVovMTI4MHg3MjAvODQwMDAwMC90aHVtYi0wLm1wNCIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTczNjUzMzkzMH19fV19&Key-Pair-Id=K225EVWK1YSVGJ&Signature=L7hXg2U3Wf7SA38fERiNYMvuGPWYTvqaD25ywUQSnLFJcvA-KPJioMyCKLUOfTj1TFUrlbYR6FUioGR29kX~dsfpjUkl77wSKm8yciNk~IFGgYirfv6fUcH6yQmhYDRa6GPT-eyh6K~MtJsoCTiC2u-vTX~IaDoXKECoG-fnBmOLfGBtakmUbtY92eChm9JjP7oqUEXhui8SvloWOQ1qHSE9QcDKd1~SyiYjLWvzKIYKmbWEeTU~RJPKNvE09GkjetjpAfChfYS-d~tdU0-G4fSEBRftpHkcKLEECnWQr3J3XsEYW~k6TbgjxJOeyRKYt56UZczuvdyDq98Ve4blsA__')] bg-no-repeat bg-center bg-cover rounded-xl">
+      </div>
+
+      <div class="absolute inset-0 size-full">
+        <div class="flex flex-col justify-center items-center size-full">
+          <a
+            class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800 dark:focus:bg-neutral-800"
+            href="https://www.tella.tv/video/document-signing-documenso-157w"
+          >
+            <svg
+              class="shrink-0 size-4"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Watch the demo
+          </a>
         </div>
       </div>
 
-      <div>
-        <div
-          class=" rounded md:ml-10 w-full p-0.5 dark:shadow-[0_20px_100px_rgba(0,96,223,0.3),inset_0_0_0px_rgba(0,96,223,0.3)] dark:bg-[radial-gradient(circle_at_center,rgba(0,96,223,0.3)_0%,rgba(0,96,223,0)_0%)] shadow-xl transition-all"
-          data-card3d=""
-          data-card3d-perspective="1000"
-          data-card3d-full-page-listening="true"
-        >
-          <img
-            src={~p"/images/onestack-hero-test.png"}
-            alt="Onestack alternatives"
-            class="overflow-hidden rounded-ss-lg dark:hidden w-full"
-            rel="preload"
-          />
-          <img
-            src={~p"/images/onestack-hero-test-transparent.png"}
-            alt="Onestack alternatives"
-            class="overflow-hidden rounded-ss-lg hidden dark:block w-full"
-            rel="preload"
-          />
-        </div>
+      <div class="absolute bottom-12 -start-20 -z-[1] size-48 bg-gradient-to-b from-orange-500 to-white p-px rounded-lg dark:to-neutral-900">
+        <div class="bg-white size-48 rounded-lg dark:bg-neutral-900"></div>
+      </div>
+
+      <div class="absolute -top-12 -end-20 -z-[1] size-48 bg-gradient-to-t from-blue-600 to-cyan-400 p-px rounded-full">
+        <div class="bg-white size-48 rounded-full dark:bg-neutral-900"></div>
       </div>
     </div>
   </div>
-</section>
+</div>
+<%!-- </div>
+</section> --%>
 
-<section class="relative py-8 lg:py-20 " id="features">
+<section class="relative py-8 lg:py-16 " id="features">
   <div class="absolute start-[10%] z-0">
     <div class="pointer-events-none aspect-square w-60 rounded-full bg-gradient-to-r from-primary/10 via-violet-500/10 to-purple-500/10 blur-3xl [transform:translate3d(0,0,0)] lg:w-[600px]">
     </div>

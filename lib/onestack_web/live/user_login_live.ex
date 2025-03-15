@@ -3,52 +3,89 @@ defmodule OnestackWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-md my-16 min-h-screen">
-      <div class="bg-base-200 p-8 rounded-xl shadow-lg border border-base-300">
-        <div class="mb-8">
-          <div class="text-4xl font-bold text-center mb-2">Welcome Back</div>
-          <div class="badge badge-secondary badge-lg mx-auto block w-fit">Sign In</div>
-        </div>
+    <main id="log_in" class="w-full flex min-h-screen justify-center items-center mx-auto p-6">
+      <div class="w-full max-w-md">
+        <div class="mt-7 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-neutral-900 dark:border-neutral-700">
+          <div class="p-4 sm:p-7">
+            <div class="text-center">
+              <h1 class="block text-2xl font-bold text-gray-800 dark:text-white">Sign in</h1>
+              <p class="mt-2 text-sm text-gray-600 dark:text-neutral-400">
+                Don't have an account yet?
+                <.link
+                  navigate={~p"/users/register"}
+                  class="text-blue-600 decoration-2 hover:underline focus:outline-none focus:underline font-medium dark:text-blue-500"
+                >
+                  Sign up here
+                </.link>
+              </p>
+            </div>
 
-        <.simple_form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
-          <.input
-            field={@form[:email]}
-            type="email"
-            label="Email"
-            required
-            class="w-full"
-            placeholder="your@email.com"
-          />
-          <.input
-            field={@form[:password]}
-            type="password"
-            label="Password"
-            required
-            placeholder="••••••••"
-          />
+            <div class="mt-5">
+              <.simple_form
+                for={@form}
+                id="login_form"
+                action={~p"/users/log_in"}
+                phx-update="ignore"
+                class="grid gap-y-4"
+              >
+                <div class="relative">
+                  <.input
+                    field={@form[:email]}
+                    type="email"
+                    label="Email address"
+                    required
+                    class="py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
+                    placeholder="your@email.com"
+                  />
+                </div>
 
-          <div class="flex justify-between items-center mb-4">
-            <.input field={@form[:remember_me]} type="checkbox" label="Keep me logged in" />
-            <.link href={~p"/users/reset_password"} class="text-sm font-semibold link link-hover">
-              Forgot password?
-            </.link>
+                <div>
+                  <div class="flex justify-between items-center">
+                    <label for="password" class="block text-sm mb-2 dark:text-white">Password</label>
+                    <.link
+                      href={~p"/users/reset_password"}
+                      class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline focus:outline-none focus:underline font-medium dark:text-blue-500"
+                    >
+                      Forgot password?
+                    </.link>
+                  </div>
+                  <div class="relative">
+                    <.input
+                      field={@form[:password]}
+                      type="password"
+                      label=""
+                      required
+                      class="py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div class="flex items-center">
+                  <div class="flex">
+                    <.input
+                      field={@form[:remember_me]}
+                      type="checkbox"
+                      label="Remember me"
+                      class="shrink-0 mt-0.5 border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                    />
+                  </div>
+                </div>
+
+                <:actions>
+                  <.button
+                    phx-disable-with="Signing in..."
+                    class="w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    Sign in
+                  </.button>
+                </:actions>
+              </.simple_form>
+            </div>
           </div>
-
-          <:actions>
-            <.button phx-disable-with="Signing in..." class="w-full btn-secondary">
-              Sign In <span aria-hidden="true">→</span>
-            </.button>
-          </:actions>
-        </.simple_form>
-
-        <div class="text-center mt-6 text-sm">
-          New to Onestack?
-          <.link navigate={~p"/users/register"} class="font-semibold link link-hover">
-            Create an account
-          </.link>
         </div>
       </div>
-    </div>
+    </main>
     """
   end
 

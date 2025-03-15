@@ -31,6 +31,7 @@ defmodule OnestackWeb.Router do
 
     live "/", LandingLive, :index
     get "/privacy", PageController, :privacy_policy
+    get "/pricing", PageController, :pricing
     get "/security", PageController, :security
     get "/test_land", PageController, :test_land
     get "/roadmap", PageController, :roadmap

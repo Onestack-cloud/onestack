@@ -15,6 +15,10 @@ defmodule OnestackWeb.PageController do
     render(conn, :roadmap, page_title: "Roadmap")
   end
 
+  def pricing(conn, _params) do
+    render(conn, :pricing, page_title: "Pricing")
+  end
+
   def security(conn, _params) do
     render(conn, :security, page_title: "Security")
   end
