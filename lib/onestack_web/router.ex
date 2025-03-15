@@ -1,6 +1,5 @@
 defmodule OnestackWeb.Router do
   use OnestackWeb, :router
-  import Plug.BasicAuth
   import OnestackWeb.UserAuth
 
   pipeline :browser do
@@ -8,10 +7,6 @@ defmodule OnestackWeb.Router do
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, {OnestackWeb.Layouts, :root}
-
-    plug :basic_auth,
-      username: "onestack",
-      password: "REDACTED_BASIC_AUTH_PASSWORD"
 
     plug :protect_from_forgery,
       with: :exception,
