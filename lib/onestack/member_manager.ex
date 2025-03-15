@@ -8,6 +8,7 @@ defmodule Onestack.MemberManager do
     Repo,
     Accounts
   }
+
   require Logger
   import Ecto.Query
 
@@ -147,11 +148,14 @@ defmodule Onestack.MemberManager do
     """
 
     # Handle both cases: emails already ending with @onestack.cloud and those that don't
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -198,7 +202,9 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, token_query, token_params) do
               {:ok, _result} ->
-                Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+                Logger.info(
+                  "User inserted successfully in #{product_name} with ID: #{db_user_id}"
+                )
 
                 # 2. Create new account
                 account_creation_query = """
@@ -233,11 +239,15 @@ defmodule Onestack.MemberManager do
                         Logger.info("Account linked successfully in #{product_name}")
 
                       {:error, %Postgrex.Error{} = error} ->
-                        Logger.error("Failed to link account in #{product_name}: #{inspect(error)}")
+                        Logger.error(
+                          "Failed to link account in #{product_name}: #{inspect(error)}"
+                        )
                     end
 
                   {:error, %Postgrex.Error{} = error} ->
-                    Logger.error("Failed to insert account for #{product_name}: #{inspect(error)}")
+                    Logger.error(
+                      "Failed to insert account for #{product_name}: #{inspect(error)}"
+                    )
                 end
 
               {:error, %Postgrex.Error{} = error} ->
@@ -266,11 +276,14 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -289,7 +302,9 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                Logger.info("User reactivated successfully in #{product_name} with ID: #{user_id}")
+                Logger.info(
+                  "User reactivated successfully in #{product_name} with ID: #{user_id}"
+                )
 
               {:error, %Postgrex.Error{} = error} ->
                 Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
@@ -323,7 +338,9 @@ defmodule Onestack.MemberManager do
 
             case Postgrex.query(pid, password_query, password_params) do
               {:ok, _result} ->
-                Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+                Logger.info(
+                  "User inserted successfully in #{product_name} with ID: #{db_user_id}"
+                )
 
               {:error, %Postgrex.Error{} = error} ->
                 Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
@@ -351,11 +368,14 @@ defmodule Onestack.MemberManager do
       WHERE email LIKE $1
       """
 
-      email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+      email_pattern =
+        if String.ends_with?(email, "@onestack.cloud") do
+          # For emails already ending in @onestack.cloud
+          "#{email}%"
+        else
+          # For regular emails
+          "#{email}@onestack.cloud%"
+        end
 
       case Postgrex.query(pid, check_query, [email_pattern]) do
         {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -614,11 +634,14 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case Postgrex.query!(pid, check_query, [email_pattern]) do
       %Postgrex.Result{num_rows: 1, rows: [[disabled_email]]} ->
@@ -803,7 +826,9 @@ defmodule Onestack.MemberManager do
         )
 
       {:ok, {:new_user, user_id, project_id}} ->
-        Logger.info("New user inserted successfully in #{product_name} with ID: #{inspect(user_id)}")
+        Logger.info(
+          "New user inserted successfully in #{product_name} with ID: #{inspect(user_id)}"
+        )
 
         Logger.info("Hashed Password: #{hashed_password}")
         Logger.info("Role: global:admin")
@@ -828,11 +853,14 @@ defmodule Onestack.MemberManager do
     check_query =
       "SELECT id, username FROM cp_users WHERE username LIKE ?"
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case MyXQL.query(conn, check_query, [email_pattern]) do
       {:ok, %MyXQL.Result{rows: [[castopod_user_id, _disabled_email]]}} ->
@@ -906,7 +934,9 @@ defmodule Onestack.MemberManager do
                     Logger.info("User group added successfully for #{product_name}")
 
                   {:error, error} ->
-                    Logger.error("Failed to add user group for #{product_name}: #{inspect(error)}")
+                    Logger.error(
+                      "Failed to add user group for #{product_name}: #{inspect(error)}"
+                    )
                 end
 
               {:error, error} ->
@@ -930,11 +960,14 @@ defmodule Onestack.MemberManager do
     check_query =
       "SELECT id, email FROM kimai2_users WHERE email LIKE ?"
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case MyXQL.query(conn, check_query, [email_pattern]) do
       {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -993,11 +1026,14 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -1102,11 +1138,14 @@ defmodule Onestack.MemberManager do
     WHERE email LIKE $1
     """
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
+    email_pattern =
+      if String.ends_with?(email, "@onestack.cloud") do
+        # For emails already ending in @onestack.cloud
+        "#{email}%"
+      else
+        # For regular emails
+        "#{email}@onestack.cloud%"
+      end
 
     case Postgrex.query(pid, check_query, [email_pattern]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
@@ -1156,24 +1195,18 @@ defmodule Onestack.MemberManager do
     hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
     # Check if the email exists with @onestack.cloud suffix
     check_query = """
-    SELECT id, email FROM "User"
+    SELECT id, email FROM core.user
     WHERE email LIKE $1
     """
 
-    email_pattern = if String.ends_with?(email, "@onestack.cloud") do
-      "#{email}%"  # For emails already ending in @onestack.cloud
-    else
-      "#{email}@onestack.cloud%"  # For regular emails
-    end
-
-    case Postgrex.query(pid, check_query, [email_pattern]) do
+    case Postgrex.query(pid, check_query, [email]) do
       {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
         # User found, reactivate by removing @onestack.cloud and random string
         reactivate_query = """
-        UPDATE "User" SET email = $1, password = $3 WHERE id = $2
+        UPDATE core.user SET disabled = false, "passwordHash" = $2 WHERE id = $1
         """
 
-        case Postgrex.query(pid, reactivate_query, [email, user_id, hashed_password]) do
+        case Postgrex.query(pid, reactivate_query, [user_id, hashed_password]) do
           {:ok, _} ->
             Logger.info("User reactivated successfully in #{product_name}")
 
@@ -1182,24 +1215,66 @@ defmodule Onestack.MemberManager do
         end
 
       {:ok, %Postgrex.Result{rows: []}} ->
-        # User not found, proceed with new user creation
+        # User not found, proceed with new user creation (need a new workspace first)
+
         name = extract_name_from_email(email)
         email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
+        datetime = DateTime.from_naive!(email_verified, "Etc/UTC")
 
-        user_query = """
-        INSERT INTO "User" (name, email, "emailVerified", password, "identityProvider", roles)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        workspace_query = """
+        INSERT INTO core.workspace ("displayName", "createdAt", "updatedAt","activationStatus","metadataVersion")
+        VALUES ($1, $2, $2, $3, $4)
         RETURNING id
         """
 
-        user_params = [name, email, email_verified, hashed_password, "DOCUMENSO", ["USER"]]
+        workspace_params = [email, datetime, "ACTIVE", 2]
 
-        case Postgrex.query(pid, user_query, user_params) do
-          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
+        case Postgrex.query(pid, workspace_query, workspace_params) do
+          {:ok, %Postgrex.Result{rows: [[workspace_id]]}} ->
+            IO.puts(
+              ~s(Workspace inserted successfully in #{product_name} with ID: #{Base.encode16(workspace_id)})
+            )
+
+            user_query = """
+            INSERT INTO core.user (email, "emailVerified", "passwordHash", "createdAt", "updatedAt", "defaultWorkspaceId")
+            VALUES ($1, $2, $3, $4, $4, $5)
+            RETURNING id
+            """
+
+            user_params = [email, true, hashed_password, datetime, workspace_id]
+
+            case Postgrex.query(pid, user_query, user_params) do
+              {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+                IO.puts(
+                  "User inserted successfully in #{product_name} with ID: #{Base.encode16(db_user_id)}"
+                )
+
+                user_worspace_query = """
+                INSERT INTO core."userWorkspace" ("userId", "workspaceId", "createdAt", "updatedAt")
+                VALUES ($1, $2, $3, $3)
+                RETURNING id
+                """
+
+                user_workspace_params = [db_user_id, workspace_id, datetime]
+
+                case Postgrex.query(pid, user_worspace_query, user_workspace_params) do
+                  {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
+                    IO.puts(
+                      "User <> workspace relationship inserted successfully in #{product_name} with ID: #{Base.encode16(db_user_id)}"
+                    )
+
+                  {:error, %Postgrex.Error{} = error} ->
+                    IO.puts(
+                      "Failed to insert user <> workspace relationship for #{product_name}: #{inspect(error)}"
+                    )
+                end
+
+              {:error, %Postgrex.Error{} = error} ->
+                IO.puts("Failed to insert user for #{product_name}: #{inspect(error)}")
+            end
 
           {:error, %Postgrex.Error{} = error} ->
-            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
+            IO.puts("Failed to insert workspace_query for #{product_name}: #{inspect(error)}")
         end
 
       {:error, %Postgrex.Error{} = error} ->
@@ -1579,7 +1654,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for chatwoot user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for chatwoot user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1624,7 +1702,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for formbricks user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for formbricks user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1646,7 +1727,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for penpot user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for penpot user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1668,7 +1752,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for nocodb user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for nocodb user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1712,7 +1799,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for castopod user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for castopod user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(conn)
         {:error, error}
     end
@@ -1733,7 +1823,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for kimai user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for kimai user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(conn)
         {:error, error}
     end
@@ -1755,7 +1848,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for plane user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for plane user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end
@@ -1777,7 +1873,10 @@ defmodule Onestack.MemberManager do
         {:ok, result}
 
       {:error, error} ->
-        Logger.error("Failed to update password for documenso user: #{email}. Error: #{inspect(error)}")
+        Logger.error(
+          "Failed to update password for documenso user: #{email}. Error: #{inspect(error)}"
+        )
+
         GenServer.stop(pid)
         {:error, error}
     end

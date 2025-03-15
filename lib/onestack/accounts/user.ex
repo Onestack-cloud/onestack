@@ -12,6 +12,9 @@ defmodule Onestack.Accounts.User do
     field :bcrypt_hash, :string, redact: false
     field :argon2id_hash, :string, redact: false
     field :pkbdf2_hash, :string, redact: false
+    field :first_name, :string
+    field :last_name, :string
+    field :company_name, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -41,7 +44,7 @@ defmodule Onestack.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :first_name, :last_name, :company_name])
     |> validate_email(opts)
     |> validate_password(opts, user)
   end

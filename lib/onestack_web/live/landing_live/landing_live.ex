@@ -1,16 +1,20 @@
 defmodule OnestackWeb.LandingLive do
+  alias Onestack.CatalogMonthly.ComparisonProduct
   use OnestackWeb, :live_view
 
   import Ecto.Query
   alias Onestack.Repo
-  alias Onestack.CatalogMonthly.Product
   alias Onestack.Accounts
 
   alias Onestack.CatalogMonthly
 
+  alias OnestackWeb.Live.LandingLive.TestimonialData
+
   @impl true
   def mount(_params, session, socket) do
     products = CatalogMonthly.list_products()
+    features = CatalogMonthly.ProductMetadata.all_products()
+    testimonial_cards = TestimonialData.testimonial_cards()
 
     current_user =
       case session["user_token"] do
@@ -18,31 +22,29 @@ defmodule OnestackWeb.LandingLive do
         user_token -> Accounts.get_user_by_session_token(user_token)
       end
 
-    if current_user do
-      {:ok, push_redirect(socket, to: ~p"/subscribe")}
-    else
-      prepared_products =
-        Enum.map(products, fn product ->
-          product
-          |> Map.from_struct()
-          |> Map.drop([:__meta__])
-          |> Map.new(fn {k, v} ->
-            {k,
-             if is_struct(v, Decimal) do
-               Decimal.to_float(v)
-             else
-               v
-             end}
-          end)
+    prepared_products =
+      Enum.map(products, fn product ->
+        product
+        |> Map.from_struct()
+        |> Map.drop([:__meta__])
+        |> Map.new(fn {k, v} ->
+          {k,
+           if is_struct(v, Decimal) do
+             Decimal.to_float(v)
+           else
+             v
+           end}
         end)
+      end)
 
-      {:ok,
-       assign(socket,
-         products: products,
-         current_user: current_user,
-         prepared_products: Jason.encode!(prepared_products)
-       )}
-    end
+    {:ok,
+     assign(socket,
+       products: products,
+       current_user: current_user,
+       prepared_products: Jason.encode!(prepared_products),
+       features: features,
+       testimonial_cards: testimonial_cards
+     )}
   end
 
   @impl true
@@ -218,7 +220,7 @@ defmodule OnestackWeb.LandingLive do
 
   def get_average_prices(categories) do
     query =
-      from p in Product,
+      from p in ComparisonProduct,
         where: p.category in ^categories,
         group_by: p.category,
         select: %{
@@ -232,7 +234,7 @@ defmodule OnestackWeb.LandingLive do
 
   def get_product_prices(products) do
     query =
-      from p in Product,
+      from p in ComparisonProduct,
         where: p.closed_source_name in ^products,
         select: %{
           closed_source_name: p.closed_source_name,

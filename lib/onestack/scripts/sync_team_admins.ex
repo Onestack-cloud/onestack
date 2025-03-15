@@ -15,7 +15,7 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
   defp handle_customer(%Stripe.Customer{} = customer) do
     case customer.email do
       nil ->
-        Logger.warn("Customer #{customer.id} has no email address")
+        Logger.warning("Customer #{customer.id} has no email address")
 
       email ->
         # Check if team exists with this email
@@ -79,7 +79,7 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
         limit: 9999
       })
       |> case do
-        {:ok, %{data: customers}} = response ->
+        {:ok, %{data: customers}} = _response ->
           {:ok, %{data: Enum.sort_by(customers, & &1.created, :desc)}}
 
         error ->

@@ -20,6 +20,11 @@ if System.get_env("PHX_SERVER") do
   config :onestack, OnestackWeb.Endpoint, server: true
 end
 
+if System.get_env("PHX_HOST") do
+  config :sitemap,
+    host: "https://#{System.get_env("PHX_HOST")}"
+end
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
@@ -62,13 +67,11 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: [
       "https://#{host}",
-      "https://feedback.#{host}"
+      "https://feedback.#{host}",
+      "https://app.#{host}",
+      "https://admin.#{host}"
     ],
     session: [domain: "." <> host]
-
-  # Configure sitemap host
-  config :sitemap,
-    host: "https://#{host}"
 
   # ## SSL Support
   #

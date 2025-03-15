@@ -1,21 +1,25 @@
 stages:
-  - build
-  - deploy
+  - build_prod
+  - build_dev
+  - prod_deploy
+  - dev_deploy
 
 variables:
   CI_ENV_FILE: .env
-  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:latest
-  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
+  TAG_LATEST_PROD: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:latest
+  TAG_COMMIT_PROD: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
+  TAG_LATEST_DEV: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:latest
+  TAG_COMMIT_DEV: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
   CI_REGISTRY: registry.gitlab.com
 
-build:
+build_prod:
   image: docker:latest
   services:
     - "docker:dind"
-  stage: build
+  stage: build_prod
   only:
     - website
   before_script:
@@ -26,20 +30,57 @@ build:
     - docker-compose --version
   script:
     - docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN
-    - docker build -t $TAG_COMMIT -t $TAG_LATEST .
-    - docker push $TAG_COMMIT
-    - docker push $TAG_LATEST
+    - docker build -t $TAG_COMMIT_PROD -t $TAG_LATEST_PROD .
+    - docker push $TAG_COMMIT_PROD
+    - docker push $TAG_LATEST_PROD
 
-deploy:
+build_dev:
+  image: docker:latest
+  services:
+    - "docker:dind"
+  stage: build_dev
+  only:
+    - dev
+  before_script:
+    - echo CI_REGISTRY_IMAGE is $CI_REGISTRY_IMAGE
+    - echo CI_REGISTRY is $CI_REGISTRY
+    - echo CI_BUILD_TOKEN is $CI_BUILD_TOKEN
+    - docker info
+    - docker-compose --version
+  script:
+    - docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN
+    - docker build -t $TAG_COMMIT_DEV -t $TAG_LATEST_DEV .
+    - docker push $TAG_COMMIT_DEV
+    - docker push $TAG_LATEST_DEV
+
+prod_deploy:
   environment:
     name: production
     url: https://onestack.cloud
   only:
     - website
-  stage: deploy
+  stage: prod_deploy
+  needs:
+    - build_prod
   script:
     - chmod 600 $ID_SSH
     - apk update && apk add openssh-client
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_docker && docker compose pull && docker compose up -d"
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"
+
+dev_deploy:
+  environment:
+    name: development
+    url: https://dev.onestack.cloud
+  only:
+    - dev
+  stage: dev_deploy
+  needs:
+    - build_dev
+  script:
+    - chmod 600 $ID_SSH
+    - apk update && apk add openssh-client
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
+    - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_dev_docker && docker compose pull && docker compose up -d"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"

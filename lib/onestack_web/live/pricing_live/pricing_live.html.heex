@@ -1,0 +1,727 @@
+<div class="min-h-screen">
+  <!-- Hero Section with Gradient Background -->
+  <div class="relative overflow-hidden pb-32">
+    <div class="relative mx-auto max-w-7xl px-6 pt-24 pb-32 sm:pt-32 lg:px-8">
+      <div class="mx-auto max-w-2xl text-center">
+        <h1 class="mt-2 text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
+          Unified workspace,
+          <span class="text-blue-600 dark:text-blue-400">
+            unified pricing
+          </span>
+        </h1>
+        <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-600 dark:text-gray-200">
+          One simple plan. Add what you need. Pay for what you use.
+          Save time and money with our integrated workspace solution.
+        </p>
+      </div>
+    </div>
+  </div>
+  <!-- Sticky Pricing Summary (shows when scrolling) -->
+  <%= if length(@selected_products) > 0 do %>
+    <div class="fixed bottom-0 left-0 right-0 z-50 bg-blue-50 dark:bg-blue-900 border-t border-blue-200 dark:border-blue-800 shadow-2xl transform transition-all duration-300 ease-in-out translate-y-0 hover:translate-y-1 hover:bg-blue-100 dark:hover:bg-blue-800">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="flex -space-x-2">
+              <%= for {product_id, i} <- Enum.with_index(@selected_products) do %>
+                <% product = Map.get(@products_by_id, product_id) %>
+                <%= if product && i < 3 do %>
+                  <div class="relative z-[{30 - i * 10}] h-8 w-8 rounded-full bg-white dark:bg-blue-700 border-2 border-blue-200 dark:border-blue-600 flex items-center justify-center">
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="h-4 w-4 text-blue-600 dark:text-blue-200"
+                    />
+                  </div>
+                <% end %>
+              <% end %>
+              <%= if length(@selected_products) > 3 do %>
+                <div class="relative z-0 h-8 w-8 rounded-full bg-white dark:bg-blue-700 border-2 border-blue-200 dark:border-blue-600 flex items-center justify-center">
+                  <span class="text-xs text-blue-600 dark:text-blue-200 group-hover:text-blue-800 dark:group-hover:text-blue-100 transition-colors duration-200">
+                    +<%= length(@selected_products) - 3 %>
+                  </span>
+                </div>
+              <% end %>
+            </div>
+            <div>
+              <div class="font-medium text-blue-900 dark:text-blue-100">
+                Your Stack
+              </div>
+              <div class="text-sm text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
+                <%= length(@selected_products) %> tools selected
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <div class="text-sm text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
+                Total Monthly
+              </div>
+              <div class="text-lg font-bold text-blue-700 dark:text-blue-200">
+                $<%= calculate_total(
+                  @selected_products,
+                  @selected_plan
+                ) %>
+              </div>
+              <p class="text-xs text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
+                14-day free trial, no credit card required
+              </p>
+            </div>
+            <button
+              phx-click="start_trial"
+              class="hover:cursor-pointer px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-blue-50 dark:focus:ring-offset-blue-900 transition-colors"
+            >
+              Start Free Trial
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  <!-- Main Content with Floating Card Effect -->
+  <div class="relative z-10 mx-auto -mt-32 max-w-5xl px-6 lg:px-8">
+    <div class="mx-auto -mb-8 max-w-3xl rounded-3xl bg-white dark:bg-gray-900/80 backdrop-blur-xl border border-gray-300 dark:border-gray-600 shadow-2xl sm:mt-8 p-8 lg:p-12">
+      <!-- Trust Indicators -->
+      <div class="mb-12 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm leading-6 text-gray-600 dark:text-gray-200">
+        <div class="flex items-center gap-2">
+          <Lucide.render
+            icon="shield-check"
+            class="h-5 w-5 text-blue-500"
+          /> Enterprise-grade security
+        </div>
+        <div class="flex items-center gap-2">
+          <Lucide.render icon="clock" class="h-5 w-5 text-blue-500" />
+          Community support
+        </div>
+        <div class="flex items-center gap-2">
+          <Lucide.render icon="server" class="h-5 w-5 text-blue-500" />
+          99.9% uptime SLA
+        </div>
+      </div>
+      <div class="flex justify-center mb-8">
+        <div class="inline-flex rounded-xl border border-gray-200 dark:border-gray-600 p-1.5 bg-gray-50 dark:bg-gray-800 relative w-full max-w-md mx-auto">
+          <!-- Animated Background -->
+          <div class={[
+            "absolute h-[calc(100%-12px)] top-1.5 transition-all duration-500 ease-in-out",
+            @selected_plan == "individual" && "left-1.5",
+            @selected_plan == "team" && "left-[50%]",
+            "w-[calc(50%-3px)] bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg"
+          ]} />
+          <!-- Individual Button -->
+          <button
+            phx-click="set_plan"
+            phx-value-plan="individual"
+            class={[
+              "relative z-10 px-4 py-3 rounded-lg transition-colors duration-500 w-1/2",
+              @selected_plan == "individual" && "text-white",
+              @selected_plan != "individual" &&
+                "hover:cursor-pointer text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 hover:text-gray-600 dark:text-gray-200 hover:cursor-pointer"
+            ]}
+          >
+            <div class="flex items-center justify-center">
+              <Lucide.render
+                icon="rocket"
+                class="mr-2 h-5 w-5 inline"
+              />
+              <span>Individual</span>
+            </div>
+            <span class="absolute -bottom-6 left-0 right-0 text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+              For solo users
+            </span>
+          </button>
+          <!-- Team Button -->
+          <button
+            phx-click="set_plan"
+            phx-value-plan="team"
+            class={[
+              "relative z-10 px-6 py-3 rounded-lg transition-colors duration-500 w-1/2",
+              @selected_plan == "team" && "text-white",
+              @selected_plan != "team" &&
+                "hover:cursor-pointer text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 hover:text-gray-600 dark:text-gray-200 hover:cursor-pointer"
+            ]}
+          >
+            <div class="flex items-center justify-center">
+              <Lucide.render
+                icon="building-2"
+                class="mr-2 h-5 w-5 inline"
+              />
+              <span>Team</span>
+            </div>
+            <span class="absolute -bottom-6 left-0 right-0 text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+              For 2+ users
+            </span>
+          </button>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 mt-8 text-center">
+        Starts at $<%= if @selected_plan == "individual",
+          do: "8",
+          else: "10" %>/month per user
+      </p>
+    </div>
+
+    <div class="grid gap-8 max-w-5xl mx-auto px-4">
+      <div class="border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-600 rounded-2xl p-8 backdrop-blur-sm mx-auto w-full max-w-4xl">
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+            Create your own stack
+          </h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+            Select the features you need.
+          </p>
+        </div>
+        <div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <%= for product <- @products do %>
+              <div class="flex items-center">
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-50 dark:hover:bg-gray-100 dark:hover:bg-gray-800 dark:bg-gray-800 transition-colors duration-200 cursor-pointer w-full [&:has(input:checked)]:bg-blue-50 dark:[&:has(input:checked)]:bg-blue-900/30 [&:has(input:checked)]:border-blue-500 dark:[&:has(input:checked)]:border-blue-400">
+                  <input
+                    type="checkbox"
+                    name="product_access[]"
+                    value={product.id}
+                    checked={product.id in @selected_products}
+                    phx-click="toggle_product"
+                    phx-value-product={product.id}
+                    class="sr-only peer"
+                  />
+                  <div class="flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200 peer-checked:text-blue-400 group-has-[input:checked]:bg-blue-500 group-has-[input:checked]:text-blue">
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="w-6 h-6"
+                    />
+                  </div>
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-600 dark:text-gray-300 transition-colors duration-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 group-has-[input:checked]:text-blue-600 dark:group-has-[input:checked]:text-blue-400">
+                    <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
+                      product.feature_description
+                    ) %>
+                  </span>
+                </label>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <%= if length(@selected_products) > 0 do %>
+          <div class="mt-6 space-y-4 p-6 rounded-xl shadow-lg border border-gray-300 dark:border-gray-600">
+            <div class="text-sm font-medium text-gray-600 dark:text-gray-200 dark:text-gray-600 dark:text-gray-300">
+              Your Stack Pricing:
+            </div>
+            <%= for {product_id, index} <- Enum.with_index(@selected_products) do %>
+              <% product = Map.get(@products_by_id, product_id) %>
+              <%= if product do %>
+                <div class="flex items-center justify-between animate-fade-in">
+                  <div class="flex items-center gap-3">
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="h-6 w-6 text-blue-400 dark:text-blue-300"
+                    />
+                    <div class="flex flex-col">
+                      <span class="text-sm font-medium text-gray-800 dark:text-gray-600 dark:text-gray-200">
+                        <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
+                          product.feature_description
+                        ) %>
+                      </span>
+                      <span class="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                        <%= product.onestack_product_name %>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="font-mono text-blue-600 dark:text-blue-400">
+                      $<%= get_product_price(index, @selected_plan) %>/mo
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                      vs <%= product.closed_source_name %> @ $<%= product.closed_source_user_price %>/<%= String.downcase(
+                        product.closed_source_currency
+                      ) %>
+                    </span>
+                  </div>
+                </div>
+              <% else %>
+                <div class="flex items-center justify-between animate-fade-in text-red-500 dark:text-red-400">
+                  <span>
+                    Feature not found (ID: <%= product_id %>)
+                  </span>
+                </div>
+              <% end %>
+            <% end %>
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+              <div class="flex justify-between items-baseline">
+                <div>
+                  <span class="font-medium text-gray-600 dark:text-gray-200">
+                    Your Total
+                  </span>
+                  <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                    per user/month
+                  </span>
+                </div>
+                <div class="text-right">
+                  <span class="font-mono text-xl font-bold text-blue-400">
+                    $<%= our_total =
+                      calculate_total(
+                        @selected_products,
+                        @selected_plan
+                      ) %>
+                  </span>
+                  <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Billed monthly
+                  </div>
+                </div>
+              </div>
+
+              <% closed_source_total =
+                calculate_closed_source_total(
+                  @selected_products,
+                  @products_by_id
+                ) %>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">
+                  Closed Source Total
+                </span>
+                <span class="font-mono text-gray-500 dark:text-gray-400">
+                  $<%= closed_source_total %>/mo
+                </span>
+              </div>
+
+              <div class="flex justify-between font-medium">
+                <span class="text-green-400">Monthly Savings</span>
+                <span class="font-mono text-green-400">
+                  $<%= Float.round(
+                    closed_source_total - our_total,
+                    2
+                  ) %>/mo
+                </span>
+              </div>
+            </div>
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-400/50 max-w-3xl mx-auto w-full">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg text-gray-900 dark:text-gray-100 font-medium">
+                  Time & Effort Comparison
+                </h3>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-4 animate-fade-in">
+                  <div class="flex items-start gap-3">
+                    <div class="mt-1 h-6 w-6 flex-shrink-0 text-yellow-500">
+                      <Lucide.render
+                        icon="circle-alert"
+                        class="h-6 w-6"
+                      />
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-medium text-yellow-500">
+                        Traditional Multi-App Workflow
+                      </h4>
+                      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                        Managing <%= length(@selected_products) %> different apps means:
+                      </p>
+                      <ul class="mt-2 ml-5 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 list-disc space-y-1">
+                        <li>
+                          <%= length(@selected_products) %> separate login portals to manage
+                        </li>
+                        <li>
+                          <%= length(@selected_products) * 5 %> minutes per member for onboarding
+                        </li>
+                        <li>Individual billing cycles to track</li>
+                        <li>No unified audit trail</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-4 animate-fade-in">
+                  <div class="flex items-start gap-3">
+                    <div class="mt-1 h-6 w-6 flex-shrink-0 text-green-400">
+                      <Lucide.render
+                        icon="circle-check"
+                        class="h-6 w-6"
+                      />
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-medium text-green-400">
+                        Onestack unified experience
+                      </h4>
+                      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                        One platform for everything:
+                      </p>
+                      <ul class="mt-2 ml-5 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 list-disc space-y-1">
+                        <li>Single sign-on for all services</li>
+                        <li>1-click member provisioning</li>
+                        <li>Consolidated monthly billing</li>
+                        <li>Complete visibility across all tools</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-sm text-green-400">
+                    <Lucide.render icon="clock" class="h-4 w-4" />
+                    <span>
+                      Save up to <%= length(@selected_products) * 4 %> hours per month on admin tasks
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- FAQ Section -->
+            <div class="mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-8 max-w-3xl mx-auto w-full">
+              <h3 class="text-lg font-medium mb-6 text-gray-900 dark:text-gray-100">
+                Frequently asked questions
+              </h3>
+
+              <div class="space-y-4">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                  <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
+                    How does billing work?
+                  </h4>
+                  <p class="text-sm text-gray-600 dark:text-gray-300">
+                    You're only charged for the features you select. Add or remove features anytime - we'll prorate the charges automatically.
+                  </p>
+                </div>
+
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                  <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
+                    Can I change plans later?
+                  </h4>
+                  <p class="text-sm text-gray-600 dark:text-gray-300">
+                    Yes! You can switch between individual and team plans, or modify your stack at any time.
+                  </p>
+                </div>
+
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                  <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
+                    Is there a minimum commitment?
+                  </h4>
+                  <p class="text-sm text-gray-600 dark:text-gray-300">
+                    No long-term contracts required. Pay month-to-month and cancel anytime.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- Savings Summary -->
+            <%= if length(@selected_products) > 0 do %>
+              <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700/50 max-w-3xl mx-auto w-full">
+                <div class="flex items-center justify-between mb-6">
+                  <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Your Monthly Savings
+                  </h3>
+                  <div class="text-sm text-gray-600 dark:text-gray-300">
+                    vs. traditional solutions
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                    <div class="flex items-center gap-3 mb-2">
+                      <Lucide.render
+                        icon="clock"
+                        class="h-5 w-5 text-blue-400"
+                      />
+                      <h4 class="font-medium text-gray-900 dark:text-gray-100">
+                        Time Saved
+                      </h4>
+                    </div>
+                    <div class="text-2xl font-bold text-blue-400">
+                      <%= Float.round(
+                        get_total_time_saved(@selected_products),
+                        1
+                      ) %> hours
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                      per month
+                    </p>
+                  </div>
+
+                  <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                    <div class="flex items-center gap-3 mb-2">
+                      <Lucide.render
+                        icon="wallet"
+                        class="h-5 w-5 text-green-400"
+                      />
+                      <h4 class="font-medium text-gray-900 dark:text-gray-100">
+                        Cost Saved
+                      </h4>
+                    </div>
+                    <div class="text-2xl font-bold text-green-400">
+                      $<%= Float.round(
+                        calculate_savings(
+                          @selected_products,
+                          @products_by_id
+                        ),
+                        0
+                      ) %>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                      compared to separate tools
+                    </p>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+            <!-- Interactive Features Section -->
+            <div class="mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-8 max-w-3xl mx-auto w-full">
+              <h3 class="text-lg font-medium mb-6 text-gray-900 dark:text-gray-100">
+                Everything you need to scale
+              </h3>
+
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="space-y-4">
+                  <%= for {feature, icon, label} <- [
+        {"security", "shield", "Enterprise Security"},
+        {"automation", "settings", "Workflow Automation"},
+        {"analytics", "chart-bar-big", "Advanced Analytics"}
+      ] do %>
+                    <button
+                      phx-click="highlight_feature"
+                      phx-value-feature={feature}
+                      class={[
+                        "w-full text-left px-4 py-3 rounded-lg transition-colors hover:cursor-pointer",
+                        (@active_feature == feature &&
+                           "bg-blue-600/20 text-blue-400 dark:bg-blue-400/20 dark:text-blue-300") ||
+                          "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                      ]}
+                    >
+                      <div class="flex items-center gap-3">
+                        <Lucide.render icon={icon} class="h-5 w-5" />
+                        <span><%= label %></span>
+                      </div>
+                    </button>
+                  <% end %>
+                </div>
+
+                <div class="lg:col-span-2 rounded-2xl bg-gray-50 dark:bg-gray-800 p-6 relative overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg">
+                  <%= case @active_feature do %>
+                    <% "security" -> %>
+                      <div class="animate-fade-in">
+                        <h4 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">
+                          Enterprise-Grade Security
+                        </h4>
+                        <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                          <%= for item <- ["SOC2 Type II certified", "End-to-end encryption", "Custom security policies"] do %>
+                            <li class="flex items-center gap-2">
+                              <Lucide.render
+                                icon="circle-check"
+                                class="h-5 w-5 text-green-400"
+                              /> <%= item %>
+                            </li>
+                          <% end %>
+                        </ul>
+                      </div>
+                    <% "automation" -> %>
+                      <div class="animate-fade-in">
+                        <h4 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">
+                          Streamline Your Workflows
+                        </h4>
+                        <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                          <%= for item <- ["Automated user provisioning", "Custom workflow builders", "API integrations"] do %>
+                            <li class="flex items-center gap-2">
+                              <Lucide.render
+                                icon="circle-check"
+                                class="h-5 w-5 text-green-400"
+                              /> <%= item %>
+                            </li>
+                          <% end %>
+                        </ul>
+                      </div>
+                    <% "analytics" -> %>
+                      <div class="animate-fade-in">
+                        <h4 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">
+                          Data-Driven Insights
+                        </h4>
+                        <ul class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                          <%= for item <- ["Real-time usage metrics", "Custom dashboards", "Export & reporting"] do %>
+                            <li class="flex items-center gap-2">
+                              <Lucide.render
+                                icon="circle-check"
+                                class="h-5 w-5 text-green-400"
+                              /> <%= item %>
+                            </li>
+                          <% end %>
+                        </ul>
+                      </div>
+                  <% end %>
+                  <!-- Decorative Elements -->
+                  <div class="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 opacity-10">
+                    <%= case @active_feature do %>
+                      <% "security" -> %>
+                        <Lucide.render
+                          icon="shield"
+                          class="h-48 w-48 text-blue-400"
+                        />
+                      <% "automation" -> %>
+                        <Lucide.render
+                          icon="settings"
+                          class="h-48 w-48 animate-spin-slow text-blue-400"
+                        />
+                      <% "analytics" -> %>
+                        <Lucide.render
+                          icon="chart-bar-big"
+                          class="h-48 w-48 text-blue-400"
+                        />
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- CTA Section -->
+            <div class="mt-16 text-center">
+              <div class="inline-block group">
+                <div class="relative">
+                  <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+                  <.link
+                    navigate={~p"/users/register"}
+                    class="hover:cursor-pointer relative inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-all duration-200 group-hover:scale-[1.02]"
+                  >
+                    <div class="relative">
+                      <Lucide.render
+                        icon="rocket"
+                        class="h-5 w-5 transition-transform duration-200 group-hover:-translate-y-1 group-hover:translate-x-1"
+                      />
+                    </div>
+                    Start your free trial
+                  </.link>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                <div class="flex items-center gap-2">
+                  <Lucide.render
+                    icon="shield-check"
+                    class="h-4 w-4 text-green-400"
+                  /> No credit card required
+                </div>
+                <div class="flex items-center gap-2">
+                  <Lucide.render
+                    icon="calendar"
+                    class="h-4 w-4 text-green-400"
+                  /> 14-day free trial
+                </div>
+              </div>
+            </div>
+            <!-- Trial Modal -->
+            <%= if @show_trial_modal do %>
+              <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full p-8 relative animate-scale-up border border-gray-200/50 dark:border-gray-800/50 shadow-2xl backdrop-blur-sm mx-auto">
+                  <button
+                    phx-click="close_trial_modal"
+                    class="absolute top-4 right-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 hover:text-gray-600 dark:text-gray-200"
+                  >
+                    <Lucide.render icon="x" class="h-5 w-5" />
+                  </button>
+
+                  <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-500/10 text-blue-400 mb-4">
+                      <Lucide.render icon="rocket" class="h-6 w-6" />
+                    </div>
+                    <h3 class="text-lg font-medium">
+                      Start your free trial
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200 mt-2">
+                      Experience the full power of Onestack for 14 days
+                    </p>
+                  </div>
+
+                  <form class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-2">
+                        Work Email
+                      </label>
+                      <input
+                        type="email"
+                        class="w-full px-3 py-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="you@company.com"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium mb-2">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        class="w-full px-3 py-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Acme Inc"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      class="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                    >
+                      Get Started
+                    </button>
+                  </form>
+
+                  <div class="mt-6 flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <Lucide.render
+                        icon="circle-check"
+                        class="h-4 w-4 text-green-400"
+                      /> 14-day free trial
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Lucide.render
+                        icon="circle-check"
+                        class="h-4 w-4 text-green-400"
+                      /> No credit card
+                    </div>
+                  </div>
+
+                  <div class="mt-4 text-xs text-center text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                    By starting a trial, you agree to our
+                    <a
+                      href="#"
+                      class="text-blue-400 hover:text-blue-300"
+                    >
+                      Terms of Service
+                    </a>
+                    and
+                    <a
+                      href="#"
+                      class="text-blue-400 hover:text-blue-300"
+                    >
+                      Privacy Policy
+                    </a>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+      <!-- Enterprise Section -->
+      <div class="w-full max-w-4xl mx-auto items-center justify-center mb-20 bg-white dark:bg-gray-900 dark:bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-300 dark:border-gray-700 relative overflow-hidden group hover:border-blue-500/50 transition-colors duration-300">
+        <div class="absolute inset-0 opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA2LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6TTI0IDQ4YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnptMC0yNGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA6LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6Ii8+PC9nPjwvc3ZnPg==')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]">
+        </div>
+        <div class="relative flex items-center gap-4">
+          <div class="flex-shrink-0">
+            <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-500/20 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+              <Lucide.render icon="building" class="h-6 w-6" />
+            </div>
+          </div>
+          <div class="flex-grow">
+            <h3 class="text-lg font-semibold dark:text-white">
+              Enterprise
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 group-hover:text-gray-600 dark:text-gray-200 transition-colors duration-200">
+              Custom solutions for large teams
+            </p>
+          </div>
+          <button
+            phx-click="start_trial"
+            class="hover:cursor-pointer flex-shrink-0 px-4 py-2 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-colors group-hover:bg-blue-500 group-hover:text-white hover:!bg-blue-600 hover:!text-white"
+          >
+            Contact Sales
+          </button>
+        </div>
+        <ul class="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
+          <%= for feature <- ["Dedicated manager", "24/7 support", "Custom integrations", "Dedicated servers"] do %>
+            <li class="flex items-center gap-1">
+              <Lucide.render
+                icon="check"
+                class="h-4 w-4 text-blue-400"
+              /> <%= feature %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

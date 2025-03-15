@@ -50,7 +50,11 @@ defmodule OnestackWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-900/[.6] dark:bg-gray-900/[.8] transition-opacity" aria-hidden="true" />
+      <div
+        id={"#{@id}-bg"}
+        class="fixed inset-0 transition-opacity bg-black/50 backdrop-blur-sm"
+        aria-hidden="true"
+      />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -66,7 +70,7 @@ defmodule OnestackWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative hidden rounded-xl shadow-lg bg-white dark:bg-gray-800 p-4 sm:p-7 transition"
+              class="shadow-zinc-700/10 bg-white dark:bg-gray-800 ring-zinc-700/10 relative hidden rounded-2xl p-14 shadow-lg ring-1 transition"
             >
               <div class="absolute top-2 right-2">
                 <button
@@ -75,10 +79,16 @@ defmodule OnestackWeb.CoreComponents do
                   class="flex justify-center items-center w-7 h-7 text-sm rounded-lg border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                   aria-label={gettext("close")}
                 >
-                  <.icon name="hero-x-mark-solid" class="h-4 w-4" />
+                  <Lucide.render
+                    icon="x"
+                    class="h-5 w-5 text-gray-900 dark:text-gray-100 hover:cursor-pointer"
+                  />
                 </button>
               </div>
-              <div id={"#{@id}-content"} class="mt-2 text-gray-800 dark:text-gray-200">
+              <div
+                id={"#{@id}-content"}
+                class="mt-2 text-gray-800 dark:text-gray-200"
+              >
                 <%= render_slot(@inner_block) %>
               </div>
             </.focus_wrap>
@@ -110,43 +120,62 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div
-      :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
+      :if={
+        msg =
+          render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)
+      }
       id={@id}
-      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
+      phx-click={
+        JS.push("lv:clear-flash", value: %{key: @kind})
+        |> hide("##{@id}")
+      }
       phx-value-key={@kind}
       role="alert"
       class={[
-        "fixed top-2 right-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-md",
-        "border-l-4 transition-all duration-500 ease-in-out",
-        "bg-white dark:bg-gray-800",
-        @kind == :info && "border-blue-500",
-        @kind == :error && "border-red-500"
+        "fixed mt-[calc(var(--topbar-height,12px)+0.5rem)] right-6 w-80 sm:w-96 z-50 flex items-center p-4 rounded-lg",
+        "transition-all duration-500 ease-in-out",
+        "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm",
+        "border border-gray-200 dark:border-gray-700",
+        "shadow-lg",
+        @kind == :info &&
+          "border-l-4 border-l-blue-500 shadow-blue-100/50 dark:shadow-blue-900/20",
+        @kind == :error &&
+          "border-l-4 border-l-red-500 shadow-red-100/50 dark:shadow-red-900/20",
+        "text-gray-700 dark:text-gray-300"
       ]}
       {@rest}
     >
-      <div class="flex items-center space-x-3">
-        <div class={[
-          "p-1.5 rounded-full",
-          @kind == :info && "bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-300",
-          @kind == :error && "bg-red-100 text-red-500 dark:bg-red-900 dark:text-red-300"
-        ]}>
-          <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
-          <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
-        </div>
-        <div class="flex-grow">
-          <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">
-            <%= @title || "Success!" %>
-          </p>
-          <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"><%= msg %></p>
-        </div>
-        <button
-          type="button"
-          class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200"
-          aria-label={gettext("close")}
-        >
-          <.icon name="hero-x-mark" class="h-4 w-4" />
-        </button>
+      <div class={[
+        "inline-flex items-center justify-center shrink-0 w-9 h-9 rounded-lg me-3",
+        @kind == :info &&
+          "text-blue-600 bg-blue-100/80 dark:bg-blue-900/30 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800",
+        @kind == :error &&
+          "text-red-600 bg-red-100/80 dark:bg-red-900/30 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800"
+      ]}>
+        <Lucide.render :if={@kind == :info} icon="info" class="w-4 h-4" />
+        <Lucide.render
+          :if={@kind == :error}
+          icon="circle-alert"
+          class="w-4 h-4"
+        />
+        <span class="sr-only"><%= @kind %> icon</span>
       </div>
+      <div class="ms-3 text-sm font-normal">
+        <div class="font-semibold text-sm text-gray-800 dark:text-gray-200">
+          <%= @title || "Success!" %>
+        </div>
+        <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+          <%= msg %>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="ms-auto -mx-1.5 -my-1.5 bg-white/90 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800/90 dark:text-gray-500 dark:hover:text-white dark:hover:bg-gray-700"
+        aria-label={gettext("close")}
+      >
+        <span class="sr-only">Close</span>
+        <Lucide.render icon="x" class="w-3 h-3" />
+      </button>
     </div>
     """
   end
@@ -219,12 +248,13 @@ defmodule OnestackWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="p-4 sm:p-7 rounded-xl">
-        <div class="space-y-5">
-          <%= render_slot(@inner_block, f) %>
-          <div :for={action <- @actions} class="mt-5 flex items-center justify-end gap-x-2">
-            <%= render_slot(action, f) %>
-          </div>
+      <div class="space-y-8">
+        <%= render_slot(@inner_block, f) %>
+        <div
+          :for={action <- @actions}
+          class="mt-2 flex items-center justify-between gap-6"
+        >
+          <%= render_slot(action, f) %>
         </div>
       </div>
     </.form>
@@ -250,7 +280,7 @@ defmodule OnestackWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 btn btn-primary py-2 px-3",
+        "phx-submit-loading:opacity-75 py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none cursor-pointer hover:cursor-pointer",
         @class
       ]}
       {@rest}
@@ -327,20 +357,24 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div class="form-control" phx-feedback-for={@name}>
-      <label class="label cursor-pointer flex items-center gap-4 text-sm leading-6">
-        <input type="hidden" name={@name} value="false" />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          class="checkbox focus:ring-0"
-          {@rest}
-        />
-        <%= @label %>
-      </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="flex items-center">
+        <div class="flex">
+          <input type="hidden" name={@name} value="false" />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            checked={@checked}
+            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            {@rest}
+          />
+        </div>
+        <div class="ms-3">
+          <label class="text-sm dark:text-white"><%= @label %></label>
+        </div>
+        <.error :for={msg <- @errors}><%= msg %></.error>
+      </div>
     </div>
     """
   end
@@ -349,16 +383,27 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class="py-3 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
+      <div class="relative">
+        <select
+          id={@id}
+          name={@name}
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 appearance-none"
+          multiple={@multiple}
+          {@rest}
+        >
+          <option :if={@prompt} value=""><%= @prompt %></option>
+          <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+        </select>
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
+          <svg
+            class="fill-current h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+          >
+            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+          </svg>
+        </div>
+      </div>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
@@ -368,13 +413,14 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
-      <textarea rows = "3"
+      <textarea
+        rows="3"
         id={@id}
+        rows="4"
         name={@name}
         class={[
-          "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600",
-          "disabled:opacity-50 disabled:pointer-events-none",
-          @errors != [] && "border-red-500 dark:border-red-400"
+          "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+          @errors != [] && "input-error"
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -390,14 +436,17 @@ defmodule OnestackWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <div>
+        <.label for={@id}><%= @label %></.label>
+      </div>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600",
+          "grow",
+          "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
           @errors == [] && "",
           @errors != [] && "input-error",
           @class
@@ -417,7 +466,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">
+    <label for={@for} class="block text-sm mb-2 dark:text-white">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -430,9 +479,9 @@ defmodule OnestackWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
-      <%= render_slot(@inner_block) %>
+    <p class="mt-3 flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 phx-no-feedback:hidden">
+      <Lucide.render icon="circle-alert" class="h-4 w-4 flex-shrink-0" />
+      <span><%= render_slot(@inner_block) %></span>
     </p>
     """
   end
@@ -448,12 +497,18 @@ defmodule OnestackWeb.CoreComponents do
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
+    <header class={[
+      @actions != [] && "flex items-center justify-between gap-6",
+      @class
+    ]}>
       <div>
         <h1 class="block text-2xl font-bold text-gray-800 dark:text-white sm:text-3xl">
           <%= render_slot(@inner_block) %>
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-lg text-gray-600 dark:text-gray-400">
+        <p
+          :if={@subtitle != []}
+          class="mt-2 text-lg text-gray-600 dark:text-gray-400"
+        >
           <%= render_slot(@subtitle) %>
         </p>
       </div>
@@ -498,7 +553,9 @@ defmodule OnestackWeb.CoreComponents do
       <table class="w-full mt-11 mx-0 px-0 sm:w-full">
         <thead class="text-sm text-left leading-6">
           <tr>
-            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal"><%= col[:label] %></th>
+            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal">
+              <%= col[:label] %>
+            </th>
             <th :if={@action != []} class="relative p-0 pb-4">
               <span class="sr-only"><%= gettext("Actions") %></span>
             </th>
@@ -506,7 +563,9 @@ defmodule OnestackWeb.CoreComponents do
         </thead>
         <tbody
           id={@id}
-          phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
+          phx-update={
+            match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"
+          }
           class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6"
         >
           <tr
@@ -517,7 +576,10 @@ defmodule OnestackWeb.CoreComponents do
             <td
               :for={{col, i} <- Enum.with_index(@col)}
               phx-click={@row_click && @row_click.(row)}
-              class={["relative p-0", @row_click && "hover:cursor-pointer"]}
+              class={[
+                "relative p-0",
+                @row_click && "hover:cursor-pointer"
+              ]}
             >
               <div class="block py-4 pr-6">
                 <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-primary-content  sm:rounded-l-xl" />
@@ -562,8 +624,13 @@ defmodule OnestackWeb.CoreComponents do
     ~H"""
     <div class="mt-14">
       <dl class="-my-4 divide-y divide-zinc-100">
-        <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-          <dt class="w-1/4 flex-none text-zinc-500"><%= item.title %></dt>
+        <div
+          :for={item <- @item}
+          class="flex gap-4 py-4 text-sm leading-6 sm:gap-8"
+        >
+          <dt class="w-1/4 flex-none text-zinc-500">
+            <%= item.title %>
+          </dt>
           <dd class="text-zinc-700"><%= render_slot(item) %></dd>
         </div>
       </dl>

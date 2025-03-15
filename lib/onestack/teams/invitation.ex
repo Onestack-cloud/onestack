@@ -12,9 +12,17 @@ defmodule Onestack.Teams.Invitation do
     timestamps()
   end
 
+  @spec changeset(
+          {map(), map()}
+          | %{
+              :__struct__ => atom() | %{:__changeset__ => any(), optional(any()) => any()},
+              optional(atom()) => any()
+            },
+          :invalid | %{optional(:__struct__) => none(), optional(atom() | binary()) => any()}
+        ) :: Ecto.Changeset.t()
   def changeset(invitation, attrs) do
     invitation
-    |> cast(attrs, [:admin_email, :invitation_id, :recipient_email])
+    |> cast(attrs, [:admin_email, :invitation_id, :recipient_email, :accepted_at])
     |> validate_required([:admin_email, :invitation_id, :recipient_email])
     |> validate_format(:admin_email, ~r/^[^\s]+@[^\s]+$/)
     # 7 days

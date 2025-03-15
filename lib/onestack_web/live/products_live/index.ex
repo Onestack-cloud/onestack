@@ -1,14 +1,21 @@
 defmodule OnestackWeb.ProductLive.Index do
   use OnestackWeb, :live_view
 
-  alias Onestack.StripeCache
+  alias Onestack.{StripeCache, Accounts}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    current_user =
+      case session["user_token"] do
+        nil -> nil
+        user_token -> Accounts.get_user_by_session_token(user_token)
+      end
+
     {:ok,
      socket
      |> assign(:selected_product_categories, [])
-     |> assign(:products, StripeCache.list_products())}
+     |> assign(:products, Onestack.CatalogMonthly.list_products())
+     |> assign(:current_user, current_user)}
   end
 
   @impl true

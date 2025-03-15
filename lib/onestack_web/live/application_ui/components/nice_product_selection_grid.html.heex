@@ -1,0 +1,25 @@
+<div>
+  <.label>
+    Product Access
+  </.label>
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <%= for product <- Onestack.CatalogMonthly.ProductMetadata.all_products() do %>
+      <div class="flex items-center">
+        <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer w-full [&:has(input:checked)]:bg-blue-50 dark:[&:has(input:checked)]:bg-blue-900/30 [&:has(input:checked)]:border-blue-500 dark:[&:has(input:checked)]:border-blue-400">
+          <input
+            type="checkbox"
+            name="product_access[]"
+            value={product.onestack_product_name}
+            class="sr-only peer"
+          />
+          <div class="flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 transition-colors duration-200 peer-checked:text-white group-has-[input:checked]:bg-blue-500 group-has-[input:checked]:text-white">
+            <Lucide.render icon={product.icon} class="w-6 h-6" />
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 group-has-[input:checked]:text-blue-600 dark:group-has-[input:checked]:text-blue-400">
+            <%= product.display_name %>
+          </span>
+        </label>
+      </div>
+    <% end %>
+  </div>
+</div>

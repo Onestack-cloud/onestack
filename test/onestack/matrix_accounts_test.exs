@@ -36,14 +36,19 @@ defmodule Onestack.MatrixAccountsTest do
       matrix_user = matrix_user_fixture()
       update_attrs = %{email: "some updated email", matrix_id: "some updated matrix_id"}
 
-      assert {:ok, %MatrixUser{} = matrix_user} = MatrixAccounts.update_matrix_user(matrix_user, update_attrs)
+      assert {:ok, %MatrixUser{} = matrix_user} =
+               MatrixAccounts.update_matrix_user(matrix_user, update_attrs)
+
       assert matrix_user.email == "some updated email"
       assert matrix_user.matrix_id == "some updated matrix_id"
     end
 
     test "update_matrix_user/2 with invalid data returns error changeset" do
       matrix_user = matrix_user_fixture()
-      assert {:error, %Ecto.Changeset{}} = MatrixAccounts.update_matrix_user(matrix_user, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               MatrixAccounts.update_matrix_user(matrix_user, @invalid_attrs)
+
       assert matrix_user == MatrixAccounts.get_matrix_user!(matrix_user.id)
     end
 
