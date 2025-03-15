@@ -2,10 +2,8 @@ defmodule Onestack.Repo.Migrations.CreateFeedbacks do
   use Ecto.Migration
 
   def change do
-    execute "DROP TABLE IF EXISTS feedbacks"
-
-    create table(:feedbacks) do
-      unless table_exists?(:feedbacks) do
+    unless table_exists?(:feedbacks) do
+      create table(:feedbacks) do
         add :title, :string, null: false
         add :content, :text, null: false
         add :status, :string, default: "Open"
