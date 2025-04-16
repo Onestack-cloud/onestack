@@ -19,124 +19,125 @@ config :logger, level: :info
 # config :onestack, BreadMachine.Repo,
 #   database: Path.expand("../onestack_prod.db", Path.dirname(__ENV__.file))
 
+# Stripe configuration
 config :stripity_stripe,
-  api_key:
-    "REDACTED_STRIPE_LIVE_SECRET_KEY",
-  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET"
+  api_key: System.get_env("STRIPE_API_KEY"),
+  stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET")
 
-# Runtime production configuration, including reading
-# of environment variables, is done on config/runtime.exs.
-
+# Database configurations
 config :onestack,
   products: [
     %{
       name: "formbricks",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "formbricks"
       ]
     },
     %{
       name: "cal",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "onestack-cal"
       ]
     },
     %{
       name: "castopod",
       db_config: [
-        hostname: "mariadb",
-        port: 3306,
-        username: "root",
-        password: "REDACTED_MARIADB_PASSWORD",
+        hostname: System.get_env("MARIADB_HOST", "mariadb"),
+        port: String.to_integer(System.get_env("MARIADB_PORT", "3306")),
+        username: System.get_env("MARIADB_USER", "root"),
+        password: System.get_env("MARIADB_PASSWORD"),
         database: "castopod"
       ]
     },
     %{
       name: "n8n",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "n8n"
       ]
     },
     %{
       name: "documenso",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "documenso"
       ]
     },
     %{
       name: "nocodb",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "nocodb"
       ]
     },
     %{
       name: "chatwoot",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "chatwoot"
       ]
     },
     %{
       name: "penpot",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "penpot"
       ]
     },
     %{
       name: "plane",
       db_config: [
-        hostname: "postgres_db",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "plane"
       ]
     },
     %{
       name: "kimai",
       db_config: [
-        hostname: "mariadb",
-        port: 3306,
-        username: "root",
-        password: "REDACTED_MARIADB_PASSWORD",
+        hostname: System.get_env("MARIADB_HOST", "mariadb"),
+        port: String.to_integer(System.get_env("MARIADB_PORT", "3306")),
+        username: System.get_env("MARIADB_USER", "root"),
+        password: System.get_env("MARIADB_PASSWORD"),
         database: "kimai"
       ]
     },
     %{
       name: "twenty",
       db_config: [
-        hostname: "twenty_db",
-        port: 5432,
-        username: "postgres",
-        password: "REDACTED_TWENTY_DB_PASSWORD",
+        hostname: System.get_env("TWENTY_DB_HOST", "twenty_db"),
+        port: String.to_integer(System.get_env("TWENTY_DB_PORT", "5432")),
+        username: System.get_env("TWENTY_DB_USER", "postgres"),
+        password: System.get_env("TWENTY_DB_PASSWORD"),
         database: "default"
       ]
     }
   ]
+
+# Runtime production configuration, including reading
+# of environment variables, is done on config/runtime.exs.

@@ -66,6 +66,7 @@ prod_deploy:
     - chmod 600 $ID_SSH
     - apk update && apk add openssh-client
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
+    - scp -i $ID_SSH -o StrictHostKeyChecking=no $CI_ENV_FILE $SERVER_USER@$SERVER_IP:/root/onestack_docker/.env
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_docker && docker compose pull && docker compose up -d"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"
 
@@ -82,5 +83,6 @@ dev_deploy:
     - chmod 600 $ID_SSH
     - apk update && apk add openssh-client
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN"
+    - scp -i $ID_SSH -o StrictHostKeyChecking=no $CI_ENV_FILE $SERVER_USER@$SERVER_IP:/root/onestack_dev_docker/.env
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "cd /root/onestack_dev_docker && docker compose pull && docker compose up -d"
     - ssh -i $ID_SSH -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker image prune -af"

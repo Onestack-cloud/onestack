@@ -91,6 +91,10 @@ RUN chown nobody /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
+
+# Create a directory for environment files
+RUN mkdir -p /app/env && chown nobody /app/env
+
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/onestack ./
 

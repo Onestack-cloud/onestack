@@ -42,9 +42,9 @@ config :onestack, OnestackWeb.Endpoint,
 
 config :onestack, Onestack.Mailer,
   adapter: Swoosh.Adapters.AmazonSES,
-  region: "ap-southeast-2",
-  access_key: "REDACTED_AWS_ACCESS_KEY",
-  secret: "REDACTED_AWS_SECRET_KEY"
+  region: System.get_env("AWS_SES_REGION"),
+  access_key: System.get_env("AWS_SES_ACCESS_KEY"),
+  secret: System.get_env("AWS_SES_SECRET")
 
 # Configure esbuild (the version is required)
 config :esbuild,

@@ -62,11 +62,9 @@ config :onestack, OnestackWeb.Endpoint,
   ]
 
 config :stripity_stripe,
-  api_key:
-    "REDACTED_STRIPE_TEST_SECRET_KEY",
-  stripe_webhook_secret: "REDACTED_STRIPE_WEBHOOK_SECRET",
-  public_key:
-    "pk_live_51P78jNFzZpjdOGbNdvaEoWfyKALJ9l0tC9yvfMnKAkPVDIznEacjoTtyx9DIfbd2GVc0EOz8Qx6UrAlZkQPLfwk200d4KgNqm8"
+  api_key: System.get_env("STRIPE_API_KEY"),
+  stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),
+  public_key: System.get_env("STRIPE_PUBLIC_KEY")
 
 # ## SSL Support
 #
@@ -125,110 +123,110 @@ config :onestack,
     %{
       name: "formbricks",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "formbricks"
       ]
     },
     %{
       name: "cal",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "onestack-cal"
       ]
     },
     %{
       name: "castopod",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 3306,
-        username: "root",
-        password: "REDACTED_MARIADB_PASSWORD",
+        hostname: System.get_env("MARIADB_HOST", "mariadb"),
+        port: String.to_integer(System.get_env("MARIADB_PORT", "3306")),
+        username: System.get_env("MARIADB_USER", "root"),
+        password: System.get_env("MARIADB_PASSWORD"),
         database: "castopod"
       ]
     },
     %{
       name: "n8n",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "n8n"
       ]
     },
     %{
       name: "documenso",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "documenso"
       ]
     },
     %{
       name: "nocodb",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "nocodb"
       ]
     },
     %{
       name: "chatwoot",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "chatwoot"
       ]
     },
     %{
       name: "penpot",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "penpot"
       ]
     },
     %{
       name: "plane",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5432,
-        username: "onestack-cal",
-        password: "REDACTED_POSTGRES_PASSWORD",
+        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
+        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+        username: System.get_env("POSTGRES_USER"),
+        password: System.get_env("POSTGRES_PASSWORD"),
         database: "plane"
       ]
     },
     %{
       name: "kimai",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 3306,
-        username: "root",
-        password: "REDACTED_MARIADB_PASSWORD",
+        hostname: System.get_env("MARIADB_HOST", "mariadb"),
+        port: String.to_integer(System.get_env("MARIADB_PORT", "3306")),
+        username: System.get_env("MARIADB_USER", "root"),
+        password: System.get_env("MARIADB_PASSWORD"),
         database: "kimai"
       ]
     },
     %{
       name: "twenty",
       db_config: [
-        hostname: "94.130.19.103",
-        port: 5420,
-        username: "postgres",
-        password: "REDACTED_TWENTY_DB_PASSWORD",
+        hostname: System.get_env("TWENTY_DB_HOST", "twenty_db"),
+        port: String.to_integer(System.get_env("TWENTY_DB_PORT", "5432")),
+        username: System.get_env("TWENTY_DB_USER", "postgres"),
+        password: System.get_env("TWENTY_DB_PASSWORD"),
         database: "default"
       ]
     }
