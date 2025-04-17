@@ -435,8 +435,8 @@ defmodule OnestackWeb.Layouts do
 
   def topbar_live(assigns) do
     ~H"""
-    <header class="flex flex-wrap md:justify-start md:flex-nowrap z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-neutral-700">
-      <nav class="relative max-w-[85rem] w-full mx-auto md:flex md:items-center md:justify-between md:gap-3 py-2 px-4 sm:px-6 lg:px-8">
+    <header class="flex flex-wrap lg:justify-start lg:flex-nowrap z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-neutral-700">
+      <nav class="relative max-w-[85rem] w-full mx-auto lg:flex lg:items-center lg:justify-between lg:gap-3 py-2 px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center gap-x-1 me-6">
           <a class="flex-none" href={OnestackWeb.URLHelper.main_domain()}>
             <img
@@ -453,60 +453,84 @@ defmodule OnestackWeb.Layouts do
               Powered by open source
             </p>
           </a>
-          <!-- Collapse Button -->
-          <button
-            type="button"
-            class="hs-collapse-toggle md:hidden relative size-9 flex justify-center items-center font-medium text-[12px] rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
-            id="hs-header-base-collapse"
-            aria-expanded="false"
-            aria-controls="hs-header-base"
-            aria-label="Toggle navigation"
-            data-hs-collapse="#hs-header-base"
-          >
-            <svg
-              class="hs-collapse-open:hidden size-4"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+
+          <!-- Mobile: Action buttons next to toggle -->
+          <div class="flex items-center lg:hidden gap-2">
+            <%= if @current_user do %>
+              <a
+                href={OnestackWeb.URLHelper.subdomain_url("app")}
+                class="inline-flex items-center font-medium text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:bg-blue-600 px-2 py-2"
+              >
+                My Stack
+              </a>
+            <% else %>
+              <.link
+                navigate={~p"/users/register"}
+                class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700
+                hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300
+                dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-2 py-2
+                text-center border border-blue-800 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.2)]
+                transition-all duration-200 relative"
+              >
+                Get started
+              </.link>
+            <% end %>
+
+            <!-- Collapse Button -->
+            <button
+              type="button"
+              class="hs-collapse-toggle relative size-9 flex justify-center items-center font-medium text-[12px] rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
+              id="hs-header-base-collapse"
+              aria-expanded="false"
+              aria-controls="hs-header-base"
+              aria-label="Toggle navigation"
+              data-hs-collapse="#hs-header-base"
             >
-              <line x1="3" x2="21" y1="6" y2="6" /><line
-                x1="3"
-                x2="21"
-                y1="12"
-                y2="12"
-              /><line x1="3" x2="21" y1="18" y2="18" />
-            </svg>
-            <svg
-              class="hs-collapse-open:block shrink-0 hidden size-4"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-            </svg>
-          </button>
+              <svg
+                class="hs-collapse-open:hidden size-4"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="3" x2="21" y1="6" y2="6" /><line
+                  x1="3"
+                  x2="21"
+                  y1="12"
+                  y2="12"
+                /><line x1="3" x2="21" y1="18" y2="18" />
+              </svg>
+              <svg
+                class="hs-collapse-open:block shrink-0 hidden size-4"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <!-- Collapse -->
         <div
           id="hs-header-base"
-          class="hs-collapse hidden overflow-hidden transition-all duration-300 basis-full grow md:block"
+          class="hs-collapse hidden overflow-hidden transition-all duration-300 basis-full grow lg:block"
         >
           <div class="overflow-hidden overflow-y-auto max-h-[75vh] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-            <div class="py-2 md:py-0 flex flex-col md:flex-row md:items-center gap-0.5 md:gap-1">
+            <div class="py-2 lg:py-0 flex flex-col lg:flex-row lg:items-center gap-0.5 lg:gap-1">
               <div class="grow">
-                <div class="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-1">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-0.5 lg:gap-3">
                   <a
                     class="p-2 flex items-center text-sm text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:bg-gray-100 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
                     href={
@@ -549,8 +573,8 @@ defmodule OnestackWeb.Layouts do
                   </a>
                 </div>
               </div>
-              <!-- Button Group -->
-              <div class="md:ms-auto mt-2 md:mt-0 flex flex-wrap items-center gap-x-1.5">
+              <!-- Button Group - Hide in mobile view since we've moved these to the top bar -->
+              <div class="lg:ms-auto mt-2 lg:mt-0 flex flex-wrap items-center gap-x-2 hidden lg:flex">
                 <%= if @current_user do %>
                   <a
                     href={OnestackWeb.URLHelper.subdomain_url("app")}
@@ -558,7 +582,7 @@ defmodule OnestackWeb.Layouts do
                   >
                     My Stack
                   </a>
-                  <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+                  <div class="flex items-center lg:order-2 space-x-3 lg:space-x-0 rtl:space-x-reverse">
                     <button
                       type="button"
                       class="p-2.5 inline-flex items-center font-medium text-sm rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700 hover:cursor-pointer"
@@ -615,30 +639,32 @@ defmodule OnestackWeb.Layouts do
                     </div>
                   </div>
                 <% else %>
-                  <.link
-                    navigate={~p"/users/log_in"}
-                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-2 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-                  >
-                    Login
-                  </.link>
-                  <.link
-                    navigate={~p"/users/register"}
-                    class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700
-                    hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300
-                    dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2
-                    text-center me-2 mb-2
-                    border border-blue-800
-                    shadow-[0_4px_6px_-1px_rgba(0,0,0,0.2)]
-                    transition-all duration-200
-                    relative
-                    before:content-[''] before:absolute before:inset-0 before:rounded-lg
-                    before:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)]
-                    before:pointer-events-none
-                    hover:translate-y-[1px] hover:shadow-[0_2px_4px_-1px_rgba(0,0,0,0.2)]
-                    active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
-                  >
-                    Get started for free
-                  </.link>
+                  <div class="flex items-center space-x-2">
+                    <.link
+                      navigate={~p"/users/log_in"}
+                      class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+                    >
+                      Login
+                    </.link>
+                    <.link
+                      navigate={~p"/users/register"}
+                      class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700
+                      hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300
+                      dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2
+                      text-center
+                      border border-blue-800
+                      shadow-[0_4px_6px_-1px_rgba(0,0,0,0.2)]
+                      transition-all duration-200
+                      relative
+                      before:content-[''] before:absolute before:inset-0 before:rounded-lg
+                      before:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)]
+                      before:pointer-events-none
+                      hover:translate-y-[1px] hover:shadow-[0_2px_4px_-1px_rgba(0,0,0,0.2)]
+                      active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
+                    >
+                      Get started for free
+                    </.link>
+                  </div>
                 <% end %>
               </div>
               <!-- End Button Group -->
