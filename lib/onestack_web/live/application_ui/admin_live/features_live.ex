@@ -1,9 +1,10 @@
 # lib/onestack_web/live/admin/products_live.ex
-defmodule OnestackWeb.Admin.ProductsLive do
+defmodule OnestackWeb.Admin.FeaturesLive do
   use OnestackWeb, :live_view
   alias Onestack.{StripeCache, Teams, Accounts, Admin.Stats}
   import Phoenix.Component
   use OnestackWeb.AssignCurrentPath
+  require Logger
 
   @impl true
   def mount(_params, session, socket) do
@@ -155,6 +156,10 @@ defmodule OnestackWeb.Admin.ProductsLive do
 
       _ ->
         # Otherwise, proceed with the update
+        # Log that the product is being added to the stack
+
+        Logger.info("Product #{onestack_product_name} is being #{action}ed to the stack")
+
         send(self(), {:run_update_subscription, action, onestack_product_name})
         {:noreply, assign(socket, updating: true)}
     end
@@ -163,12 +168,18 @@ defmodule OnestackWeb.Admin.ProductsLive do
   @impl true
   def handle_info({:run_update_subscription, action, onestack_product_name}, socket) do
     current_user = socket.assigns.current_user
+    Logger.info("Starting subscription update for action: #{action}, product: #{onestack_product_name}")
 
-    case find_customer_with_active_subscription(current_user.email) do
+    result = find_customer_with_active_subscription(current_user.email)
+    Logger.info("Customer subscription lookup result: #{inspect(result)}")
+
+    case result do
       {:ok, subscription_id} ->
+        Logger.info("Found active subscription: #{subscription_id}, proceeding with update")
         handle_subscription_update(subscription_id, action, onestack_product_name, socket)
 
       {:error, reason} ->
+        Logger.error("Subscription update failed with reason: #{inspect(reason)}")
         {:noreply,
          socket
          |> assign(updating: false)
@@ -177,39 +188,53 @@ defmodule OnestackWeb.Admin.ProductsLive do
   end
 
   defp find_customer_with_active_subscription(email) do
+    Logger.info("Looking for customer with email: #{email}")
     case Stripe.Customer.list(%{email: email}) do
       {:ok, %{data: []}} ->
+        Logger.info("No customer found for email: #{email}")
         {:error, :no_customer}
 
       {:ok, %{data: customers}} ->
+        Logger.info("Found #{length(customers)} customers for email: #{email}")
         find_active_subscription(customers)
 
       {:error, error} ->
+        Logger.error("Stripe error when listing customers: #{inspect(error)}")
         {:error, error}
     end
   end
 
   defp find_active_subscription(customers) do
+    Logger.info("Searching for active subscriptions among #{length(customers)} customers")
     # Try to find a customer with an active subscription
     Enum.reduce_while(customers, {:error, :no_subscription}, fn customer, acc ->
+      Logger.info("Checking subscriptions for customer: #{customer.id}")
       case Stripe.Subscription.list(%{customer: customer.id, status: "active", limit: 1}) do
         {:ok, %{data: [subscription | _]}} ->
+          Logger.info("Found active subscription #{subscription.id} for customer #{customer.id}")
           {:halt, {:ok, subscription.id}}
 
-        _ ->
+        {:ok, %{data: []}} ->
+          Logger.info("No active subscriptions found for customer #{customer.id}")
+          {:cont, acc}
+
+        {:error, error} ->
+          Logger.error("Error listing subscriptions for customer #{customer.id}: #{inspect(error)}")
           {:cont, acc}
       end
     end)
   end
 
   defp handle_subscription_update(subscription_id, action, onestack_product_name, socket) do
+    Logger.info("Handling subscription update for subscription #{subscription_id}, action: #{action}, product: #{onestack_product_name}")
     case update_subscription_with_product(
            subscription_id,
            action,
            onestack_product_name,
            socket
          ) do
-      {:ok, _updated_subscription} ->
+      {:ok, updated_subscription} ->
+        Logger.info("Successfully updated subscription: #{updated_subscription.id}")
         # Get fresh stats to update all subscription-related data
         stats = Stats.get_user_stats(socket.assigns.current_user)
         action_text = if action == "add", do: "added to", else: "removed from"
@@ -229,6 +254,7 @@ defmodule OnestackWeb.Admin.ProductsLive do
          |> put_flash(:info, "Product #{action_text} subscription successfully")}
 
       {:error, reason} ->
+        Logger.error("Failed to update subscription with reason: #{inspect(reason)}")
         {:noreply,
          socket
          |> assign(updating: false)
@@ -237,8 +263,11 @@ defmodule OnestackWeb.Admin.ProductsLive do
   end
 
   defp update_subscription_with_product(subscription_id, action, onestack_product_name, socket) do
+    Logger.info("Updating subscription #{subscription_id} with product change (#{action}: #{onestack_product_name})")
     with {:ok, subscription} <- Stripe.Subscription.retrieve(subscription_id),
+         _ <- Logger.info("Retrieved subscription: #{inspect(subscription.id)}"),
          {:ok, new_price} <- create_new_price_for_subscription(subscription, action, socket),
+         _ <- Logger.info("Created new price: #{inspect(new_price.id)}"),
          {:ok, updated_subscription} <- update_subscription_with_price(subscription, new_price) do
       # Update team products
       team_member_emails = Teams.list_team_members_by_admin(socket.assigns.current_user)
@@ -260,6 +289,10 @@ defmodule OnestackWeb.Admin.ProductsLive do
       end
 
       {:ok, updated_subscription}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed in update_subscription_with_product: #{inspect(reason)}")
+        error
     end
   end
 
@@ -290,10 +323,13 @@ defmodule OnestackWeb.Admin.ProductsLive do
     subscription_item = List.first(subscription.items.data)
     product_id = subscription_item.price.product
 
+    # Get the currency from the existing subscription
+    currency = subscription_item.price.currency
+
     # Create new price
     price_params = %{
       unit_amount: new_price_cents,
-      currency: "usd",
+      currency: currency,
       recurring: %{
         interval: "month"
       },

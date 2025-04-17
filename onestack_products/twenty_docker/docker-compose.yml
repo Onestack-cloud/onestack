@@ -1,0 +1,95 @@
+name: twenty
+
+services:
+    change-vol-ownership:
+        image: ubuntu
+        user: root
+        volumes:
+            - /root/twenty_docker/server-local-data:/tmp/server-local-data
+            - /root/twenty_docker/docker-data:/tmp/docker-data
+        command: >
+            bash -c "
+            chown -R 1000:1000 /tmp/server-local-data
+            && chown -R 1000:1000 /tmp/docker-data"
+        networks:
+            - traefik_default
+
+    twenty_server:
+        container_name: twenty_server
+        image: twentycrm/twenty:${TAG}
+        volumes:
+            - /root/twenty_docker/server-local-data:/app/packages/twenty-server/${STORAGE_LOCAL_PATH:-.local-storage}
+            - /root/twenty_docker/docker-data:/app/docker-data
+        # ports:
+        # - "3000:3000"
+        env_file:
+            - .env
+        depends_on:
+            change-vol-ownership:
+                condition: service_completed_successfully
+            twenty_db:
+                condition: service_healthy
+        healthcheck:
+            test: curl --fail http://localhost:3000/healthz
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: always
+        labels:
+            - traefik.enable=true
+            # - traefik.http.routers.twenty.rule=Host(`twenty.onestack.cloud`) || HostRegexp(`.+\.twenty\.onestack\.cloud`)
+            - traefik.http.routers.twenty.tls=true
+            - traefik.http.routers.twenty.tls.certresolver=letsencrypt
+            - traefik.http.services.twenty.loadbalancer.server.port=3000
+            - "traefik.http.routers.twenty.tls.domains[0].main=twenty.onestack.cloud"
+            - "traefik.http.routers.twenty.tls.domains[0].sans=*.twenty.onestack.cloud"
+            - "traefik.http.routers.twenty.rule=PathPrefix(`/`)"
+        networks:
+            - traefik_default
+
+    twenty_worker:
+        container_name: twenty_worker
+        image: twentycrm/twenty:${TAG}
+        command: ["yarn", "worker:prod"]
+        environment:
+            ENABLE_DB_MIGRATIONS: "false"
+        env_file:
+            - .env
+        depends_on:
+            twenty_server:
+                condition: service_healthy
+            twenty_db:
+                condition: service_healthy
+        restart: always
+        networks:
+            - traefik_default
+
+    twenty_db:
+        container_name: twenty_db
+        image: twentycrm/twenty-postgres-spilo:${TAG}
+        volumes:
+            - /root/twenty_docker/db-data:/home/postgres/pgdata
+        env_file:
+            - .env
+        healthcheck:
+            test: pg_isready -U onestack -h localhost -d postgres
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: always
+        networks:
+            - traefik_default
+        # labels:
+        #     - "traefik.enable=true"
+        #     - "traefik.tcp.routers.twenty_db.rule=HostSNI(`*`)"
+        #     # - "traefik.tcp.routers.postgres.tls=true"
+        #     - "traefik.tcp.routers.twenty_db.entrypoints=twenty_db"
+        #     # - "traefik.tcp.routers.postgres.tls.certresolver=letsencrypt"
+        #     - "traefik.tcp.services.twenty_db.loadbalancer.server.port=5432"
+    # redis:
+    #     image: redis
+    #     restart: always
+
+networks:
+    traefik_default:
+        external: true

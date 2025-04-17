@@ -1,0 +1,39 @@
+services:
+    mariadb:
+        image: "mariadb:11"
+        container_name: mariadb
+        env_file:
+            - .env
+        restart: unless-stopped
+        ports:
+            - "3336:3306"
+        networks:
+            - traefik_default
+        labels:
+            - "traefik.enable=true"
+            - "traefik.tcp.routers.mariadb.rule=HostSNI(`*`)"
+            # - "traefik.tcp.routers.postgres.tls=true"
+            - "traefik.tcp.routers.mariadb.entrypoints=mariadb"
+            # - "traefik.tcp.routers.mariadb.tls.certresolver=letsencrypt"
+            - "traefik.tcp.services.mariadb.loadbalancer.server.port=3306"
+        healthcheck:
+            test:
+                - CMD
+                - healthcheck.sh
+                - "--connect"
+                - "--innodb_initialized"
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 5s
+        # mem_limit: '0'
+        # memswap_limit: '0'
+        # mem_swappiness: 60
+        # mem_reservation: '0'
+        # cpus: 0.0
+        # cpu_shares: 1024
+        volumes:
+            - "/root/databases/mariadb/mysql:/var/lib/mysql"
+networks:
+    traefik_default:
+        external: true

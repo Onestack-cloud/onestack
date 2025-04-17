@@ -1,0 +1,38 @@
+services:
+    onestack:
+        env_file:
+            - .env
+        image: registry.gitlab.com/curiousgeorge/onestack/dev
+        labels:
+            - traefik.enable=true
+            # Define the service once
+            - traefik.http.services.onestack_dev.loadbalancer.server.port=8080
+
+            # Main domain router
+            - traefik.http.routers.onestack_dev-landing.rule=Host(`dev.onestack.cloud`)
+            - traefik.http.routers.onestack_dev-landing.tls=true
+            - traefik.http.routers.onestack_dev-landing.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack_dev-landing.service=onestack_dev
+
+            # Feedback subdomain router
+            - traefik.http.routers.onestack_dev-feedback.rule=Host(`feedback.dev.onestack.cloud`)
+            - traefik.http.routers.onestack_dev-feedback.tls=true
+            - traefik.http.routers.onestack_dev-feedback.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack_dev-feedback.service=onestack_dev
+
+            # App subdomain router
+            - traefik.http.routers.onestack_dev-app.rule=Host(`app.dev.onestack.cloud`)
+            - traefik.http.routers.onestack_dev-app.tls=true
+            - traefik.http.routers.onestack_dev-app.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack_dev-app.service=onestack_dev
+
+        volumes:
+            - "/root/onestack_dev_docker/dev.db:/app/bin/dev.db"
+        restart: always
+        container_name: onestack_dev
+        networks:
+            - traefik_default
+
+networks:
+    traefik_default:
+        external: true

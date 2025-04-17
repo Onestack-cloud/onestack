@@ -41,7 +41,7 @@ defmodule OnestackWeb.Router do
 
         scope "/admin", Admin do
           live "/teams", TeamsLive
-          live "/features", ProductsLive
+          live "/features", FeaturesLive
           # Ensure this matches the link path in teams_live.html.heex
           live "/teams/invite", TeamsLive, :new
         end

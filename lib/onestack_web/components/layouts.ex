@@ -10,64 +10,60 @@ defmodule OnestackWeb.Layouts do
 
   def sidebar_live(assigns) do
     ~H"""
-    <!-- Navigation Toggle -->
-    <div class="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row">
-      <button
-        data-drawer-target="default-sidebar"
-        data-drawer-toggle="default-sidebar"
-        aria-controls="default-sidebar"
-        type="button"
-        class="inline-flex items-center p-2 mt-2 ms-3 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600 hover:cursor-pointer"
-      >
-        <span class="sr-only">Open sidebar</span>
-        <svg
-          class="w-6 h-6"
-          aria-hidden="true"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          xmlns="http://www.w3.org/2000/svg"
+    <div class="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col md:flex-row">
+      <!-- Mobile Navigation Toggle - Only visible on mobile -->
+      <div class="md:hidden p-2 border-b border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          data-drawer-target="sidebar-menu"
+          data-drawer-toggle="sidebar-menu"
+          aria-controls="sidebar-menu"
+          class="inline-flex items-center p-2 text-gray-500 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
         >
-          <path
-            clip-rule="evenodd"
-            fill-rule="evenodd"
-            d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"
+          <span class="sr-only">Open sidebar</span>
+          <svg
+            class="w-6 h-6"
+            aria-hidden="true"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
           >
-          </path>
-        </svg>
-      </button>
-      <!-- End Navigation Toggle -->
+            <path
+              clip-rule="evenodd"
+              fill-rule="evenodd"
+              d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"
+            >
+            </path>
+          </svg>
+        </button>
+      </div>
 
-    <!-- Sidebar -->
+      <!-- Sidebar -->
       <aside
-        id="default-sidebar"
-        class="fixed lg:sticky top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0"
+        id="sidebar-menu"
+        class="fixed top-0 left-0 z-40 h-screen w-64 transform -translate-x-full transition-transform md:translate-x-0 md:relative md:w-64 flex-shrink-0"
+        aria-label="Sidebar"
       >
-        <div class="h-full flex flex-col bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-          <!-- Header -->
+        <div class="h-full overflow-y-auto flex flex-col bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+          <!-- Header with close button for mobile -->
           <div class="flex justify-between items-center">
             <button
               type="button"
-              class="lg:hidden p-2 text-gray-500 rounded-lg hover:bg-gray-100 focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600 hover:cursor-pointer"
-              data-drawer-target="default-sidebar"
-              data-drawer-toggle="default-sidebar"
-              aria-controls="default-sidebar"
+              data-drawer-hide="sidebar-menu"
+              aria-controls="sidebar-menu"
+              class="md:hidden p-1 text-gray-500 rounded-lg hover:bg-gray-100 focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
             >
-              <span class="sr-only">Toggle sidebar</span>
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <span class="sr-only">Close sidebar</span>
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                 <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                  fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                ></path>
               </svg>
             </button>
           </div>
+
           <!-- Navigation -->
           <div class="flex-1 px-3 py-4 overflow-y-auto">
             <ul class="space-y-2">
@@ -267,7 +263,9 @@ defmodule OnestackWeb.Layouts do
             <ul class="space-y-2 text-sm">
               <li>
                 <a
-                  href="/support"
+                  href={OnestackWeb.URLHelper.subdomain_url("support")}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   class="flex items-center p-2 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 group"
                 >
                   <svg
@@ -348,8 +346,13 @@ defmodule OnestackWeb.Layouts do
                 data-dropdown-toggle="user-dropdown"
               >
                 <img
-                  class="w-6 h-6 rounded-full"
+                  class="w-6 h-6 rounded-full hidden dark:block"
                   src="/images/logo_white.png"
+                  alt="user photo"
+                />
+                <img
+                  class="w-6 h-6 rounded-full dark:hidden"
+                  src="/images/logo_black.png"
                   alt="user photo"
                 />
                 <span class="ml-3">
@@ -390,7 +393,8 @@ defmodule OnestackWeb.Layouts do
         </div>
       </aside>
 
-      <main class="w-full lg:flex-1">
+      <!-- Main Content -->
+      <main class="w-full min-h-screen">
         <%= @inner_content %>
       </main>
     </div>
