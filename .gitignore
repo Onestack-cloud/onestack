@@ -47,3 +47,6 @@ apps
 packages
 .env*
 .DS_Store
+
+.dev.env
+.prod.env
