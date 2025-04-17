@@ -200,7 +200,7 @@ defmodule OnestackWeb.Layouts do
                     </svg>
                   </a>
                 </li>
-                <li>
+                <!-- <li>
                   <a
                     href="#"
                     class="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
@@ -213,7 +213,7 @@ defmodule OnestackWeb.Layouts do
                       Become an affiliate
                     </span>
                   </a>
-                </li>
+                </li> -->
               <% else %>
                 <!-- Member-only navigation items -->
                 <li>
@@ -283,6 +283,20 @@ defmodule OnestackWeb.Layouts do
                     />
                   </svg>
                   <span class="ml-3">Support</span>
+                  <svg
+                    class="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
                 </a>
               </li>
               <li>
@@ -333,6 +347,20 @@ defmodule OnestackWeb.Layouts do
                   <Lucide.render icon="book-open-text" class="w-5 h-5" />
 
                   <span class="ml-3">Docs</span>
+                  <svg
+                    class="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
                 </a>
               </li>
             </ul>
@@ -356,7 +384,11 @@ defmodule OnestackWeb.Layouts do
                   alt="user photo"
                 />
                 <span class="ml-3">
-                  <%= @current_user.first_name %> <%= @current_user.last_name %>
+                  <%= if @current_user.first_name && @current_user.last_name do %>
+                    <%= @current_user.first_name %> <%= @current_user.last_name %>
+                  <% else %>
+                    <%= @current_user.email %>
+                  <% end %>
                 </span>
                 <Lucide.render
                   icon="chevron-down"
