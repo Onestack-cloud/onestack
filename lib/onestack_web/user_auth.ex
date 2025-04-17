@@ -33,7 +33,7 @@ defmodule OnestackWeb.UserAuth do
     |> renew_session()
     |> put_token_in_session(token)
     |> maybe_write_remember_me_cookie(token)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(external: user_return_to || signed_in_path(conn))
   end
 
   defp maybe_write_remember_me_cookie(conn, token) do
@@ -230,7 +230,7 @@ defmodule OnestackWeb.UserAuth do
     socket = mount_current_user(socket, session)
 
     if socket.assigns.current_user do
-      {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
+      {:halt, Phoenix.LiveView.redirect(socket, external: signed_in_path(socket))}
     else
       {:cont, socket}
     end
@@ -262,7 +262,7 @@ defmodule OnestackWeb.UserAuth do
   def redirect_if_user_is_authenticated(conn, _opts) do
     if conn.assigns[:current_user] do
       conn
-      |> redirect(to: signed_in_path(conn))
+      |> redirect(external: signed_in_path(conn))
       |> halt()
     else
       conn
