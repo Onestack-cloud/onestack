@@ -1,0 +1,51 @@
+services:
+  coturn:
+    image: coturn/coturn
+    container_name: coturn
+    restart: unless-stopped
+    networks:
+      - traefik_default
+    command:
+      - '--server-name=coturn.${TOP_LEVEL_DOMAIN}'
+      - '--fingerprint'
+      - '--listening-ip=0.0.0.0'
+      - '--external-ip=5.78.42.42'
+      - '--listening-port=3478'
+      - '--min-port=49152'
+      - '--max-port=65535'
+      - '--log-file=/var/log/coturn/turnserver.log'
+      - '--tls-listening-port=443'
+      - '--use-auth-secret'
+      - '--static-auth-secret='
+      - '--relay-ip=5.78.42.42'
+      - '--syslog'
+    # labels:
+    #   - 'traefik.enable=true'
+    #   - 'traefik.http.routers.coturn.tls=true'
+    #   - 'traefik.http.routers.coturn.rule=Host(`coturn.onestack.cloud`)'
+    #   - 'traefik.http.routers.coturn.entrypoints=websecure'
+    #   - 'traefik.http.routers.coturn.tls.certresolver=letsencrypt'
+
+    volumes:
+      - ./coturn_logs:/var/log/coturn
+    ports:
+## STUN/TURN
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "3479:3479"
+      - "3479:3479/udp"
+      - "80:80"
+      - "80:80/udp"
+## STUN/TURN SSL
+      - "5349:5349"
+      - "5349:5349/udp"
+      - "5350:5350"
+      - "5350:5350/udp"
+      - "443:443"
+      - "443:443/udp"
+# Relay Ports
+      - "49152-65535:49152-65535"
+      - "49152-65535:49152-65535/udp"
+networks:
+  traefik_default:
+    external: true

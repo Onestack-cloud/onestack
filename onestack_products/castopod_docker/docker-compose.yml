@@ -1,0 +1,23 @@
+services:
+    app:
+        image: castopod/castopod:latest
+        container_name: "castopod-app"
+        volumes:
+            - /root/castopod_docker/castopod-media:/var/www/castopod/public/media
+        env_file:
+            - .env
+
+        networks:
+            - traefik_default
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.castopod.rule=Host(`castopod.${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.castopod.tls=true
+            - traefik.http.routers.castopod.entrypoints=websecure
+            - traefik.http.routers.castopod.tls.certresolver=${CERT_RESOLVER:-letsencrypt}
+            - traefik.http.services.castopod.loadbalancer.server.port=8000
+        restart: unless-stopped
+
+networks:
+    traefik_default:
+        external: true

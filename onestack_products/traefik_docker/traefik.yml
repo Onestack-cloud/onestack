@@ -1,0 +1,51 @@
+api:
+    dashboard: true
+    insecure: true  # Set to true for local development
+
+
+entryPoints:
+    web:
+        address: ":80"
+    websecure:
+        address: ":443"
+    traefik:
+        address: ":8080"
+    postgres:
+        address: ":5432"
+    mariadb:
+        address: ":3306"
+    valkey:
+        address: ":6379"
+    mongodb:
+        address: ":27017"
+    twenty_db:
+        address: ":5420"
+
+
+providers:
+    docker:
+        endpoint: "unix:///var/run/docker.sock"
+        exposedByDefault: false
+    file:
+        # This allows us to conditionally include a local configuration file when in development
+        directory: "/etc/traefik"
+        watch: true
+
+certificatesResolvers:
+    letsencrypt:
+        acme:
+            email: george@onestack.cloud
+            storage: /etc/traefik/acme.json
+            httpChallenge:
+                entryPoint: web
+
+# For local development, enable this to see what's happening
+log:
+  level: "DEBUG"
+
+# Global TLS settings
+tls:
+  options:
+    default:
+      sniStrict: false
+      insecureSkipVerify: true

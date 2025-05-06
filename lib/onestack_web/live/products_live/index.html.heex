@@ -1,0 +1,85 @@
+<section class="py-8 lg:py-20 min-h-screen" id="products">
+  <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto">
+    <div class="max-w-2xl mx-auto text-center mb-8 lg:mb-10">
+      <h2 class="text-3xl font-bold md:text-4xl md:leading-tight text-gray-800 dark:text-gray-200 animate-fade-in">
+        One-click access to all the features you need from one interface
+      </h2>
+    </div>
+
+    <%!-- Products Grid --%>
+    <div
+      id="products-container"
+      phx-update="replace"
+      class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
+      <%= for {product, index} <- Enum.with_index(@products) do %>
+        <div
+          id={"product-#{product.onestack_product_name}"}
+          class="backdrop-blur-md bg-white/70 dark:bg-slate-800/60 border border-gray-100/60 dark:border-gray-700/40 rounded-2xl p-6 flex flex-col items-center shadow-sm animate-fade-in cursor-default select-none"
+          style={"animation-delay: #{index * 0.05}s"}
+          aria-label="Static product information card"
+        >
+          <div class="mb-4">
+            <div class="h-16 w-16 bg-gradient-to-br from-blue-50/80 to-blue-100/80 dark:from-blue-900/10 dark:to-blue-800/20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-inner">
+              <Lucide.render
+                icon={product.icon_name}
+                class="h-8 w-8 text-blue-500/90 dark:text-blue-400/90"
+              />
+            </div>
+          </div>
+          <h3 class="text-lg font-medium text-gray-800 dark:text-white text-center mb-1">
+            <%= product.display_name %>
+          </h3>
+        </div>
+      <% end %>
+    </div>
+
+    <%!-- Suggest a Feature Section --%>
+    <div class="mt-12 lg:mt-16 text-center">
+      <div class="inline-block p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+        <div class="max-w-xl mx-auto">
+          <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">
+            Can't find what you're looking for?
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-5">
+            Have a feature idea or suggestion? We'd love to hear from you!
+          </p>
+          <a
+            href={OnestackWeb.URLHelper.subdomain_url("feedback")}
+            class="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-800"
+          >
+            <Lucide.render icon="lightbulb" class="w-5 h-5" />
+            Suggest a Feature
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%!-- Add these styles to your app.css or equivalent --%>
+<style>
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .shadow-fade {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .group:hover .shadow-fade {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+</style>

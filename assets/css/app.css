@@ -1,0 +1,93 @@
+@import "tailwindcss" source("../..");
+@plugin "@tailwindcss/typography";
+
+@theme {
+    --font-sans: "DM Sans", "sans-serif";
+}
+
+/* This file is for your main application CSS */
+/* @font-face {
+	font-family: "PublicPixel";
+	src: url("PublicPixel-E447g.ttf");
+} */
+
+/* @layer base {
+	@font-face {
+		font-family: PublicPixel;
+		font-weight: 400;
+		src: url(./PublicPixel-E447g.ttf) format("ttf");
+	}
+} */
+
+.rotatingText {
+    align-items: center;
+    display: flex;
+    height: 100vh;
+    text-align: center;
+}
+
+.rotatingText-content {
+    position: relative;
+    width: 100%;
+}
+
+.static-word {
+    margin: 0;
+    text-align: center;
+
+    @media (min-width: 768px) {
+        font-size: 70px;
+    }
+}
+
+.rotating-wrapper {
+    display: inline-block;
+    position: relative;
+    margin-left: 15px;
+}
+
+.rotatingText-adjective {
+    font-size: 40px;
+    left: 0;
+    margin: 0;
+    opacity: 0;
+    position: absolute;
+    text-align: left;
+
+    @media (min-width: 768px) {
+        font-size: 70px;
+    }
+
+    &:nth-of-type(1) {
+        animation: rotate-text-up 4.5s 0s infinite;
+    }
+
+    &:nth-of-type(2) {
+        animation: rotate-text-up 4.5s 1.5s infinite;
+    }
+
+    &:nth-of-type(3) {
+        animation: rotate-text-up 4.5s 3s infinite;
+    }
+}
+
+@keyframes rotate-text-up {
+
+    0%,
+    20% {
+        transform: translate3d(0, 80px, 0);
+        opacity: 0;
+    }
+
+    25%,
+    45% {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+    }
+
+    50%,
+    100% {
+        transform: translate3d(0, -40px, 0);
+        opacity: 0;
+    }
+}

@@ -1,0 +1,16 @@
+# Local development TLS settings
+# This file is only loaded when running in local development mode
+
+tls:
+  options:
+    default:
+      sniStrict: false
+      insecureSkipVerify: true
+
+# Set up a self-signed cert for local development
+certificatesResolvers:
+  localcert:
+    # We're generating a self-signed certificate for local development
+    # No need for ACME/Let's Encrypt in local dev
+    tls:
+      selfSigned: {} 

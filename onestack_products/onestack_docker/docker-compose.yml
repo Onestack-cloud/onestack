@@ -1,0 +1,43 @@
+services:
+    onestack:
+        env_file:
+            - .env
+        image: registry.gitlab.com/curiousgeorge/onestack/website
+        labels:
+            - traefik.enable=true
+            # Define the service once
+            - traefik.http.services.onestack.loadbalancer.server.port=8080
+
+            # Main domain router
+            - traefik.http.routers.onestack-landing.rule=Host(`${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.onestack-landing.tls=true
+            - traefik.http.routers.onestack-landing.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack-landing.service=onestack
+
+            # Feedback subdomain router
+            - traefik.http.routers.onestack-feedback.rule=Host(`feedback.${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.onestack-feedback.tls=true
+            - traefik.http.routers.onestack-feedback.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack-feedback.service=onestack
+
+            # App subdomain router
+            - traefik.http.routers.onestack-app.rule=Host(`app.${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.onestack-app.tls=true
+            - traefik.http.routers.onestack-app.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack-app.service=onestack
+
+            # Admin subdomain router
+            - traefik.http.routers.onestack-admin.rule=Host(`admin.${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.onestack-admin.tls=true
+            - traefik.http.routers.onestack-admin.tls.certresolver=letsencrypt
+            - traefik.http.routers.onestack-admin.service=onestack
+        volumes:
+            - "/root/onestack_docker/prod.db:/app/bin/prod.db"
+        restart: always
+        container_name: onestack
+        networks:
+            - traefik_default
+
+networks:
+    traefik_default:
+        external: true

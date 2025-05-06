@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Onestack</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata&family=VT323&display=swap" rel="stylesheet" />
+</head>
+
+<body style="
+            font-family: &quot;Inconsolata&quot;, monospace;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        ">
+    <div style="background-color: white; padding: 30px; border-radius: 5px">
+        <div style="text-align: center; margin-bottom: 20px">
+            <img src="https://onestack-images.pages.dev/logo_black_text.png" alt="OneStack Logo" style="width: 150px" />
+        </div>
+
+        <h1 style="
+                    font-family: &quot;VT323&quot;, monospace;
+                    font-size: 28px;
+                    text-align: center;
+                    margin-bottom: 20px;
+                ">
+            Welcome to Onestack!
+        </h1>
+
+        <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px">
+            Great news! {Admin first name} ({admin email}) has invited you
+            to join their Onestack workspace.
+        </p>
+
+        <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px">
+            Your Onestack access card is like a skeleton key to the future
+            of work. Imagine unlocking a productivity powerhouse that'll
+            make you 10x more efficient. Ready to swipe your way into the
+            fast lane of innovation?
+        </p>
+
+        <div style="text-align: center">
+            <a href="https://onestack.cloud/invitations/<%= @invitation_link %>" style="
+                        display: inline-block;
+                        text-decoration: none;
+                        background-color: #000000;
+                        color: white;
+                        padding: 12px 32px;
+                        border-radius: 9999px;
+                        font-weight: 700;
+                        font-size: 15px;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        margin: 20px;
+                    "
+                onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                Activate your Access Card
+            </a>
+            <p style="font-size: 14px">
+                Can't see the button?
+                <a href="https://onestack.cloud/invitations/<%= @invitation_link %>"
+                    style="color: #0066cc; text-decoration: underline">Click here.</a>
+            </p>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #dddddd; margin: 20px 0" />
+        <div style="text-align: center; margin-bottom: 20px">
+            <p style="
+                        font-size: 16px;
+                        line-height: 1.5;
+                        margin-bottom: 10px;
+                    ">
+                Join our Telegram channel for updates, support, and
+                community interaction:
+            </p>
+            <a href="https://community.onestack.cloud" style="
+                        display: inline-block;
+                        background-color: #0088cc;
+                        color: white;
+                        padding: 10px 30px;
+                        text-decoration: none;
+                        border-radius: 25px;
+                        font-weight: bold;
+                        font-size: 16px;
+                        margin-top: 14px;
+                    ">
+                Join Onestack Telegram
+            </a>
+        </div>
+    </div>
+
+    <div style="
+                text-align: center;
+                margin-top: 20px;
+                font-size: 12px;
+                color: #888;
+            ">
+        Onestack - Empowering the world with open-source solutions
+    </div>
+</body>
+
+</html>

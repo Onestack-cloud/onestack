@@ -1,0 +1,8 @@
+{
+  "name": "onestack",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "preline": "^2.0.3"
+  }
+}

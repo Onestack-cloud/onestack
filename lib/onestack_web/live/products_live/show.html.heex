@@ -1,0 +1,38 @@
+<.header>
+  Product <%= @product.id %>
+  <:subtitle>This is a product record from your database.</:subtitle>
+  <:actions>
+    <.link patch={~p"/products/#{@product}/show/edit"} phx-click={JS.push_focus()}>
+      <.button>Edit product</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Category"><%= @product.category %></:item>
+  <:item title="Closed source name"><%= @product.closed_source_name %></:item>
+  <:item title="Open source name"><%= @product.open_source_name %></:item>
+  <:item title="Closed source userprice"><%= @product.closed_source_user_price %></:item>
+  <:item title="Open source fixed price"><%= @product.open_source_fixed_price %></:item>
+  <:item title="Usd to aud"><%= @product.usd_to_aud %></:item>
+  <:item title="Closed source currency"><%= @product.closed_source_currency %></:item>
+  <:item title="Open source currency"><%= @product.open_source_currency %></:item>
+</.list>
+
+<.back navigate={~p"/products"}>Back to products</.back>
+
+<.modal
+  :if={@live_action == :edit}
+  id="product-modal"
+  show
+  on_cancel={JS.patch(~p"/products/#{@product}")}
+>
+  <.live_component
+    module={OnestackWeb.ProductLive.FormComponent}
+    id={@product.id}
+    title={@page_title}
+    action={@live_action}
+    product={@product}
+    patch={~p"/products/#{@product}"}
+  />
+</.modal>

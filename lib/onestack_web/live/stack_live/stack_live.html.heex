@@ -1,0 +1,331 @@
+<section class="py-8 lg:py-20 min-h-screen bg-base-200 dark:bg-zinc-900" id="stack-builder">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+        Choose Your Stack
+      </h2>
+      <p class="text-xl text-gray-600 dark:text-gray-300">
+        Deploy pre-configured stacks or build your own in minutes
+      </p>
+    </div>
+    <!-- Preset Stacks -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+      <!-- Virtual Assistant Stack -->
+      <div class="card bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900 shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200 dark:border-slate-700">
+        <div class="card-body">
+          <div class="flex items-center gap-2 mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8 text-blue-500 dark:text-blue-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            <h3 class="card-title text-2xl text-gray-800 dark:text-gray-100">
+              Virtual Assistant Stack
+            </h3>
+          </div>
+          <p class="mb-6 text-gray-600 dark:text-gray-300">
+            Perfect for running your virtual assistant business
+          </p>
+          <div class="space-y-3 mb-6">
+            <%= for product <- Enum.take_random(@products, 4) do %>
+              <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                <img
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
+                  class="w-8 h-8 rounded bg-white p-1"
+                />
+                <span class="font-medium text-gray-700 dark:text-gray-200">
+                  <%= product.name %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+          <div class="card-actions justify-end mt-auto">
+            <button
+              class="btn btn-primary btn-lg w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 border-0"
+              phx-click="deploy_preset"
+              phx-value-stack="va"
+            >
+              Deploy VA Stack
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- AI Hacker Stack -->
+      <div class="card bg-gradient-to-br from-rose-50 to-amber-50 dark:from-rose-900 dark:to-amber-900 shadow-xl hover:shadow-2xl transition-all duration-300 border border-rose-200 dark:border-rose-800">
+        <div class="card-body">
+          <div class="flex items-center gap-2 mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8 text-rose-500 dark:text-rose-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            <h3 class="card-title text-2xl text-gray-800 dark:text-gray-100">AI Hacker Stack</h3>
+          </div>
+          <p class="mb-6 text-gray-600 dark:text-gray-300">
+            Essential tools for AI development and testing
+          </p>
+          <div class="space-y-3 mb-6">
+            <%= for product <- Enum.take_random(@products, 4) do %>
+              <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                <img
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
+                  class="w-8 h-8 rounded bg-white p-1"
+                />
+                <span class="font-medium text-gray-700 dark:text-gray-200">
+                  <%= product.name %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+          <div class="card-actions justify-end mt-auto">
+            <button class="btn btn-lg w-full bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 border-0 text-white">
+              Deploy AI Stack
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Marketing Agency Stack -->
+      <div class="card bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900 dark:to-teal-900 shadow-xl hover:shadow-2xl transition-all duration-300 border border-emerald-200 dark:border-emerald-800">
+        <div class="card-body">
+          <div class="flex items-center gap-2 mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8 text-emerald-500 dark:text-emerald-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            <h3 class="card-title text-2xl text-gray-800 dark:text-gray-100">
+              Marketing Agency Stack
+            </h3>
+          </div>
+          <p class="mb-6 text-gray-600 dark:text-gray-300">
+            Complete suite for digital marketing needs
+          </p>
+          <div class="space-y-3 mb-6">
+            <%= for product <- Enum.take_random(@products, 4) do %>
+              <div class="flex items-center gap-3 bg-white/80 dark:bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                <img
+                  src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
+                  class="w-8 h-8 rounded bg-white p-1"
+                />
+                <span class="font-medium text-gray-700 dark:text-gray-200">
+                  <%= product.name %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+          <div class="card-actions justify-end mt-auto">
+            <button class="btn btn-lg w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 border-0 text-white">
+              Deploy Marketing Stack
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 ml-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider before:bg-gray-300 after:bg-gray-300">
+      <span class="bg-primary text-primary-content px-4 py-2 rounded-full text-sm font-medium">
+        OR
+      </span>
+    </div>
+    <!-- Custom Stack Builder -->
+    <div class="mt-16">
+      <h3 class="text-3xl font-bold text-center mb-4">
+        Build Your Custom Stack
+      </h3>
+      <p class="text-center text-gray-600 dark:text-gray-300 mb-10">
+        Mix and match from our collection of open-source products
+      </p>
+
+      <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Product Selection Area -->
+        <div class="lg:w-2/3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <%= for product <- @products do %>
+              <div class="card bg-base-100 dark:bg-zinc-800 shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
+                <div class="absolute top-4 right-4 z-10">
+                  <input
+                    type="checkbox"
+                    name="selected_products[]"
+                    value={product.id}
+                    class="checkbox checkbox-primary"
+                    phx-click="toggle_product"
+                    phx-value-id={product.id}
+                  />
+                </div>
+                <figure class="pt-10 px-6">
+                  <img
+                    src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
+                    alt={product.name}
+                    class="rounded-xl h-16 object-contain"
+                  />
+                </figure>
+                <div class="card-body items-center text-center">
+                  <h3 class="card-title text-lg"><%= product.name %></h3>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    <%= product.description %>
+                  </p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        <!-- Stack Summary -->
+        <div class="lg:w-1/3">
+          <div class="card bg-base-100 dark:bg-zinc-800 shadow-xl sticky top-4">
+            <div class="card-body">
+              <h3 class="card-title text-xl mb-4">Your Custom Stack</h3>
+
+              <%= if Enum.empty?(@selected_products) do %>
+                <div class="text-center py-8">
+                  <div class="text-gray-400 mb-4">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-16 w-16 mx-auto"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
+                  </div>
+                  <p class="text-gray-500">Start building your stack by selecting products</p>
+                </div>
+              <% else %>
+                <div class="space-y-4">
+                  <%= for product <- @selected_products do %>
+                    <div class="flex items-center justify-between bg-base-200 dark:bg-zinc-700 p-3 rounded-lg">
+                      <div class="flex items-center gap-3">
+                        <img
+                          src={"https://onestack-images.pages.dev/#{URI.encode_www_form(String.downcase(product.name))}.png"}
+                          alt={product.name}
+                          class="w-8 h-8 object-contain bg-white p-1 rounded"
+                        />
+                        <span><%= product.name %></span>
+                      </div>
+                      <button
+                        class="btn btn-ghost btn-circle btn-sm hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900"
+                        phx-click="remove_product"
+                        phx-value-id={product.id}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="mt-4">
+                  <button class="btn btn-primary btn-lg w-full">
+                    Deploy Custom Stack
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5 ml-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

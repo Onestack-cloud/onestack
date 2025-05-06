@@ -1,0 +1,33 @@
+services:
+    traefik:
+        container_name: traefik
+        restart: unless-stopped
+        image: traefik:v3
+        ports:
+            - "80:80"
+            - "443:443"
+            - "8080:8080"
+            - "5432:5432"
+            - "3306:3306"
+            - "6379:6379"
+            - "27017:27017"
+            - "5420:5420"
+        environment:
+            - TOP_LEVEL_DOMAIN=${TOP_LEVEL_DOMAIN:-localhost}  # Default to localhost for local testing
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock:ro"
+            - ./traefik.yml:/etc/traefik/traefik.yml
+            - ./acme.json:/etc/traefik/acme.json
+        networks:
+            - traefik_default
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.dashboard.rule=Host(`traefik.${TOP_LEVEL_DOMAIN:-localhost}`)"
+            - "traefik.http.routers.dashboard.service=api@internal"
+            - "traefik.http.routers.dashboard.entrypoints=websecure"
+            - "traefik.http.routers.dashboard.tls=true"
+
+
+networks:
+    traefik_default:
+        external: true

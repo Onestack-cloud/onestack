@@ -1,0 +1,40 @@
+services:
+    valkey_redis:
+        image: "redis:7"
+        command: "redis-server --requirepass ${REDIS_PASSWORD} --bind 0.0.0.0 --protected-mode no"
+        container_name: valkey_redis
+        env_file:
+            - .env
+        restart: unless-stopped
+        # ports:
+        #     - "6379:6379"
+        networks:
+            - traefik_default
+        labels:
+            - "traefik.enable=true"
+            - "traefik.tcp.routers.valkey.rule=HostSNI(`*`)"
+            # - "traefik.tcp.routers.valkey.tls=true"
+            - "traefik.tcp.routers.valkey.entrypoints=valkey"
+            # - "traefik.tcp.routers.valkey.tls.certresolver=letsencrypt"
+            # - "traefik.tcp.routers.valkey.service=valkey"
+            - "traefik.tcp.services.valkey.loadbalancer.server.port=6379"
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - redis-cli
+                - ping
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 5s
+        # mem_limit: '0'
+        # memswap_limit: '0'
+        # mem_swappiness: 60
+        # mem_reservation: '0'
+        # cpus: 0.0
+        # cpu_shares: 1024
+        volumes:
+            - "/root/databases/valkey_redis/data:/data"
+networks:
+    traefik_default:
+        external: true

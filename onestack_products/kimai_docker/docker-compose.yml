@@ -1,0 +1,30 @@
+services:
+    kimai:
+        image: kimai/kimai2:apache
+        volumes:
+            - ./data:/opt/kimai/var/data
+            - ./plugins:/opt/kimai/var/plugins
+            - ./invoices:/opt/kimai/var/invoices:rw,consistent
+            - /root/kimai_docker/local.yaml:/opt/kimai/config/packages/local.yaml
+        # ports:
+        #     - 8001:8001
+        env_file:
+            - .env
+
+
+        restart: unless-stopped
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.kimai.rule=Host(`kimai.${TOP_LEVEL_DOMAIN}`)
+            - traefik.http.routers.kimai.tls=true
+            - traefik.http.routers.kimai.tls.certresolver=${CERT_RESOLVER:-letsencrypt}
+            - traefik.http.services.kimai.loadbalancer.server.port=8001
+            - traefik.http.routers.kimai.entrypoints=websecure
+            - traefik.http.services.kimai.loadbalancer.server.scheme=http
+            - traefik.http.services.kimai.loadbalancer.passHostHeader=true
+        networks:
+            - traefik_default
+
+networks:
+    traefik_default:
+        external: true

@@ -1,0 +1,5 @@
+#!/bin/sh
+cd -P -- "$(dirname -- "$0")"
+
+# Run migrations. If they fail, don't start the server
+./migrate && exec ./server

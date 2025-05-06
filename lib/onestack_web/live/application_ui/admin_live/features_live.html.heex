@@ -1,0 +1,571 @@
+<div class="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+  <div class="px-4 py-6 md:py-8 w-full max-w-full md:max-w-[calc(100%-1rem)] lg:max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6 md:mb-10">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+        <div>
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+            Features
+          </h1>
+          <p class="mt-2 text-base sm:text-lg text-gray-600 dark:text-gray-300">
+            Manage and discover software tools for your team
+          </p>
+        </div>
+        <%!-- <.button class="max-w-xs">
+          <Lucide.render icon="circle-plus" class="w-4 h-4" /> Add New Product
+        </.button> !--%>
+      </div>
+      <!-- Summary Cards with Smooth Gradients -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
+        <div class="relative overflow-hidden">
+          <div class="relative bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Active Features
+                </p>
+                <h3 class="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  <%= length(@selected_product_names) %>
+                </h3>
+              </div>
+              <div class="rounded-full p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/30">
+                <Lucide.render
+                  icon="box"
+                  class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400"
+                />
+              </div>
+            </div>
+            <!-- <div class="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <Lucide.render icon="arrow-up" class="w-4 h-4 text-green-500" />
+              <span>12% more than last month</span>
+            </div> -->
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="relative bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="flex items-center gap-1">
+                  <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Monthly Savings
+                  </p>
+                  <div class="relative group">
+                    <Lucide.render
+                      icon="info"
+                      class="w-4 h-4 text-green-600 dark:text-green-400 cursor-help"
+                    />
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[9999] pointer-events-none">
+                      <div class="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm p-3">
+                        Savings calculated by comparing your Onestack subscription costs with equivalent closed-source alternatives based on features and number of seats.
+                        <div class="absolute w-2 h-2 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 border-b border-r transform rotate-45 -translate-x-1/2 left-1/2 -bottom-1">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <h3 class="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  <% total_closed_source_cost =
+                    Enum.reduce(@products, Money.new(0), fn product,
+                                                            acc ->
+                      if Enum.member?(
+                           @selected_product_names,
+                           String.downcase(
+                             product.onestack_product_name
+                           )
+                         ) do
+                        user_price =
+                          product.closed_source_user_price
+                          |> Decimal.new()
+                          |> Decimal.mult(Decimal.new(100))
+                          |> Decimal.to_integer()
+                          |> Money.new()
+
+                        cost = Money.multiply(user_price, @num_users)
+                        Money.add(acc, cost)
+                      else
+                        acc
+                      end
+                    end)
+
+                  current_subscription_cost =
+                    if @upcoming_invoice do
+                      @upcoming_invoice.amount_due
+                      |> Money.new()
+                    else
+                      Money.new(0)
+                    end
+
+                  total_savings =
+                    Money.subtract(
+                      total_closed_source_cost,
+                      current_subscription_cost
+                    ) %>
+                  <%= Money.to_string(total_savings) %>
+                </h3>
+              </div>
+              <div class="rounded-full p-2 sm:p-3 bg-green-50 dark:bg-green-900/30">
+                <Lucide.render
+                  icon="banknote"
+                  class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400"
+                />
+              </div>
+            </div>
+            <!-- <div class="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <Lucide.render icon="arrow-up" class="w-4 h-4 text-green-500" />
+              <span>28% increase in savings</span>
+            </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Tabs -->
+    <div class="mb-6">
+      <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="flex space-x-4 sm:space-x-6 overflow-x-auto pb-1 sm:pb-2" aria-label="Products">
+          <button
+            phx-click="set_tab"
+            phx-value-tab="active"
+            class={[
+              "whitespace-nowrap pb-2 sm:pb-4 px-1 border-b-2 font-medium text-sm hover:cursor-pointer",
+              @current_tab == "active" &&
+                "border-blue-500 text-blue-600 dark:text-blue-400",
+              @current_tab != "active" &&
+                "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            ]}
+          >
+            Active Features
+            <span class={[
+              "ml-2 py-0.5 px-2 sm:px-2.5 rounded-full text-xs font-medium",
+              @current_tab == "active" &&
+                "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
+              @current_tab != "active" &&
+                "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
+            ]}>
+              <%= length(@selected_product_names) %>
+            </span>
+          </button>
+
+          <button
+            phx-click="set_tab"
+            phx-value-tab="available"
+            class={[
+              "whitespace-nowrap pb-2 sm:pb-4 px-1 border-b-2 font-medium text-sm hover:cursor-pointer",
+              @current_tab == "available" &&
+                "border-blue-500 text-blue-600 dark:text-blue-400",
+              @current_tab != "available" &&
+                "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            ]}
+          >
+            Available Features
+            <span class={[
+              "ml-2 py-0.5 px-2 sm:px-2.5 rounded-full text-xs font-medium hover:cursor-pointer",
+              @current_tab == "available" &&
+                "bg-blue-100 text-blue-600 dark:bg-blue-900/30",
+              @current_tab != "available" &&
+                "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-400"
+            ]}>
+              <%= length(@products) - length(@selected_product_names) %>
+            </span>
+          </button>
+        </nav>
+      </div>
+    </div>
+    <!-- Products Grid -->
+    <div class="mt-4 sm:mt-6">
+      <%= if @current_tab=="active" do %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+          <%= for product <- @products do %>
+            <%= if Enum.member?(@selected_product_names, String.downcase(product.onestack_product_name)) do %>
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200">
+                <div class="absolute top-3 right-3">
+                  <button
+                    class="text-gray-400 hover:text-red-500 transition-colors duration-200 hover:cursor-pointer"
+                    phx-click="open_modal"
+                    phx-value-product={product.onestack_product_name}
+                    phx-value-action="remove"
+                  >
+                    <Lucide.render icon="trash-2" class="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
+                <div class="p-4 sm:p-6">
+                  <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                    <%= if product do %>
+                      <Lucide.render
+                        icon={product.icon_name}
+                        class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500"
+                      />
+                    <% else %>
+                      <Lucide.render
+                        icon="frown"
+                        class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500"
+                      />
+                    <% end %>
+                  </div>
+                  <div>
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                      <%= if product do %>
+                        <%= product.display_name %>
+                      <% else %>
+                        <%= "no metadata found" %>
+                      <% end %>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      <%= product.onestack_product_name %>
+                    </p>
+                  </div>
+
+                  <div class="space-y-4">
+                    <%!-- <div>
+                      <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-600 dark:text-gray-300">Active Users</span>
+                        <span class="font-medium text-gray-900 dark:text-white">
+                          <%= @num_users %>/<%= "XX" %>
+                        </span>
+                      </div>
+                      <div class="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden dark:bg-gray-700">
+                        <div
+                          class={[
+                            "absolute h-full rounded-full transition-all duration-500",
+                            usage_color(@num_users / 100)
+                          ]}
+                          style={"width: #{@num_users
+                        / 100 * 100}%"}
+                        />
+                      </div>
+                    </div> !--%>
+
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-4">
+                        <%!-- <div class="flex -space-x-2">
+                          <%= for _ <- 1..3 do %>
+                            <div class="w-7 h-7 rounded-full bg-gray-200 border-2 border-white dark:border-gray-800">
+                            </div>
+                          <% end %>
+                          <div class="w-7 h-7 rounded-full bg-gray-100 border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                            <span class="text-xs text-gray-600">+12</span>
+                          </div>
+                        </div> !--%>
+                      </div>
+                      <%!-- <div class="text-sm">
+                        <span class="text-green-600 dark:text-green-400 font-medium">
+                          <%= Money.to_string(
+                            calculate_monthly_savings(
+                              product,
+                              @num_users,
+                              @upcoming_invoice
+                            )
+                          ) %>
+                        </span>
+                        <span class="text-gray-500 dark:text-gray-400">
+                          saved/mo
+                        </span>
+                      </div> !--%>
+                    </div>
+                  </div>
+                  <!-- Launch Button -->
+                  <div class="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <a
+                      href={"https://#{product.onestack_product_name}.onestack.cloud"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex items-center justify-center w-full py-2 sm:py-2.5 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+                    >
+                      <Lucide.render
+                        icon="external-link"
+                        class="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2"
+                      /> Launch <%= product.display_name %>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+          <%= for product <- @products do %>
+            <%= if !Enum.member?(@selected_product_names, String.downcase(product.onestack_product_name)) do %>
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 overflow-hidden">
+                <%= if false do %>
+                  <div class="absolute top-3 right-3">
+                    <div class="bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm">
+                      Trending
+                    </div>
+                  </div>
+                <% end %>
+
+                <div class="p-4 sm:p-6">
+                  <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                    <Lucide.render
+                      icon={product.icon_name}
+                      class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500"
+                    />
+                    <div>
+                      <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                        <%= product.display_name %>
+                      </h3>
+                      <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        <%= product.onestack_product_name %>
+                      </p>
+                    </div>
+                  </div>
+
+                  <%!-- <div class="space-y-4">
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-300">
+                        Starting from
+                      </span>
+                      <span class="font-medium text-gray-900 dark:text-white">
+                        <%= "$XXX" %>/mo
+                      </span>
+                    </div>
+                  </div> !--%>
+                </div>
+
+                <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700/50">
+                  <button
+                    class="w-full inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors duration-200 hover:cursor-pointer"
+                    phx-click="open_modal"
+                    phx-value-product={product.onestack_product_name}
+                    phx-value-action="add"
+                  >
+                    <Lucide.render icon="plus" class="w-3 h-3 sm:w-4 sm:h-4" />
+                    Add to Stack
+                  </button>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+<!-- Product Action Modal -->
+<%= if @show_modal do %>
+  <div
+    id="product-modal"
+    tabindex="-1"
+    aria-hidden="true"
+    class="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-screen flex animate-fade-in"
+    phx-window-keydown="close_modal"
+    phx-key="escape"
+  >
+    <div class="relative p-3 sm:p-4 w-full max-w-sm sm:max-w-md md:max-w-2xl max-h-full">
+      <!-- Modal content -->
+      <div class="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/20 dark:border-gray-700/20 transform transition-all animate-scale-in">
+        <%= if @modal_product do %>
+          <!-- Modal header -->
+          <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200/30 dark:border-gray-700/30">
+            <div class="flex items-center space-x-3">
+              <%= if @modal_action == "add" do %>
+                <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-50 dark:bg-blue-900/30">
+                  <Lucide.render
+                    icon="plus"
+                    class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400"
+                  />
+                </div>
+              <% else %>
+                <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-50 dark:bg-red-900/30">
+                  <Lucide.render
+                    icon="trash-2"
+                    class="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400"
+                  />
+                </div>
+              <% end %>
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+                <%= if @modal_action == "add" do %>
+                  Add <%= @product_metadata.display_name %>
+                <% else %>
+                  Remove Feature
+                <% end %>
+              </h3>
+            </div>
+            <button
+              type="button"
+              class="text-gray-500 bg-transparent hover:bg-gray-100 hover:text-gray-900 rounded-lg text-sm w-7 h-7 sm:w-8 sm:h-8 inline-flex justify-center items-center dark:hover:bg-gray-800 dark:hover:text-white transition-colors duration-200"
+              phx-click="close_modal"
+              disabled={@updating}
+            >
+              <Lucide.render icon="x" class="w-4 h-4 sm:w-5 sm:h-5" />
+              <span class="sr-only">Close modal</span>
+            </button>
+          </div>
+          <!-- Modal body -->
+          <div class="p-4 sm:p-6">
+            <p class="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300">
+              <%= if @modal_action == "add" do %>
+                <div class="mb-3 sm:mb-4">
+                  <h4 class="text-sm sm:text-base font-medium text-gray-900 dark:text-white mb-1">
+                    <%= @product_metadata.display_name %>
+                  </h4>
+                  <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    Are you sure you want to add this feature to your stack?
+                  </p>
+                </div>
+                <div class="p-3 sm:p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                      <Lucide.render
+                        icon="piggy-bank"
+                        class="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400"
+                      />
+                    </div>
+                    <div class="ml-3">
+                      <p class="text-xs sm:text-sm text-green-700 dark:text-green-400">
+                        You'll save approximately
+                        <span class="font-semibold">
+                          <%= Money.to_string(
+                            calculate_monthly_savings(
+                              @modal_product,
+                              @num_users,
+                              @upcoming_invoice
+                            )
+                          ) %>
+                        </span>
+                        per month by using this feature on Onestack.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              <% else %>
+                <div class="mb-3 sm:mb-4">
+                  <h4 class="text-sm sm:text-base font-medium text-gray-900 dark:text-white mb-1">
+                    <%= @product_metadata.display_name %>
+                  </h4>
+                  <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    Are you sure you want to remove this feature from your stack?
+                  </p>
+                </div>
+                <div class="p-3 sm:p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                      <Lucide.render
+                        icon="circle-alert"
+                        class="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400"
+                      />
+                    </div>
+                    <div class="ml-3">
+                      <p class="text-xs sm:text-sm text-amber-700 dark:text-amber-400">
+                        You're currently saving
+                        <span class="font-semibold">
+                          <%= Money.to_string(
+                            calculate_monthly_savings(
+                              @modal_product,
+                              @num_users,
+                              @upcoming_invoice
+                            )
+                          ) %>
+                        </span>
+                        per month with this feature through Onestack.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </p>
+          </div>
+          <!-- Modal footer -->
+          <div class="flex items-center justify-end p-4 sm:p-6 border-t border-gray-200/30 dark:border-gray-700/30 gap-2 sm:gap-3">
+            <button
+              type="button"
+              class="mr-4 sm:mr-6 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-gray-300 dark:focus:ring-gray-700 rounded-lg transition-colors duration-200 hover:cursor-pointer"
+              phx-click="close_modal"
+              disabled={@updating}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class={
+                [
+                  "inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 transition-colors duration-200 hover:cursor-pointer",
+                  if(@modal_action == "add",
+                    do:
+                      "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
+                    else:
+                      "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                  )
+                ]
+                |> Enum.join(" ")
+              }
+              phx-click="update_subscription"
+              phx-value-action={@modal_action}
+              phx-value-product={
+                @modal_product.onestack_product_name
+              }
+              disabled={@updating}
+            >
+              <%= if @updating do %>
+                <svg
+                  class="animate-spin -ml-1 mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  >
+                  </circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  >
+                  </path>
+                </svg>
+                <%= if @modal_action == "add",
+                  do: "Adding...",
+                  else: "Removing..." %>
+              <% else %>
+                <%= if @modal_action == "add" do %>
+                  <Lucide.render
+                    icon="plus"
+                    class="-ml-0.5 mr-1 sm:mr-1.5 w-3 h-3 sm:w-4 sm:h-4"
+                  /> Add Feature
+                <% else %>
+                  <Lucide.render
+                    icon="trash-2"
+                    class="-ml-0.5 mr-1 sm:mr-1.5 w-3 h-3 sm:w-4 sm:h-4"
+                  /> Remove Feature
+                <% end %>
+              <% end %>
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <!-- Modal backdrop -->
+  <div
+    class="fixed inset-0 z-40 bg-gray-900/20 dark:bg-gray-900/40 backdrop-blur-sm transform transition-all animate-fade-in"
+    phx-click="close_modal"
+  >
+  </div>
+<% end %>
+
+<style>
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scale-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.15s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.15s ease-out;
+  }
+</style>

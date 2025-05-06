@@ -1,0 +1,280 @@
+<div class="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+  <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
+    <!-- Header with Stats -->
+    <div class="mb-12">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-4xl font-bold text-gray-900 dark:text-white">
+            Team Members
+          </h1>
+          <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+            Manage your team and control product access
+          </p>
+        </div>
+        <.link patch={~p"/admin/teams/invite"}>
+          <.button class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium ">
+            <Lucide.render icon="plus" class="w-4 h-4" />
+            Invite Members
+          </.button>
+        </.link>
+      </div>
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border-1 border-neutral-500 dark:border-neutral-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Total Members
+              </p>
+              <h3 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+                <%= length(@team_members) %>
+              </h3>
+            </div>
+            <div class={[
+              "rounded-full p-3",
+              stat_background_color(:primary)
+            ]}>
+              <Lucide.render
+                icon="users"
+                class={[
+                  "w-6 h-6",
+                  stat_icon_color(:primary)
+                ]}
+              />
+            </div>
+          </div>
+          <%!-- <div class="mt-4 flex items-center gap-2 text-sm">
+            <Lucide.render
+              icon="arrow-up"
+              class="w-4 h-4 text-green-500"
+            />
+            <span class="text-gray-600 dark:text-gray-300">
+              12% from last month
+            </span>
+          </div> !--%>
+        </div>
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl p-6 border-1 border-neutral-500 dark:border-neutral-600 relative">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-medium text-gray-400 dark:text-gray-500">
+              Active Now
+            </p>
+            <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-500 text-white absolute -top-2 -right-3">
+              Coming Soon
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-2xl font-bold text-gray-500 dark:text-gray-400">
+              --
+            </h3>
+          </div>
+
+          <%!-- <div class="mt-4 flex items-center gap-2 text-sm">
+            <Lucide.render
+              icon="minus"
+              class="w-4 h-4 text-gray-400 dark:text-gray-500"
+            />
+            <span class="text-gray-400 dark:text-gray-500">
+              No data available
+            </span>
+          </div> !--%>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 rounded-2xl border-1 border-neutral-500 dark:border-neutral-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Pending Invites
+              </p>
+              <h3 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+                <%= @pending_invitations_count %>
+              </h3>
+            </div>
+            <div class={[
+              "rounded-full p-3",
+              stat_background_color(:warning)
+            ]}>
+              <Lucide.render
+                icon="send"
+                class={[
+                  "w-6 h-6",
+                  stat_icon_color(:warning)
+                ]}
+              />
+            </div>
+          </div>
+          <%!-- <div class="mt-4 flex items-center gap-2 text-sm">
+            <Lucide.render
+              icon="arrow-down"
+              class="w-4 h-4 text-red-500"
+            />
+            <span class="text-gray-600 dark:text-gray-300">
+              2% from last month
+            </span>
+          </div> !--%>
+        </div>
+      </div>
+    </div>
+    <!-- Filters and Search -->
+    <!-- Members Grid -->
+      <!-- List View -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead>
+          <tr class="rounded-t-2xl bg-gray-100 dark:bg-gray-800/70 [&>th:first-child]:rounded-tl-2xl [&>th:last-child]:rounded-tr-2xl">
+            <th
+              scope="col"
+              class="w-8 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white"
+            >
+            </th>
+            <th
+              scope="col"
+              class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
+            >
+              User
+            </th>
+            <th
+              scope="col"
+              class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
+            >
+              Role
+            </th>
+            <th
+              scope="col"
+              class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
+            >
+              Subteam
+            </th>
+            <th
+              scope="col"
+              class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
+            >
+              Products
+            </th>
+            <th scope="col" class="relative py-3.5 pl-3 pr-4">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <%= for member_email <- @team_members do %>
+            <% user =
+              Onestack.Accounts.get_user_by_email(member_email) %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 last:[&>td:first-child]:rounded-bl-2xl last:[&>td:last-child]:rounded-br-2xl">
+              <td class="whitespace-nowrap py-4 pl-4 pr-3"></td>
+
+              <td class="whitespace-nowrap px-3 py-4">
+                <div class="flex items-center gap-3">
+                  <div>
+                    <div class="font-medium text-gray-900 dark:text-white">
+                      <%= if is_nil(user) && Onestack.Teams.has_pending_invitation?(member_email) do %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                          Invitation Pending
+                        </span>
+                      <% else %>
+                        <%= cond do
+                          is_nil(user) ->
+                            member_email
+
+                          user.first_name || user.last_name ->
+                            [user.first_name, user.last_name]
+                            |> Enum.reject(&is_nil/1)
+                            |> Enum.join(" ")
+
+                          true ->
+                            user.email || member_email
+                        end %>
+                      <% end %>
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                      <%= member_email %>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4">
+                <%= if member_email == @current_user.email do %>
+                  <div class="flex items-center space-x-2">
+                    <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-purple-900 dark:text-purple-300">
+                      Admin
+                    </span>
+                  </div>
+                <% else %>
+                  <div class="flex items-center space-x-2">
+                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-200">
+                      Member
+                    </span>
+                  </div>
+                <% end %>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+                  Coming Soon
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4">
+                <div class="flex -space-x-2">
+                  <% product_names =
+                    Onestack.Teams.list_user_products(member_email) %>
+                  <%= for product_name <- Enum.take(product_names, 3) do %>
+                    <% product_metadata =
+                      Onestack.CatalogMonthly.ProductMetadata.get_metadata(
+                        product_name
+                      ) %>
+                    <.link
+                      navigate="/admin/products"
+                      class="w-8 h-8 rounded-full ring-2 ring-white dark:ring-gray-800 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+                      title={product_metadata.display_name}
+                    >
+                      <Lucide.render
+                        icon={product_metadata.icon}
+                        class="w-4 h-4 text-gray-600 dark:text-gray-300"
+                      />
+                    </.link>
+                  <% end %>
+                  <%= if length(product_names) > 3 do %>
+                    <.link
+                      navigate="/admin/products"
+                      class="w-8 h-8 rounded-full ring-2 ring-white dark:ring-gray-800 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+                    >
+                      <span class="text-xs text-gray-600 dark:text-gray-300">
+                        +<%= length(product_names) - 3 %>
+                      </span>
+                    </.link>
+                  <% end %>
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4">
+                <div class="flex items-center justify-between p-2 rounded-lg">
+                  <%= if member_email != @current_user.email do %>
+                    <button
+                      phx-click="remove_member"
+                      phx-value-email={member_email}
+                      class="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-3 py-1 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900 hover:cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <!-- Invite Modal -->
+    <.modal
+      :if={@live_action in [:new, :edit]}
+      id="invite-modal"
+      show
+      on_cancel={JS.patch(~p"/admin/teams")}
+    >
+      <.live_component
+        module={OnestackWeb.Admin.InviteFormComponent}
+        id="invite-form"
+        title="Invite Team Members"
+        invited_emails={@invited_emails}
+        current_user={@current_user}
+        patch={~p"/admin/teams"}
+      />
+    </.modal>
+  </div>
+</div>
