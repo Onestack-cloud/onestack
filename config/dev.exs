@@ -1,8 +1,21 @@
 import Config
 
+# Load .env file
+if File.exists?(".env") do
+  for line <- File.stream!(".env", [], :line) do
+    line = String.trim(line)
+    unless line == "" or String.starts_with?(line, "#") do
+      [key, value] = String.split(line, "=", parts: 2)
+      System.put_env(key, value)
+    end
+  end
+end
+
 # Configure sitemap host for development
 config :sitemap,
   host: "http://localhost:4000"
+
+
 
 # Configure your database
 config :onestack, Onestack.Repo,

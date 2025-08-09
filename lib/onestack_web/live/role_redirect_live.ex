@@ -1,5 +1,6 @@
 defmodule OnestackWeb.RoleRedirectLive do
   use OnestackWeb, :live_view
+  alias Onestack.Member.Stats
 
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
@@ -14,7 +15,16 @@ defmodule OnestackWeb.RoleRedirectLive do
 
         # Regular authenticated user
         user ->
-          ~p"/member/features"
+          # Check if user has any subscribed products
+          stats = Stats.get_user_stats(user)
+          
+          if Enum.empty?(stats.subscribed_products) do
+            # New user with no products - send to onboarding
+            ~p"/onboarding"
+          else
+            # Existing user with products - send to features
+            ~p"/member/features"
+          end
 
         # Fallback for unauthenticated users (should not happen due to ensure_authenticated)
         true ->

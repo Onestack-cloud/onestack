@@ -19,42 +19,77 @@
       </p>
     </div>
     <!-- App Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
-      <%= for product <- @products do %>
-        <%= if Enum.member?(@subscribed_products, String.downcase(product.onestack_product_name)) do %>
-          <a
-            href={"https://#{product.onestack_product_name}.onestack.cloud"}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="group relative block transition-transform duration-200 hover:-translate-y-1"
-          >
-            <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm rg-2 ring-gray-200/80 dark:ring-gray-700/80 hover:shadow-xl hover:ring-blue-400 dark:hover:ring-blue-500 transition-all duration-200 overflow-hidden">
-              <div class="p-8">
-                <div class="flex flex-col items-center text-center space-y-4">
-                  <div class="flex-shrink-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-5 transition-colors duration-200 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50">
+    <%= if Enum.empty?(@subscribed_products) do %>
+      <!-- Empty state for users with no products -->
+      <div class="text-center py-16">
+        <div class="max-w-md mx-auto">
+          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+            <Lucide.render
+              icon="package-plus"
+              class="w-12 h-12 text-blue-600 dark:text-blue-400"
+            />
+          </div>
+          <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+            No Products in Your Stack Yet
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-8">
+            Get started by adding some products to your stack. Browse our catalog and choose the tools that fit your needs.
+          </p>
+          <div class="space-y-3">
+            <.link
+              navigate="/onboarding"
+              class="inline-flex items-center justify-center px-6 py-3 rounded-lg text-white bg-blue-600 hover:bg-blue-700 font-medium transition-colors duration-200"
+            >
+              <Lucide.render icon="plus" class="w-5 h-5 mr-2" />
+              Add Products to Stack
+            </.link>
+            <.link
+              navigate="/features"
+              class="block text-blue-600 dark:text-blue-400 hover:underline text-sm"
+            >
+              Browse Available Features
+            </.link>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
+        <%= for product <- @products do %>
+          <%= if Enum.member?(@subscribed_products, String.downcase(product.onestack_product_name)) do %>
+            <a
+              href={"https://#{product.onestack_product_name}.onestack.cloud"}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group relative block transition-transform duration-200 hover:-translate-y-1"
+            >
+              <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm rg-2 ring-gray-200/80 dark:ring-gray-700/80 hover:shadow-xl hover:ring-blue-400 dark:hover:ring-blue-500 transition-all duration-200 overflow-hidden">
+                <div class="p-8">
+                  <div class="flex flex-col items-center text-center space-y-4">
+                    <div class="flex-shrink-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-5 transition-colors duration-200 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50">
+                      <Lucide.render
+                        icon={product.icon_name}
+                        class="w-10 h-10 text-blue-600 dark:text-blue-400"
+                      />
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+                      <%= product.display_name %>
+                    </h3>
+                  </div>
+
+                  <div class="mt-8 inline-flex items-center px-5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors duration-200">
+                    Launch
                     <Lucide.render
-                      icon={product.icon_name}
-                      class="w-10 h-10 text-blue-600 dark:text-blue-400"
+                      icon="arrow-right"
+                      class="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1"
                     />
                   </div>
-                  <h3 class="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                    <%= product.display_name %>
-                  </h3>
-                </div>
-
-                <div class="mt-8 inline-flex items-center px-5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors duration-200">
-                  Launch
-                  <Lucide.render
-                    icon="arrow-right"
-                    class="w-4 h-4 ml-2 transition-transform duration-200 group-hover:translate-x-1"
-                  />
                 </div>
               </div>
-            </div>
-          </a>
+            </a>
+          <% end %>
         <% end %>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   </div>
 </div>
 <!-- Product Action Modal -->
