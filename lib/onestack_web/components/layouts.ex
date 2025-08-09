@@ -370,20 +370,20 @@ defmodule OnestackWeb.Layouts do
             <div class="flex items-center">
               <button
                 type="button"
-                class="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 hover:cursor-pointer"
+                class="flex items-center w-full p-2 text-base text-gray-900 transition duration-75 rounded-lg group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 hover:cursor-pointer min-w-0"
                 data-dropdown-toggle="user-dropdown"
               >
                 <img
-                  class="w-6 h-6 rounded-full hidden dark:block"
+                  class="w-6 h-6 rounded-full hidden dark:block flex-shrink-0"
                   src="/images/logo_white.png"
                   alt="user photo"
                 />
                 <img
-                  class="w-6 h-6 rounded-full dark:hidden"
+                  class="w-6 h-6 rounded-full dark:hidden flex-shrink-0"
                   src="/images/logo_black.png"
                   alt="user photo"
                 />
-                <span class="ml-3">
+                <span class="ml-3 truncate text-ellipsis overflow-hidden">
                   <%= if @current_user.first_name && @current_user.last_name do %>
                     <%= @current_user.first_name %> <%= @current_user.last_name %>
                   <% else %>
@@ -392,7 +392,7 @@ defmodule OnestackWeb.Layouts do
                 </span>
                 <Lucide.render
                   icon="chevron-down"
-                  class="w-6 h-6 ml-auto"
+                  class="w-6 h-6 ml-auto flex-shrink-0"
                 />
               </button>
             </div>
