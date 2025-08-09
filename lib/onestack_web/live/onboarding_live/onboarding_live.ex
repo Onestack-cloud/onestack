@@ -169,12 +169,16 @@ defmodule OnestackWeb.OnboardingLive do
                String.downcase(product.onestack_product_name)
              end)
              |> Jason.encode!(),
-           "metadata[seats]" => %{
-             socket.assigns.current_user.email => {"features", socket.assigns.selected_products}
-           }
-         },
-         {:ok, %HTTPoison.Response{status_code: 200, body: body}} <-
-           HTTPoison.post(
+           "metadata[seats]" => Jason.encode!(%{
+             socket.assigns.current_user.email => %{
+               "type" => "features", 
+               "products" => socket.assigns.selected_products
+             }
+           })
+         } do
+      IO.inspect(session_params, label: "Stripe Session Params")
+      
+      case HTTPoison.post(
              "https://api.stripe.com/v1/checkout/sessions",
              URI.encode_query(session_params),
              [
@@ -184,29 +188,40 @@ defmodule OnestackWeb.OnboardingLive do
                {"Stripe-Version", "2024-04-10;custom_checkout_beta=v1"}
              ]
            ) do
-      IO.inspect(Jason.decode!(body))
+        {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+          IO.inspect(Jason.decode!(body))
 
-      {:noreply,
-       socket
-       |> assign(:client_secret, Jason.decode!(body)["client_secret"])}
+          {:noreply,
+           socket
+           |> assign(:client_secret, Jason.decode!(body)["client_secret"])}
+
+        {:ok, %HTTPoison.Response{status_code: status_code, body: body}} when status_code != 200 ->
+          error_data = Jason.decode!(body)
+          error_message = get_in(error_data, ["error", "message"]) || "Unknown error"
+
+          IO.inspect(error_data, label: "Stripe API Error")
+
+          {:noreply,
+           socket
+           |> assign(:stripe_error, "Stripe API Error: #{error_message}")
+           |> put_flash(:error, "Payment setup failed: #{error_message}")}
+
+        {:error, error} ->
+          {:noreply,
+           assign(socket, :stripe_error, "There was an error with Stripe: #{inspect(error)}")}
+      end
     else
       {:error, error} ->
         {:noreply,
-         assign(socket, :stripe_error, "There was an error with Stripe: #{inspect(error)}")}
-
-      {:ok, %HTTPoison.Response{status_code: status_code, body: body}} when status_code != 200 ->
-        error_data = Jason.decode!(body)
-        error_message = get_in(error_data, ["error", "message"]) || "Unknown error"
-
-        IO.inspect(error_data, label: "Stripe API Error")
-
-        {:noreply,
          socket
-         |> assign(:stripe_error, "Stripe API Error: #{error_message}")
-         |> put_flash(:error, "Payment setup failed: #{error_message}")}
+         |> assign(:stripe_error, "Customer creation failed: #{inspect(error)}")
+         |> put_flash(:error, "Failed to create customer: #{inspect(error)}")}
 
       _ ->
-        {:noreply, assign(socket, :stripe_error, "There was an error with Stripe")}
+        {:noreply, 
+         socket 
+         |> assign(:stripe_error, "There was an error with Stripe")
+         |> put_flash(:error, "Payment setup failed. Please try again.")}
     end
   end
 
