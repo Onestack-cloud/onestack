@@ -156,24 +156,8 @@ defmodule OnestackWeb.FeedbackLive.Index do
     {:noreply, stream_insert(socket, :feedbacks, feedback)}
   end
 
-  defp list_feedbacks(sort, search_query) do
-    Feedback.list_feedbacks()
-    |> search_feedbacks(search_query)
-  end
 
-  defp search_feedbacks(query, nil), do: query
-  defp search_feedbacks(query, ""), do: query
-
-  defp search_feedbacks(query, search_query) do
-    search_query = String.downcase(search_query)
-
-    Enum.filter(query, fn feedback ->
-      String.contains?(String.downcase(feedback.title), search_query) ||
-        String.contains?(String.downcase(feedback.content), search_query)
-    end)
-  end
-
-  defp relative_time(datetime) do
+  def relative_time(datetime) do
     now = DateTime.utc_now()
 
     datetime =

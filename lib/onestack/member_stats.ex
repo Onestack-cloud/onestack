@@ -3,7 +3,7 @@ defmodule Onestack.Member.Stats do
   Context for fetching common statistics and metrics used across the application.
   """
 
-  alias Onestack.{StripeCache, Teams, Accounts}
+  alias Onestack.Teams
 
   @doc """
   Gets common stats for a user including team members and products.

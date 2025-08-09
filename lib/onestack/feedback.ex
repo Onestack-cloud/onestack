@@ -122,6 +122,12 @@ defmodule Onestack.Feedback do
     |> Repo.all()
   end
 
+  def get_comment!(id) do
+    Comment
+    |> Repo.get!(id)
+    |> Repo.preload([:user])
+  end
+
   def create_comment(attrs \\ %{}) do
     %Comment{}
     |> Comment.changeset(attrs)
@@ -136,11 +142,4 @@ defmodule Onestack.Feedback do
     Comment.changeset(comment, attrs)
   end
 
-  defp sort_feedbacks(query, :new) do
-    order_by(query, [f], [desc: f.inserted_at])
-  end
-
-  defp sort_feedbacks(query, :top) do
-    order_by(query, [f], [desc: f.upvotes_count, desc: f.inserted_at])
-  end
 end

@@ -1,7 +1,7 @@
 defmodule Onestack.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
-  alias Onestack.{PasswordHasher, MemberManager}
+  alias Onestack.PasswordHasher
 
   schema "users" do
     field :email, :string

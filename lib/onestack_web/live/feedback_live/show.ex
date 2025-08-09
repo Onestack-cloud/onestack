@@ -47,7 +47,7 @@ defmodule OnestackWeb.FeedbackLive.Show do
         feedback = Feedback.get_feedback!(id)
         was_upvoted = Feedback.has_upvoted?(feedback, user.id)
 
-        case Feedback.upvote_feedback(feedback, user.id) do
+        case Feedback.toggle_upvote(feedback, user) do
           {:ok, feedback} ->
             feedback = Map.put(feedback, :has_upvoted, !was_upvoted)
             {:noreply, assign(socket, :feedback, feedback)}

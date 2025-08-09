@@ -3,17 +3,22 @@ defmodule Onestack.Admin.Stats do
   Context for fetching common statistics and metrics used across the application.
   """
 
-  alias Onestack.{StripeCache, Teams, Accounts}
+  alias Onestack.{StripeCache, Teams}
 
   @doc """
   Gets common stats for a user including team members and products.
   """
   def get_user_stats(user) when not is_nil(user) do
+    upcoming_invoice = case get_upcoming_invoice(user) do
+      {:error, _reason} -> nil
+      invoice -> invoice
+    end
+    
     %{
       team_members: get_team_members(user),
       subscribed_product_names: get_user_products(user),
       combined_customers: StripeCache.list_combined_customers(),
-      upcoming_invoice: get_upcoming_invoice(user)
+      upcoming_invoice: upcoming_invoice
     }
   end
 
@@ -54,17 +59,44 @@ defmodule Onestack.Admin.Stats do
   end
 
   defp get_upcoming_invoice(user) do
+    # First try to find subscription in our database
+    case Onestack.Subscriptions.get_subscription_by_email(user.email) do
+      nil ->
+        # Fallback to StripeCache if not found in database
+        get_upcoming_invoice_from_cache(user)
+        
+      subscription when subscription.status == "active" ->
+        case Onestack.StripeCache.get_upcoming_invoice(subscription.stripe_subscription_id) do
+          nil -> {:error, "Subscription not found"}
+          invoice -> invoice
+        end
+        
+      _subscription ->
+        {:error, "No active subscription"}
+    end
+  end
+
+  defp get_upcoming_invoice_from_cache(user) do
     combined_customers = StripeCache.list_combined_customers()
 
     stripe_customer =
       Enum.find(combined_customers, fn customer -> customer.email == user.email end)
 
-    case Onestack.StripeCache.get_upcoming_invoice(stripe_customer.subscription_id) do
+    case stripe_customer do
       nil ->
-        {:error, "Subscription not found"}
+        {:error, "Customer not found"}
+      
+      customer when is_nil(customer.subscription_id) ->
+        {:error, "No active subscription"}
+        
+      customer ->
+        case Onestack.StripeCache.get_upcoming_invoice(customer.subscription_id) do
+          nil ->
+            {:error, "Subscription not found"}
 
-      subscription ->
-        subscription
+          subscription ->
+            subscription
+        end
     end
   end
 end

@@ -215,6 +215,20 @@ defmodule Onestack.Teams do
   end
 
   @doc """
+  Removes all products from a team administered by the given admin email.
+  Used when canceling a subscription to immediately revoke access to all products.
+  """
+  def remove_all_products_for_admin(admin_email) do
+    case Repo.get_by(Team, admin_email: admin_email) do
+      nil ->
+        {:error, "No team found for admin: #{admin_email}"}
+        
+      team ->
+        update_team(team, %{products: []})
+    end
+  end
+
+  @doc """
   Lists all products that a user has access to through their team memberships.
   """
   def list_user_products(email) do

@@ -197,4 +197,78 @@ defmodule Onestack.Subscriptions do
   def change_customer(%Customer{} = customer, attrs \\ %{}) do
     Customer.changeset(customer, attrs)
   end
+
+  # Helper functions for Stripe webhook integration
+
+  @doc """
+  Creates a subscription from Stripe data.
+  """
+  def create_subscription_from_stripe(stripe_customer, stripe_subscription_id, metadata) do
+    # Extract data from metadata
+    plan_type = Map.get(metadata, "plan_type", "individual")
+    num_users = case Map.get(metadata, "num_users") do
+      nil -> 1
+      num when is_binary(num) -> String.to_integer(num)
+      num when is_integer(num) -> num
+    end
+    
+    selected_products = case Map.get(metadata, "selected_products") do
+      nil -> []
+      products_json when is_binary(products_json) -> 
+        case Jason.decode(products_json) do
+          {:ok, products} when is_list(products) -> products
+          _ -> []
+        end
+      products when is_list(products) -> products
+    end
+
+    # Try to find associated user
+    user = Onestack.Accounts.get_user_by_email(stripe_customer.email)
+    user_id = if user, do: user.id, else: nil
+
+    attrs = %{
+      status: "active",
+      stripe_subscription_id: stripe_subscription_id,
+      stripe_customer_id: stripe_customer.id,
+      customer_email: stripe_customer.email,
+      plan_type: plan_type,
+      num_users: num_users,
+      selected_products: selected_products,
+      metadata: metadata,
+      user_id: user_id
+    }
+
+    create_subscription(attrs)
+  end
+
+  @doc """
+  Finds a subscription by Stripe subscription ID.
+  """
+  def get_subscription_by_stripe_id(stripe_subscription_id) do
+    Repo.get_by(Subscription, stripe_subscription_id: stripe_subscription_id)
+  end
+
+  @doc """
+  Finds a subscription by customer email.
+  Returns the most recent active subscription, or nil if none found.
+  """
+  def get_subscription_by_email(email) do
+    from(s in Subscription,
+      where: s.customer_email == ^email,
+      where: s.status == "active",
+      order_by: [desc: s.updated_at],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Updates subscription status.
+  """
+  def update_subscription_status(stripe_subscription_id, status) do
+    case get_subscription_by_stripe_id(stripe_subscription_id) do
+      nil -> {:error, :not_found}
+      subscription -> update_subscription(subscription, %{status: status})
+    end
+  end
 end

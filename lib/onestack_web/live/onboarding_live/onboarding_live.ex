@@ -121,7 +121,7 @@ defmodule OnestackWeb.OnboardingLive do
         # Create subscription records in your database
         # Associate with user, etc.
         IO.inspect(payment_intent, label: "Payment Intent")
-        {:noreply, socket |> redirect(to: ~p"/dashboard")}
+        {:noreply, socket |> redirect(external: OnestackWeb.URLHelper.subdomain_url("app"))}
 
       {:error, error} ->
         {:noreply, socket |> put_flash(:error, "Payment verification failed: #{inspect(error)}")}
@@ -149,33 +149,44 @@ defmodule OnestackWeb.OnboardingLive do
              socket.assigns.current_user.first_name <>
                " " <> socket.assigns.current_user.last_name
            ),
-         # Use a single line item with quantity instead of multiple line items
-         session_params <- %{
-           "line_items[0][price]" =>
-             case socket.assigns.selected_plan do
-               "individual" -> "price_1QywRUFzZpjdOGbNhOvS4CFX"
-               "team" -> "price_1QywTRFzZpjdOGbNveOtxJTF"
-             end,
-           "line_items[0][quantity]" => length(socket.assigns.selected_products),
-           "mode" => "subscription",
-           "return_url" =>
-             "http://localhost:4000/checkout/return?session_id={CHECKOUT_SESSION_ID}",
-           "ui_mode" => "custom",
-           "customer" => stripe_customer.id,
-           "metadata[selected_products]" =>
-             socket.assigns.selected_products
-             |> Enum.map(fn product_id ->
-               product = Map.get(socket.assigns.products_by_id, product_id)
-               String.downcase(product.onestack_product_name)
-             end)
-             |> Jason.encode!(),
-           "metadata[seats]" => Jason.encode!(%{
-             socket.assigns.current_user.email => %{
-               "type" => "features", 
-               "products" => socket.assigns.selected_products
-             }
-           })
-         } do
+         # Configure line items based on plan type
+         session_params <- (
+           case socket.assigns.selected_plan do
+             "individual" ->
+               %{
+                 "line_items[0][price]" => System.get_env("STRIPE_INDIVIDUAL_PRICE_ID"),
+                 "line_items[0][quantity]" => length(socket.assigns.selected_products)
+               }
+             "team" ->
+               %{
+                 "line_items[0][price]" => System.get_env("STRIPE_TEAM_FEATURES_PRICE_ID"),
+                 "line_items[0][quantity]" => length(socket.assigns.selected_products),
+                 "line_items[1][price]" => System.get_env("STRIPE_TEAM_SEATS_PRICE_ID"),
+                 "line_items[1][quantity]" => socket.assigns.num_users
+               }
+           end
+           |> Map.merge(%{
+             "mode" => "subscription",
+             "return_url" =>
+               "http://localhost:4000/checkout/return?session_id={CHECKOUT_SESSION_ID}",
+             "ui_mode" => "custom",
+             "customer" => stripe_customer.id,
+             "metadata[selected_products]" =>
+               socket.assigns.selected_products
+               |> Enum.map(fn product_id ->
+                 product = Map.get(socket.assigns.products_by_id, product_id)
+                 String.downcase(product.onestack_product_name)
+               end)
+               |> Jason.encode!(),
+             "metadata[seats]" => Jason.encode!(%{
+               socket.assigns.current_user.email => %{
+                 "type" => "features", 
+                 "products" => socket.assigns.selected_products
+               }
+             }),
+             "metadata[plan_type]" => socket.assigns.selected_plan,
+             "metadata[num_users]" => socket.assigns.num_users
+           })) do
       IO.inspect(session_params, label: "Stripe Session Params")
       
       case HTTPoison.post(
@@ -250,15 +261,35 @@ defmodule OnestackWeb.OnboardingLive do
   defp get_product_price(index, plan_type) do
     case plan_type do
       "individual" -> Enum.at([8, 6, 4, 2, 2, 2], index, 2)
-      "team" -> Enum.at([10, 8, 6, 6, 6, 6], index, 6)
+      "team" -> 10  # Flat $10 per feature for team plans
     end
   end
 
-  defp calculate_total(selected_products, plan_type) do
-    selected_products
-    |> Enum.with_index()
-    |> Enum.reduce(0, fn {_product_id, index}, acc ->
-      acc + get_product_price(index, plan_type)
-    end)
+  defp get_seat_price(num_users) do
+    cond do
+      num_users <= 5 -> 8
+      num_users <= 10 -> 6  
+      true -> 5
+    end
+  end
+
+  defp calculate_total(selected_products, plan_type, num_users \\ 1) do
+    feature_cost = case plan_type do
+      "individual" ->
+        selected_products
+        |> Enum.with_index()
+        |> Enum.reduce(0, fn {_product_id, index}, acc ->
+          acc + get_product_price(index, plan_type)
+        end)
+      "team" ->
+        length(selected_products) * get_product_price(0, plan_type)
+    end
+    
+    seat_cost = case plan_type do
+      "individual" -> 0
+      "team" -> num_users * get_seat_price(num_users)
+    end
+
+    feature_cost + seat_cost
   end
 end

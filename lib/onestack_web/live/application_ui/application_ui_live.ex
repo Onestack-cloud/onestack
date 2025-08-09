@@ -12,7 +12,7 @@ defmodule OnestackWeb.ApplicationUiLive do
         user_token -> Onestack.Accounts.get_user_by_session_token(user_token)
       end
 
-    stats = Onestack.Stats.get_user_stats(current_user)
+    stats = Onestack.Member.Stats.get_user_stats(current_user)
 
     view_state =
       determine_view_state(current_user, stats.subscribed_products, stats.team_members)

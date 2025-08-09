@@ -32,25 +32,28 @@ defmodule OnestackWeb.Admin.FeaturesLive do
       |> assign(products: Onestack.CatalogMonthly.list_products())
       |> assign(invited_emails: [])
 
-    # IO.inspect(socket)
-
-    {:ok,
-     assign(socket,
-       page_title: "Features",
-       selected_category: "all",
-       search: "",
-       show_product_details: nil,
-       total_monthly_savings: "$3,450",
-       total_monthly_cost: "$899",
-       show_onboarding: false,
-       selected_view: "grid",
-       show_compare: false,
-       current_tab: "active",
-       show_modal: false,
-       modal_product: nil,
-       modal_action: nil,
-       updating: false
-     )}
+    # Redirect to onboarding if user has no active products
+    if length(stats.subscribed_product_names) == 0 do
+      {:ok, push_navigate(socket, to: ~p"/onboarding")}
+    else
+      {:ok,
+       assign(socket,
+         page_title: "Features",
+         selected_category: "all",
+         search: "",
+         show_product_details: nil,
+         total_monthly_savings: "$3,450",
+         total_monthly_cost: "$899",
+         show_onboarding: false,
+         selected_view: "grid",
+         show_compare: false,
+         current_tab: "active",
+         show_modal: false,
+         modal_product: nil,
+         modal_action: nil,
+         updating: false
+       )}
+    end
   end
 
   def find_price_for_product(product_id) do
@@ -137,10 +140,13 @@ defmodule OnestackWeb.Admin.FeaturesLive do
     case {action, current_products} do
       {"remove", [only_product]} when only_product == onestack_product_name ->
         # This is the last product and we're removing it -> cancel subscription
-        active_subscription_id =
-          find_customer_with_active_subscription(socket.assigns.current_user.email)
-
-        send(self(), {:cancel_subscription, active_subscription_id})
+        case find_customer_with_active_subscription(socket.assigns.current_user.email) do
+          {:ok, subscription_id} ->
+            send(self(), {:cancel_subscription, subscription_id})
+          {:error, _reason} ->
+            # No active subscription to cancel, just proceed
+            nil
+        end
 
         # Remove member from team and delete team
         current_user = socket.assigns.current_user

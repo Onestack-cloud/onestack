@@ -21,6 +21,11 @@ defmodule OnestackWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :stripe_webhook do
+    plug :accepts, ["json"]
+    plug OnestackWeb.Plugs.RawBodyReader
+  end
+
   scope "/", OnestackWeb do
     pipe_through :browser
 
@@ -92,6 +97,13 @@ defmodule OnestackWeb.Router do
   # scope "/api", OnestackWeb do
   #   pipe_through :api
   # end
+
+  # Stripe webhook endpoint
+  scope "/webhooks", OnestackWeb do
+    pipe_through :stripe_webhook
+    
+    post "/stripe", StripeWebhookController, :handle
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:onestack, :dev_routes) do

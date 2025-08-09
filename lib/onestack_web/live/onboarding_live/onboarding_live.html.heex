@@ -311,26 +311,24 @@
                         <span class="text-gray-700 dark:text-gray-300">
                           <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
                             product.feature_description
-                          ) %> <%= if @selected_plan ==
-                                        "team",
-                                      do: "× #{@num_users}" %>
+                          ) %>
                         </span>
                         <span class="font-medium text-gray-900 dark:text-white">
-                          $<%= if @selected_plan == "team",
-                            do:
-                              get_product_price(
-                                index,
-                                @selected_plan
-                              ) *
-                                @num_users,
-                            else:
-                              get_product_price(
-                                index,
-                                @selected_plan
-                              ) %>
+                          $<%= get_product_price(index, @selected_plan) %>
                         </span>
                       </div>
                     <% end %>
+                  <% end %>
+                  
+                  <%= if @selected_plan == "team" do %>
+                    <div class="flex justify-between border-t border-gray-100 dark:border-gray-600 pt-2 mt-2">
+                      <span class="text-gray-700 dark:text-gray-300">
+                        Seats (<%= @num_users %> users)
+                      </span>
+                      <span class="font-medium text-gray-900 dark:text-white">
+                        $<%= @num_users * get_seat_price(@num_users) %>
+                      </span>
+                    </div>
                   <% end %>
                 </div>
 
@@ -340,38 +338,10 @@
                       Total (Monthly)
                     </span>
                     <span class="text-gray-900 dark:text-white">
-                      $<%= Enum.reduce(
+                      $<%= calculate_total(
                         @selected_products,
-                        0,
-                        fn product_id, acc ->
-                          product =
-                            Map.get(@products_by_id, product_id)
-
-                          if product do
-                            if @selected_plan == "team" do
-                              acc +
-                                get_product_price(
-                                  Enum.find_index(
-                                    @selected_products,
-                                    &(&1 == product_id)
-                                  ),
-                                  @selected_plan
-                                ) *
-                                  @num_users
-                            else
-                              acc +
-                                get_product_price(
-                                  Enum.find_index(
-                                    @selected_products,
-                                    &(&1 == product_id)
-                                  ),
-                                  @selected_plan
-                                )
-                            end
-                          else
-                            acc
-                          end
-                        end
+                        @selected_plan,
+                        @num_users
                       ) %>
                     </span>
                   </div>
@@ -419,19 +389,24 @@
                       <span class="text-gray-700 dark:text-gray-300">
                         <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
                           product.feature_description
-                        ) %><%= if @selected_plan == "team",
-                          do: " × #{@num_users}" %>
+                        ) %>
                       </span>
                       <span class="font-medium text-gray-900 dark:text-white">
-                        $<%= if @selected_plan == "team",
-                          do:
-                            get_product_price(index, @selected_plan) *
-                              @num_users,
-                          else:
-                            get_product_price(index, @selected_plan) %>
+                        $<%= get_product_price(index, @selected_plan) %>
                       </span>
                     </div>
                   <% end %>
+                <% end %>
+                
+                <%= if @selected_plan == "team" do %>
+                  <div class="flex justify-between border-t border-gray-100 dark:border-gray-600 pt-2 mt-2">
+                    <span class="text-gray-700 dark:text-gray-300">
+                      Seats (<%= @num_users %> users)
+                    </span>
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      $<%= @num_users * get_seat_price(@num_users) %>
+                    </span>
+                  </div>
                 <% end %>
               </div>
 
@@ -443,8 +418,9 @@
                   <span class="text-gray-900 dark:text-white">
                     $<%= calculate_total(
                       @selected_products,
-                      @selected_plan
-                    ) * @num_users %>
+                      @selected_plan,
+                      @num_users
+                    ) %>
                   </span>
                 </div>
               </div>

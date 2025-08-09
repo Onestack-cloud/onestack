@@ -1,7 +1,7 @@
 # lib/onestack_web/live/admin/members_live.ex
 defmodule OnestackWeb.Admin.TeamsLiveNew do
   use OnestackWeb, :live_view
-  alias Onestack.{Accounts, Stats}
+  alias Onestack.{Accounts, Member.Stats}
   use OnestackWeb.AssignCurrentPath
 
   @impl true

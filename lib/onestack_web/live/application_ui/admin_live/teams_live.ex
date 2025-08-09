@@ -102,14 +102,14 @@ defmodule OnestackWeb.Admin.TeamsLive do
     {:noreply, assign(socket, show_invite_modal: !socket.assigns.show_invite_modal)}
   end
 
+  def handle_event("set-view", %{"view" => view}, socket) do
+    {:noreply, assign(socket, view: view)}
+  end
+
   @impl true
   def handle_info({:send_invites, emails}, socket) do
     # Add your invite sending logic here
     {:noreply, assign(socket, show_invite_modal: false)}
-  end
-
-  def handle_event("set-view", %{"view" => view}, socket) do
-    {:noreply, assign(socket, view: view)}
   end
 
   def handle_event("filter-department", %{"department" => department}, socket) do
@@ -118,6 +118,29 @@ defmodule OnestackWeb.Admin.TeamsLive do
 
   def handle_event("search", %{"value" => search}, socket) do
     {:noreply, assign(socket, search: search)}
+  end
+
+  def handle_event("add_email", %{"key" => "Enter", "value" => email}, socket) do
+    # Validate email format
+    case validate_email(email) do
+      {:ok, validated_email} ->
+        # Only add if not already in the list
+        if validated_email in socket.assigns.invited_emails do
+          {:noreply,
+           socket
+           |> put_flash(:info, "Email address is already in the list")}
+        else
+          {:noreply,
+           socket
+           |> assign(invited_emails: [validated_email | socket.assigns.invited_emails])
+           |> put_flash(:info, "Email address added successfully")}
+        end
+
+      {:error, message} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, message)}
+    end
   end
 
   def handle_event("toggle-member", %{"id" => id}, socket) do
@@ -314,28 +337,6 @@ defmodule OnestackWeb.Admin.TeamsLive do
     end
   end
 
-  def handle_event("add_email", %{"key" => "Enter", "value" => email}, socket) do
-    # Validate email format
-    case validate_email(email) do
-      {:ok, validated_email} ->
-        # Only add if not already in the list
-        if validated_email in socket.assigns.invited_emails do
-          {:noreply,
-           socket
-           |> put_flash(:info, "Email address is already in the list")}
-        else
-          {:noreply,
-           socket
-           |> assign(invited_emails: [validated_email | socket.assigns.invited_emails])
-           |> put_flash(:info, "Email address added successfully")}
-        end
-
-      {:error, message} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, message)}
-    end
-  end
 
   def handle_member_addition(team_member_email, admin_user, socket) do
     # Get the team and products directly from the admin user

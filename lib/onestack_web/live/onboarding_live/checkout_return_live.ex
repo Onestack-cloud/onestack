@@ -68,8 +68,15 @@ defmodule OnestackWeb.CheckoutReturnLive do
 
             {:ok, socket}
 
-          _existing_member ->
-            # User already exists, just assign user status
+          existing_team ->
+            # User already exists, update team products and add member to products
+            Teams.update_team(existing_team, %{products: subscribed_products})
+            
+            Onestack.MemberManager.add_member(
+              current_user.email,
+              subscribed_products
+            )
+            
             {:ok, assign(socket, :user_status, :existing)}
         end
 

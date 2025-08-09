@@ -1,6 +1,5 @@
 defmodule Onestack.Scripts.SyncStripeAdmins do
   alias Onestack.Teams
-  alias Onestack.Accounts
   require Logger
 
   def run do
@@ -106,7 +105,8 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
           |> Enum.map(& &1.price.product)
         end)
         |> Enum.uniq()
-        |> OnestackWeb.SubscribeLive.get_product_names()
+        # TODO: Implement product name mapping
+        # |> get_product_names_from_stripe_ids()
 
       [] ->
         []
