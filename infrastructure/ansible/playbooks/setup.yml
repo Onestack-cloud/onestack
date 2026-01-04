@@ -1,0 +1,10 @@
+---
+# Initial server setup - run this first on a new server
+# Usage: ansible-playbook playbooks/setup.yml
+
+- name: Initial server setup
+  hosts: production
+  become: yes
+  roles:
+    - common
+    - docker

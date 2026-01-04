@@ -1,0 +1,26 @@
+[global]
+    run as user = netdata
+
+[db]
+    mode = dbengine
+    storage tiers = 3
+    # Tier 0: Full resolution (~7 days at 1s intervals)
+    dbengine multihost disk space MB = 4096
+    # Tier 1: 1-minute averages (~30 days)
+    dbengine tier 1 multihost disk space MB = 2048
+    # Tier 2: 1-hour averages (~{{ netdata_retention_days }}+ days)
+    dbengine tier 2 multihost disk space MB = 1024
+
+[web]
+    bind to = 127.0.0.1 172.18.0.1
+    allow connections from = localhost 172.18.*
+    allow dashboard from = localhost 172.18.*
+
+[plugins]
+    cgroups = yes
+    apps = yes
+    proc = yes
+    diskspace = yes
+
+[plugin:cgroups]
+    enable docker = yes

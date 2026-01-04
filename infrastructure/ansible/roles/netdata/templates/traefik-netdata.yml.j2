@@ -1,0 +1,23 @@
+http:
+  routers:
+    netdata:
+      rule: "Host(`{{ netdata_domain }}`)"
+      entryPoints:
+        - websecure
+      service: netdata
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - netdata-auth
+
+  middlewares:
+    netdata-auth:
+      basicAuth:
+        users:
+          - "{{ vault_netdata_user }}:{{ vault_netdata_password_hash }}"
+
+  services:
+    netdata:
+      loadBalancer:
+        servers:
+          - url: "http://172.18.0.1:19999"

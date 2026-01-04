@@ -50,3 +50,9 @@ packages
 
 .dev.env
 .prod.env
+
+
+# Vault password - NEVER commit this
+.vault-password
+vault-password
+*.vault-password

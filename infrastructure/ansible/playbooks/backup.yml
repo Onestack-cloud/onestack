@@ -1,0 +1,55 @@
+---
+# Backup databases and important data
+# Usage: ansible-playbook playbooks/backup.yml
+
+- name: Backup server data
+  hosts: production
+  become: yes
+
+  vars:
+    backup_dir: "/root/backups"
+    backup_date: "{{ ansible_date_time.date }}"
+
+  tasks:
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}/{{ backup_date }}"
+        state: directory
+        mode: "0700"
+
+    - name: Backup PostgreSQL databases
+      shell: |
+        docker exec postgres_db pg_dumpall -U {{ vault_postgres_user }} | gzip > {{ backup_dir }}/{{ backup_date }}/postgres_all.sql.gz
+      ignore_errors: yes
+
+    - name: Backup MariaDB databases
+      shell: |
+        docker exec mariadb mariadb-dump --all-databases -u root -p{{ vault_mariadb_root_password }} | gzip > {{ backup_dir }}/{{ backup_date }}/mariadb_all.sql.gz
+      ignore_errors: yes
+
+    - name: Backup MongoDB databases
+      shell: |
+        docker exec mongodb mongodump --archive --gzip -u {{ vault_mongodb_root_user }} -p {{ vault_mongodb_root_password }} --authenticationDatabase admin > {{ backup_dir }}/{{ backup_date }}/mongodb_all.archive.gz
+      ignore_errors: yes
+
+    - name: Backup AllBids SQLite database
+      copy:
+        src: "{{ apps_dir }}/allbids_app/data/"
+        dest: "{{ backup_dir }}/{{ backup_date }}/allbids_data/"
+        remote_src: yes
+      ignore_errors: yes
+
+    - name: Backup Traefik acme.json
+      copy:
+        src: "{{ apps_dir }}/traefik_docker/acme.json"
+        dest: "{{ backup_dir }}/{{ backup_date }}/acme.json"
+        remote_src: yes
+
+    - name: Clean up old backups (keep last 7 days)
+      shell: |
+        find {{ backup_dir }} -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+      ignore_errors: yes
+
+    - name: Display backup location
+      debug:
+        msg: "Backup completed: {{ backup_dir }}/{{ backup_date }}"

@@ -1,0 +1,108 @@
+---
+# Shared databases setup
+
+- name: Create databases directory
+  file:
+    path: "{{ databases_dir }}"
+    state: directory
+    mode: "0755"
+
+# PostgreSQL
+- name: Create PostgreSQL directory
+  file:
+    path: "{{ databases_dir }}/postgres"
+    state: directory
+    mode: "0755"
+
+- name: Create PostgreSQL data directory
+  file:
+    path: "{{ databases_dir }}/postgres/data"
+    state: directory
+    mode: "0755"
+
+- name: Deploy PostgreSQL docker-compose
+  template:
+    src: postgres/docker-compose.yml.j2
+    dest: "{{ databases_dir }}/postgres/docker-compose.yml"
+    mode: "0644"
+
+- name: Start PostgreSQL
+  community.docker.docker_compose_v2:
+    project_src: "{{ databases_dir }}/postgres"
+    state: present
+    pull: always
+
+# MariaDB
+- name: Create MariaDB directory
+  file:
+    path: "{{ databases_dir }}/mariadb"
+    state: directory
+    mode: "0755"
+
+- name: Create MariaDB data directory
+  file:
+    path: "{{ databases_dir }}/mariadb/mysql"
+    state: directory
+    mode: "0755"
+
+- name: Deploy MariaDB docker-compose
+  template:
+    src: mariadb/docker-compose.yml.j2
+    dest: "{{ databases_dir }}/mariadb/docker-compose.yml"
+    mode: "0644"
+
+- name: Start MariaDB
+  community.docker.docker_compose_v2:
+    project_src: "{{ databases_dir }}/mariadb"
+    state: present
+    pull: always
+
+# MongoDB
+- name: Create MongoDB directory
+  file:
+    path: "{{ databases_dir }}/mongodb"
+    state: directory
+    mode: "0755"
+
+- name: Create MongoDB data directory
+  file:
+    path: "{{ databases_dir }}/mongodb/data"
+    state: directory
+    mode: "0755"
+
+- name: Deploy MongoDB docker-compose
+  template:
+    src: mongodb/docker-compose.yml.j2
+    dest: "{{ databases_dir }}/mongodb/docker-compose.yml"
+    mode: "0644"
+
+- name: Start MongoDB
+  community.docker.docker_compose_v2:
+    project_src: "{{ databases_dir }}/mongodb"
+    state: present
+    pull: always
+
+# Valkey Redis
+- name: Create Valkey Redis directory
+  file:
+    path: "{{ databases_dir }}/valkey_redis"
+    state: directory
+    mode: "0755"
+
+- name: Create Valkey Redis data directory
+  file:
+    path: "{{ databases_dir }}/valkey_redis/data"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Valkey Redis docker-compose
+  template:
+    src: valkey/docker-compose.yml.j2
+    dest: "{{ databases_dir }}/valkey_redis/docker-compose.yml"
+    mode: "0644"
+
+- name: Start Valkey Redis
+  community.docker.docker_compose_v2:
+    project_src: "{{ databases_dir }}/valkey_redis"
+    state: present
+    pull: always

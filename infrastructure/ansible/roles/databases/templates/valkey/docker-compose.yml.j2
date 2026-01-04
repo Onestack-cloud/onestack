@@ -1,0 +1,25 @@
+services:
+  valkey_redis:
+    image: "valkey/valkey:{{ valkey_version }}"
+    container_name: valkey_redis
+    command: valkey-server --requirepass {{ vault_valkey_password }}
+    restart: unless-stopped
+    networks:
+      - {{ docker_network_name }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.redis.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.redis.entrypoints=redis"
+      - "traefik.tcp.services.redis.loadbalancer.server.port=6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "{{ vault_valkey_password }}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - "{{ databases_dir }}/valkey_redis/data:/data"
+
+networks:
+  {{ docker_network_name }}:
+    external: true

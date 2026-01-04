@@ -1,0 +1,9 @@
+---
+# Deploy or update databases only
+# Usage: ansible-playbook playbooks/deploy-databases.yml
+
+- name: Deploy databases
+  hosts: production
+  become: yes
+  roles:
+    - databases

@@ -1,0 +1,26 @@
+# Ansible
+*.retry
+*.pyc
+__pycache__/
+
+# Vault password - NEVER commit this
+.vault-password
+vault-password
+*.vault-password
+
+# Local configs
+.env
+.env.local
+
+# Backup files
+*.bak
+*.backup
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,9 @@
+---
+# Deploy or update Traefik only
+# Usage: ansible-playbook playbooks/deploy-traefik.yml
+
+- name: Deploy Traefik
+  hosts: production
+  become: yes
+  roles:
+    - traefik

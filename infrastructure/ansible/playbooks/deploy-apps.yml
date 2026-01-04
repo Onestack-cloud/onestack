@@ -1,0 +1,19 @@
+---
+# Deploy or update applications only
+# Usage: ansible-playbook playbooks/deploy-apps.yml
+# Deploy specific app: ansible-playbook playbooks/deploy-apps.yml -e "deploy_app=allbids"
+
+- name: Deploy applications
+  hosts: production
+  become: yes
+
+  tasks:
+    - name: Include apps role
+      include_role:
+        name: apps
+      when: deploy_app is not defined
+
+    # Deploy specific app when deploy_app is defined
+    - name: Deploy specific app
+      include_tasks: "../roles/apps/tasks/{{ deploy_app }}.yml"
+      when: deploy_app is defined

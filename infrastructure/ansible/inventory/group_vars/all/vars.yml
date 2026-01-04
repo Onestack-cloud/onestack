@@ -1,0 +1,101 @@
+---
+# Global variables for all environments
+
+# Docker settings
+docker_compose_version: "2.24.5"
+docker_network_name: traefik_default
+
+# Base directories on server
+base_dir: /root
+apps_dir: "{{ base_dir }}"
+databases_dir: "{{ base_dir }}/databases"
+
+# Domain settings
+base_domain: onestack.cloud
+acme_email: digitalnachos@proton.me
+
+# Traefik settings
+traefik_version: "v3"
+traefik_dashboard_domain: "traefik.{{ base_domain }}"
+
+# Netdata settings
+netdata_domain: "monitor.{{ base_domain }}"
+netdata_retention_days: 90
+
+# Database versions
+postgres_version: "16-alpine"
+mariadb_version: "11"
+mongodb_version: "7.0"
+valkey_version: "8.0-alpine"
+
+# Apps configuration
+# Each app can be enabled/disabled and configured here
+apps:
+  allbids:
+    enabled: true
+    domain: wealways.bid
+    image: registry.gitlab.com/digitalnachos-prototypes/allbids_app/main:latest
+    port: 4000
+
+  n8n:
+    enabled: true
+    domain: "n8n.{{ base_domain }}"
+    image: docker.n8n.io/n8nio/n8n
+    port: 5678
+
+  kimai:
+    enabled: true
+    domain: "kimai.{{ base_domain }}"
+    image: kimai/kimai2:apache
+    port: 8001
+
+  calcom:
+    enabled: true
+    domain: "cal.{{ base_domain }}"
+    image: calcom/cal.com:latest
+    port: 3000
+
+  librechat:
+    enabled: true
+    domain: "chat.{{ base_domain }}"
+    image: ghcr.io/danny-avila/librechat-dev:latest
+    port: 3080
+
+  penpot:
+    enabled: true
+    domain: "penpot.{{ base_domain }}"
+
+  formbricks:
+    enabled: true
+    domain: "forms.{{ base_domain }}"
+    image: formbricks/formbricks:latest
+    port: 3000
+
+  chatwoot:
+    enabled: true
+    domain: "support.{{ base_domain }}"
+
+  plane:
+    enabled: true
+    domain: "plane.{{ base_domain }}"
+
+  documenso:
+    enabled: true
+    domain: "sign.{{ base_domain }}"
+
+  onestack:
+    enabled: true
+    domain: "app.{{ base_domain }}"
+
+  castopod:
+    enabled: true
+    domain: "podcast.{{ base_domain }}"
+
+  kuma:
+    enabled: true
+    domain: "status.{{ base_domain }}"
+    port: 3001
+
+  matrix:
+    enabled: false
+    domain: "matrix.{{ base_domain }}"

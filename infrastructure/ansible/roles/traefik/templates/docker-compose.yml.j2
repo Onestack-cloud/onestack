@@ -1,0 +1,37 @@
+services:
+  traefik:
+    container_name: traefik
+    restart: unless-stopped
+    image: traefik:{{ traefik_version }}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+      - "5432:5432"
+      - "3306:3306"
+      - "6379:6379"
+      - "27017:27017"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./traefik.yml:/etc/traefik/traefik.yml
+      - ./acme.json:/etc/traefik/acme.json
+      - ./dynamic:/etc/traefik/dynamic
+      - /var/log/traefik:/var/log/traefik
+    networks:
+      - {{ docker_network_name }}
+    environment:
+      - CF_API_EMAIL={{ vault_cloudflare_email }}
+      - CF_API_KEY={{ vault_cloudflare_api_key }}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-dashboard.rule=Host(`{{ traefik_dashboard_domain }}`)
+      - traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt
+      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=80
+      - traefik.http.routers.traefik-dashboard.entrypoints=websecure
+      - traefik.http.routers.traefik-dashboard.service=api@internal
+      - traefik.http.middlewares.auth.basicauth.users={{ vault_traefik_dashboard_user }}:{{ vault_traefik_dashboard_password_hash | regex_replace('\$', '$$') }}
+      - traefik.http.routers.traefik-dashboard.middlewares=auth@docker
+
+networks:
+  {{ docker_network_name }}:
+    external: true

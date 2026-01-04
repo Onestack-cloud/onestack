@@ -1,0 +1,31 @@
+services:
+  postgres_db:
+    image: "postgres:{{ postgres_version }}"
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER={{ vault_postgres_user }}
+      - PGUSER={{ vault_postgres_user }}
+      - POSTGRES_PASSWORD={{ vault_postgres_password }}
+      - POSTGRES_DB={{ vault_postgres_db }}
+    restart: unless-stopped
+    networks:
+      - {{ docker_network_name }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.postgres.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.postgres.entrypoints=postgres"
+      - "traefik.tcp.services.postgres.loadbalancer.server.port=5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "psql -U {{ vault_postgres_user }} -d {{ vault_postgres_db }} -c 'SELECT 1' || exit 1"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - "{{ databases_dir }}/postgres/data:/var/lib/postgresql/data"
+
+networks:
+  {{ docker_network_name }}:
+    external: true

@@ -1,0 +1,27 @@
+services:
+  mongodb:
+    image: "mongo:{{ mongodb_version }}"
+    container_name: mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME={{ vault_mongodb_root_user }}
+      - MONGO_INITDB_ROOT_PASSWORD={{ vault_mongodb_root_password }}
+    restart: unless-stopped
+    networks:
+      - {{ docker_network_name }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.mongodb.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.mongodb.entrypoints=mongodb"
+      - "traefik.tcp.services.mongodb.loadbalancer.server.port=27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - "{{ databases_dir }}/mongodb/data:/data/db"
+
+networks:
+  {{ docker_network_name }}:
+    external: true

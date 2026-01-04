@@ -1,0 +1,46 @@
+---
+# Traefik reverse proxy setup
+
+- name: Create Traefik directory
+  file:
+    path: "{{ apps_dir }}/traefik_docker"
+    state: directory
+    mode: "0755"
+
+- name: Create Traefik subdirectories
+  file:
+    path: "{{ apps_dir }}/traefik_docker/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - dynamic
+    - certs
+
+- name: Create acme.json file
+  file:
+    path: "{{ apps_dir }}/traefik_docker/acme.json"
+    state: touch
+    mode: "0600"
+    modification_time: preserve
+    access_time: preserve
+
+- name: Deploy Traefik static config
+  template:
+    src: traefik.yml.j2
+    dest: "{{ apps_dir }}/traefik_docker/traefik.yml"
+    mode: "0644"
+  notify: restart traefik
+
+- name: Deploy Traefik docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ apps_dir }}/traefik_docker/docker-compose.yml"
+    mode: "0644"
+  notify: restart traefik
+
+- name: Start Traefik
+  community.docker.docker_compose_v2:
+    project_src: "{{ apps_dir }}/traefik_docker"
+    state: present
+    pull: always
+  register: traefik_output

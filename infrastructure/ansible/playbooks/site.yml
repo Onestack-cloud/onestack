@@ -1,0 +1,14 @@
+---
+# Master playbook - deploys everything
+# Usage: ansible-playbook playbooks/site.yml
+
+- name: Deploy complete infrastructure
+  hosts: production
+  become: yes
+  roles:
+    - common
+    - docker
+    - traefik
+    - databases
+    - apps
+    - netdata
