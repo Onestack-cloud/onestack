@@ -11,14 +11,12 @@ defmodule Onestack.CatalogMonthlyFixtures do
     {:ok, product} =
       attrs
       |> Enum.into(%{
-        category: "some category",
-        closed_source_currency: "some closed_source_currency",
         closed_source_name: "some closed_source_name",
+        onestack_product_name: "some_product",
         closed_source_user_price: "120.5",
-        open_source_currency: "some open_source_currency",
-        open_source_fixed_price: "120.5",
-        open_source_name: "some open_source_name",
-        usd_to_aud: "120.5"
+        closed_source_currency: "USD",
+        icon_name: "box",
+        feature_description: "some_feature"
       })
       |> Onestack.CatalogMonthly.create_product()
 

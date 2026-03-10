@@ -96,12 +96,37 @@ defmodule OnestackWeb.FeedbackLive.Index do
 
       user ->
         feedback = Onestack.Feedback.get_feedback!(id)
+        currently_upvoted = Map.get(feedback, :has_upvoted, false)
 
-        case Onestack.Feedback.toggle_upvote(feedback, user) do
-          {:ok, _} -> {:noreply, load_feedbacks(socket)}
-          {:error, _} -> {:noreply, socket}
-        end
+        # Optimistically update the stream immediately
+        optimistic_feedback =
+          feedback
+          |> Map.put(:has_upvoted, !currently_upvoted)
+          |> Map.update!(:upvote_count, fn count ->
+            if currently_upvoted, do: max(count - 1, 0), else: count + 1
+          end)
+
+        socket = stream_insert(socket, :feedbacks, optimistic_feedback)
+
+        # Persist in the background
+        {:noreply,
+         start_async(socket, {:toggle_upvote, id}, fn ->
+           Onestack.Feedback.toggle_upvote(feedback, user)
+         end)}
     end
+  end
+
+  @impl true
+  def handle_async({:toggle_upvote, _id}, {:ok, {:ok, _}}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_async({:toggle_upvote, _id}, {:ok, {:error, _}}, socket) do
+    {:noreply, load_feedbacks(socket)}
+  end
+
+  def handle_async({:toggle_upvote, _id}, {:exit, _reason}, socket) do
+    {:noreply, load_feedbacks(socket)}
   end
 
   @impl true

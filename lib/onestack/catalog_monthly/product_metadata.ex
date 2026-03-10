@@ -21,7 +21,14 @@ defmodule Onestack.CatalogMonthly.ProductMetadata do
 
     case Repo.one(query) do
       nil ->
-        nil
+        %{
+          icon: "box",
+          feature_description: product_name,
+          closed_source_user_price: nil,
+          closed_source_currency: nil,
+          display_name: String.capitalize(product_name),
+          benefits: get_benefits_for_product(product_name)
+        }
 
       metadata ->
         metadata
@@ -78,6 +85,13 @@ defmodule Onestack.CatalogMonthly.ProductMetadata do
           "Integrate AI capabilities into your app",
           "Natural language processing",
           "Image and content generation"
+        ]
+
+      "secrets_management" ->
+        [
+          "Centralised secrets and environment variables",
+          "Automatic secret rotation and versioning",
+          "Native integrations with CI/CD and infrastructure"
         ]
 
       _ ->

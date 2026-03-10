@@ -16,7 +16,7 @@ ansible-playbook playbooks/backup.yml --vault-password-file "$VAULT_PASSWORD_FIL
 # Optionally sync to remote storage
 if [ -n "$1" ]; then
     echo "Syncing backups to $1..."
-    rsync -avz --delete root@94.130.19.103:/root/backups/ "$1"
+    rsync -avz --delete "root@${SSH_HOST:-YOUR_SERVER_IP}:/root/backups/" "$1"
 fi
 
 echo "Backup completed successfully!"

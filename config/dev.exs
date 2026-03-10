@@ -26,16 +26,6 @@ config :onestack, Onestack.Repo,
   queue_target: 1000,
   queue_interval: 5000
 
-# config :onestack, Onestack.Repo,
-# username: "onestack-cal",
-# password: "REDACTED_POSTGRES_PASSWORD",
-# hostname: "postgres_db",
-# database: "onestack_dev",
-# port: 5433,
-# pool_size: 10,
-# stacktrace: true,
-# show_sensitive_data_on_connection_error: true
-
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #
@@ -53,8 +43,8 @@ config :onestack, OnestackWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "REDACTED_SECRET_KEY_BASE",
-  session: [domain: ".localhost", key: "_onestack_key", signing_salt: "NnzPSuuD"],
+  secret_key_base: "dev_only_placeholder_replace_me_with_mix_phx_gen_secret_output_at_least_64_chars_long!!",
+  session: [domain: ".localhost", key: "_onestack_key", signing_salt: "x7Wp9mKz"],
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:onestack, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:onestack, ~w(--watch)]}
@@ -126,7 +116,9 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 # Include HEEx debug annotations as HTML comments in rendered markup
-config :phoenix_live_view, :debug_heex_annotations, true
+config :phoenix_live_view,
+  debug_heex_annotations: true,
+  enable_expensive_runtime_checks: true
 
 # Disable swoosh api client as it is only required for production adapters.
 # config :swoosh, :api_client, false

@@ -14,7 +14,8 @@ config :sitemap,
 
 config :onestack,
   ecto_repos: [Onestack.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  stripe_enabled: false
 
 # Configures the endpoint
 config :onestack, OnestackWeb.Endpoint,
@@ -25,7 +26,7 @@ config :onestack, OnestackWeb.Endpoint,
     layout: false
   ],
   pubsub_server: Onestack.PubSub,
-  live_view: [signing_salt: "AYfWDwt/"]
+  live_view: [signing_salt: "Rk3pV2nJ"]
 
 # static_url: [path: "/"]
 
@@ -51,9 +52,9 @@ config :esbuild,
   version: "0.17.11",
   onestack: [
     args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # Configure tailwind (the version is required)

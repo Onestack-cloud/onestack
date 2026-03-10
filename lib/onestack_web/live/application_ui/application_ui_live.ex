@@ -25,10 +25,10 @@ defmodule OnestackWeb.ApplicationUiLive do
 
       case view_state do
         :stack_admin ->
-          {:ok, socket |> push_redirect(to: "/admin/features")}
+          {:ok, socket |> push_navigate(to: "/admin/features")}
 
         :stack_user ->
-          {:ok, socket |> push_redirect(to: "/user/features")}
+          {:ok, socket |> push_navigate(to: "/user/features")}
 
         _ ->
           {:ok, socket}

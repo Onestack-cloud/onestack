@@ -105,26 +105,54 @@ defmodule OnestackWeb.OnboardingLive do
       {:noreply,
        put_flash(socket, :error, "Please select at least one product before continuing")}
     else
-      send(self(), {:create_payment_intent})
-      {:noreply, assign(socket, current_step: 3)}
+      if Onestack.stripe_enabled?() do
+        assigns = socket.assigns
+
+        {:noreply,
+         socket
+         |> assign(current_step: 3, processing_payment: true)
+         |> start_async(:create_payment_intent, fn ->
+           create_checkout_session(assigns)
+         end)}
+      else
+        # Without Stripe, activate products directly
+        current_user = socket.assigns.current_user
+
+        product_names =
+          socket.assigns.selected_products
+          |> Enum.map(fn product_id ->
+            product = Map.get(socket.assigns.products_by_id, product_id)
+            String.downcase(product.onestack_product_name)
+          end)
+
+        Teams.get_or_create_team(%{email: current_user.email, products: product_names})
+        Onestack.MemberManager.add_member(current_user.email, product_names)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Products activated successfully!")
+         |> redirect(external: OnestackWeb.URLHelper.subdomain_url("app"))}
+      end
     end
   end
 
   @impl true
   def handle_event("payment-success", payment_result, socket) do
-    # Extract the payment_intent ID
-    payment_intent_id = payment_result["id"]
+    unless Onestack.stripe_enabled?() do
+      {:noreply, socket |> redirect(external: OnestackWeb.URLHelper.subdomain_url("app"))}
+    else
+      # Extract the payment_intent ID
+      payment_intent_id = payment_result["id"]
 
-    # Confirm or update the PaymentIntent status with Stripe
-    case Stripe.PaymentIntent.retrieve(payment_intent_id) do
-      {:ok, payment_intent} ->
-        # Create subscription records in your database
-        # Associate with user, etc.
-        IO.inspect(payment_intent, label: "Payment Intent")
-        {:noreply, socket |> redirect(external: OnestackWeb.URLHelper.subdomain_url("app"))}
+      # Confirm or update the PaymentIntent status with Stripe
+      case Stripe.PaymentIntent.retrieve(payment_intent_id) do
+        {:ok, payment_intent} ->
+          IO.inspect(payment_intent, label: "Payment Intent")
+          {:noreply, socket |> redirect(external: OnestackWeb.URLHelper.subdomain_url("app"))}
 
-      {:error, error} ->
-        {:noreply, socket |> put_flash(:error, "Payment verification failed: #{inspect(error)}")}
+        {:error, error} ->
+          {:noreply, socket |> put_flash(:error, "Payment verification failed: #{inspect(error)}")}
+      end
     end
   end
 
@@ -135,104 +163,94 @@ defmodule OnestackWeb.OnboardingLive do
   end
 
   @impl true
-  def handle_info(
-        {:create_payment_intent},
-        socket
-      ) do
-    IO.puts("handle info called")
+  def handle_async(:create_payment_intent, {:ok, {:ok, client_secret}}, socket) do
+    {:noreply, assign(socket, client_secret: client_secret, processing_payment: false)}
+  end
 
-    # Calculate the actual amount in cents (multiply by 100 since Stripe uses cents)
+  def handle_async(:create_payment_intent, {:ok, {:error, message}}, socket) do
+    {:noreply,
+     socket
+     |> assign(processing_payment: false)
+     |> put_flash(:error, "Payment setup failed: #{message}")}
+  end
 
+  def handle_async(:create_payment_intent, {:exit, reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(processing_payment: false)
+     |> put_flash(:error, "Payment setup failed unexpectedly: #{inspect(reason)}")}
+  end
+
+  defp create_checkout_session(assigns) do
     with {:ok, stripe_customer} <-
            find_or_create_customer(
-             socket.assigns.current_user.email,
-             socket.assigns.current_user.first_name <>
-               " " <> socket.assigns.current_user.last_name
+             assigns.current_user.email,
+             assigns.current_user.first_name <> " " <> assigns.current_user.last_name
            ),
-         # Configure line items based on plan type
-         session_params <- (
-           case socket.assigns.selected_plan do
-             "individual" ->
-               %{
-                 "line_items[0][price]" => System.get_env("STRIPE_INDIVIDUAL_PRICE_ID"),
-                 "line_items[0][quantity]" => length(socket.assigns.selected_products)
-               }
-             "team" ->
-               %{
-                 "line_items[0][price]" => System.get_env("STRIPE_TEAM_FEATURES_PRICE_ID"),
-                 "line_items[0][quantity]" => length(socket.assigns.selected_products),
-                 "line_items[1][price]" => System.get_env("STRIPE_TEAM_SEATS_PRICE_ID"),
-                 "line_items[1][quantity]" => socket.assigns.num_users
-               }
-           end
-           |> Map.merge(%{
-             "mode" => "subscription",
-             "return_url" =>
-               "http://localhost:4000/checkout/return?session_id={CHECKOUT_SESSION_ID}",
-             "ui_mode" => "custom",
-             "customer" => stripe_customer.id,
-             "metadata[selected_products]" =>
-               socket.assigns.selected_products
-               |> Enum.map(fn product_id ->
-                 product = Map.get(socket.assigns.products_by_id, product_id)
-                 String.downcase(product.onestack_product_name)
-               end)
-               |> Jason.encode!(),
-             "metadata[seats]" => Jason.encode!(%{
-               socket.assigns.current_user.email => %{
-                 "type" => "features", 
-                 "products" => socket.assigns.selected_products
-               }
-             }),
-             "metadata[plan_type]" => socket.assigns.selected_plan,
-             "metadata[num_users]" => socket.assigns.num_users
-           })) do
-      IO.inspect(session_params, label: "Stripe Session Params")
-      
+         session_params <-
+           (case assigns.selected_plan do
+              "individual" ->
+                %{
+                  "line_items[0][price]" => System.get_env("STRIPE_INDIVIDUAL_PRICE_ID"),
+                  "line_items[0][quantity]" => length(assigns.selected_products)
+                }
+
+              "team" ->
+                %{
+                  "line_items[0][price]" => System.get_env("STRIPE_TEAM_FEATURES_PRICE_ID"),
+                  "line_items[0][quantity]" => length(assigns.selected_products),
+                  "line_items[1][price]" => System.get_env("STRIPE_TEAM_SEATS_PRICE_ID"),
+                  "line_items[1][quantity]" => assigns.num_users
+                }
+            end
+            |> Map.merge(%{
+              "mode" => "subscription",
+              "return_url" =>
+                "http://localhost:4000/checkout/return?session_id={CHECKOUT_SESSION_ID}",
+              "ui_mode" => "custom",
+              "customer" => stripe_customer.id,
+              "metadata[selected_products]" =>
+                assigns.selected_products
+                |> Enum.map(fn product_id ->
+                  product = Map.get(assigns.products_by_id, product_id)
+                  String.downcase(product.onestack_product_name)
+                end)
+                |> Jason.encode!(),
+              "metadata[seats]" =>
+                Jason.encode!(%{
+                  assigns.current_user.email => %{
+                    "type" => "features",
+                    "products" => assigns.selected_products
+                  }
+                }),
+              "metadata[plan_type]" => assigns.selected_plan,
+              "metadata[num_users]" => assigns.num_users
+            })) do
       case HTTPoison.post(
              "https://api.stripe.com/v1/checkout/sessions",
              URI.encode_query(session_params),
              [
                {"Content-Type", "application/x-www-form-urlencoded"},
                {"Authorization",
-                "Basic " <> Base.encode64("#{Application.get_env(:stripity_stripe, :api_key)}:")},
+                "Basic " <>
+                  Base.encode64("#{Application.get_env(:stripity_stripe, :api_key)}:")},
                {"Stripe-Version", "2024-04-10;custom_checkout_beta=v1"}
              ]
            ) do
         {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-          IO.inspect(Jason.decode!(body))
+          {:ok, Jason.decode!(body)["client_secret"]}
 
-          {:noreply,
-           socket
-           |> assign(:client_secret, Jason.decode!(body)["client_secret"])}
-
-        {:ok, %HTTPoison.Response{status_code: status_code, body: body}} when status_code != 200 ->
+        {:ok, %HTTPoison.Response{body: body}} ->
           error_data = Jason.decode!(body)
           error_message = get_in(error_data, ["error", "message"]) || "Unknown error"
-
-          IO.inspect(error_data, label: "Stripe API Error")
-
-          {:noreply,
-           socket
-           |> assign(:stripe_error, "Stripe API Error: #{error_message}")
-           |> put_flash(:error, "Payment setup failed: #{error_message}")}
+          {:error, error_message}
 
         {:error, error} ->
-          {:noreply,
-           assign(socket, :stripe_error, "There was an error with Stripe: #{inspect(error)}")}
+          {:error, "Connection error: #{inspect(error)}"}
       end
     else
-      {:error, error} ->
-        {:noreply,
-         socket
-         |> assign(:stripe_error, "Customer creation failed: #{inspect(error)}")
-         |> put_flash(:error, "Failed to create customer: #{inspect(error)}")}
-
-      _ ->
-        {:noreply, 
-         socket 
-         |> assign(:stripe_error, "There was an error with Stripe")
-         |> put_flash(:error, "Payment setup failed. Please try again.")}
+      {:error, error} -> {:error, "Customer creation failed: #{inspect(error)}"}
+      _ -> {:error, "Payment setup failed. Please try again."}
     end
   end
 

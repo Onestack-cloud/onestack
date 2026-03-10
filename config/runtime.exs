@@ -25,9 +25,16 @@ if System.get_env("PHX_HOST") do
     host: "https://#{System.get_env("PHX_HOST")}"
 end
 
+stripe_api_key = System.get_env("STRIPE_API_KEY")
+
 config :stripity_stripe,
-  api_key: System.get_env("STRIPE_API_KEY"),
-  stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET")
+  api_key: stripe_api_key,
+  stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),
+  public_key: System.get_env("STRIPE_PUBLIC_KEY")
+
+# Auto-detect Stripe: enabled only when a real API key is present
+stripe_enabled = stripe_api_key not in [nil, ""]
+config :onestack, :stripe_enabled, stripe_enabled
 
 if config_env() == :prod do
   database_path =

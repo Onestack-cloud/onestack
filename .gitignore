@@ -46,11 +46,32 @@ example-apps
 apps
 packages
 .env*
+!.env.example
+onestack_products/**/.env
 .DS_Store
 
 .dev.env
 .prod.env
 
+# SQLite databases (with and without .db extension)
+onestack_dev
+onestack_dev-shm
+onestack_dev-wal
+onestack_test
+onestack_test-shm
+onestack_test-wal
+
+# Traefik certificates
+**/acme.json
+
+# Plane env (not matched by **/.env pattern)
+onestack_products/plane_docker/plane.env
+
+# Binary archives
+*.zip
+
+# Loose scripts at root
+/restore_subscriptions.exs
 
 # Vault password - NEVER commit this
 .vault-password

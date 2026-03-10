@@ -8,7 +8,7 @@ defmodule Onestack.TeamsTest do
 
     import Onestack.TeamsFixtures
 
-    @invalid_attrs %{member_email: nil, products: nil}
+    @invalid_attrs %{members: nil, products: nil, admin_email: nil}
 
     test "list_teams/0 returns all teams" do
       team = team_fixture()
@@ -21,11 +21,16 @@ defmodule Onestack.TeamsTest do
     end
 
     test "create_team/1 with valid data creates a team" do
-      valid_attrs = %{member_email: "some member_email", products: ["option1", "option2"]}
+      valid_attrs = %{
+        members: ["member@example.com"],
+        products: ["option1", "option2"],
+        admin_email: "admin@example.com"
+      }
 
       assert {:ok, %Team{} = team} = Teams.create_team(valid_attrs)
-      assert team.member_email == "some member_email"
+      assert team.members == ["member@example.com"]
       assert team.products == ["option1", "option2"]
+      assert team.admin_email == "admin@example.com"
     end
 
     test "create_team/1 with invalid data returns error changeset" do
@@ -34,11 +39,17 @@ defmodule Onestack.TeamsTest do
 
     test "update_team/2 with valid data updates the team" do
       team = team_fixture()
-      update_attrs = %{member_email: "some updated member_email", products: ["option1"]}
+
+      update_attrs = %{
+        members: ["updated@example.com"],
+        products: ["option1"],
+        admin_email: "updated-admin@example.com"
+      }
 
       assert {:ok, %Team{} = team} = Teams.update_team(team, update_attrs)
-      assert team.member_email == "some updated member_email"
+      assert team.members == ["updated@example.com"]
       assert team.products == ["option1"]
+      assert team.admin_email == "updated-admin@example.com"
     end
 
     test "update_team/2 with invalid data returns error changeset" do

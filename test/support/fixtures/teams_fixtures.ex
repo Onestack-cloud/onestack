@@ -11,8 +11,9 @@ defmodule Onestack.TeamsFixtures do
     {:ok, team} =
       attrs
       |> Enum.into(%{
-        member_email: "some member_email",
-        products: ["option1", "option2"]
+        members: ["member@example.com"],
+        products: ["option1", "option2"],
+        admin_email: "admin@example.com"
       })
       |> Onestack.Teams.create_team()
 

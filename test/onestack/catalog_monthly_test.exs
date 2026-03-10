@@ -9,19 +9,19 @@ defmodule Onestack.CatalogMonthlyTest do
     import Onestack.CatalogMonthlyFixtures
 
     @invalid_attrs %{
-      category: nil,
       closed_source_name: nil,
-      open_source_name: nil,
-      closed_source_userprice: nil,
-      open_source_fixed_price: nil,
-      usd_to_aud: nil,
+      onestack_product_name: nil,
+      closed_source_user_price: nil,
       closed_source_currency: nil,
-      open_source_currency: nil
+      icon_name: nil,
+      feature_description: nil
     }
 
     test "list_products/0 returns all products" do
       product = product_fixture()
-      assert CatalogMonthly.list_products() == [product]
+      [listed] = CatalogMonthly.list_products()
+      assert listed.id == product.id
+      assert listed.closed_source_name == product.closed_source_name
     end
 
     test "get_product!/1 returns the product with given id" do
@@ -31,25 +31,21 @@ defmodule Onestack.CatalogMonthlyTest do
 
     test "create_product/1 with valid data creates a product" do
       valid_attrs = %{
-        category: "some category",
         closed_source_name: "some closed_source_name",
-        open_source_name: "some open_source_name",
-        closed_source_userprice: "120.5",
-        open_source_fixed_price: "120.5",
-        usd_to_aud: "120.5",
-        closed_source_currency: "some closed_source_currency",
-        open_source_currency: "some open_source_currency"
+        onestack_product_name: "some_product",
+        closed_source_user_price: "120.5",
+        closed_source_currency: "USD",
+        icon_name: "box",
+        feature_description: "some_feature"
       }
 
       assert {:ok, %ComparisonProduct{} = product} = CatalogMonthly.create_product(valid_attrs)
-      assert product.category == "some category"
       assert product.closed_source_name == "some closed_source_name"
-      assert product.open_source_name == "some open_source_name"
-      assert product.closed_source_userprice == Decimal.new("120.5")
-      assert product.open_source_fixed_price == Decimal.new("120.5")
-      assert product.usd_to_aud == Decimal.new("120.5")
-      assert product.closed_source_currency == "some closed_source_currency"
-      assert product.open_source_currency == "some open_source_currency"
+      assert product.onestack_product_name == "some_product"
+      assert product.closed_source_user_price == Decimal.new("120.5")
+      assert product.closed_source_currency == "USD"
+      assert product.icon_name == "box"
+      assert product.feature_description == "some_feature"
     end
 
     test "create_product/1 with invalid data returns error changeset" do
@@ -60,30 +56,31 @@ defmodule Onestack.CatalogMonthlyTest do
       product = product_fixture()
 
       update_attrs = %{
-        category: "some updated category",
-        closed_source_name: "some updated closed_source_name",
-        open_source_name: "some updated open_source_name",
-        closed_source_userprice: "456.7",
-        open_source_fixed_price: "456.7",
-        usd_to_aud: "456.7",
-        closed_source_currency: "some updated closed_source_currency",
-        open_source_currency: "some updated open_source_currency"
+        closed_source_name: "updated closed_source_name",
+        onestack_product_name: "updated_product",
+        closed_source_user_price: "456.7",
+        closed_source_currency: "AUD",
+        icon_name: "star",
+        feature_description: "updated_feature"
       }
 
-      assert {:ok, %ComparisonProduct{} = product} = CatalogMonthly.update_product(product, update_attrs)
-      assert product.category == "some updated category"
-      assert product.closed_source_name == "some updated closed_source_name"
-      assert product.open_source_name == "some updated open_source_name"
-      assert product.closed_source_userprice == Decimal.new("456.7")
-      assert product.open_source_fixed_price == Decimal.new("456.7")
-      assert product.usd_to_aud == Decimal.new("456.7")
-      assert product.closed_source_currency == "some updated closed_source_currency"
-      assert product.open_source_currency == "some updated open_source_currency"
+      assert {:ok, %ComparisonProduct{} = product} =
+               CatalogMonthly.update_product(product, update_attrs)
+
+      assert product.closed_source_name == "updated closed_source_name"
+      assert product.onestack_product_name == "updated_product"
+      assert product.closed_source_user_price == Decimal.new("456.7")
+      assert product.closed_source_currency == "AUD"
+      assert product.icon_name == "star"
+      assert product.feature_description == "updated_feature"
     end
 
     test "update_product/2 with invalid data returns error changeset" do
       product = product_fixture()
-      assert {:error, %Ecto.Changeset{}} = CatalogMonthly.update_product(product, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               CatalogMonthly.update_product(product, %{onestack_product_name: nil, icon_name: nil})
+
       assert product == CatalogMonthly.get_product!(product.id)
     end
 

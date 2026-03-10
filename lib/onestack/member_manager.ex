@@ -69,8 +69,8 @@ defmodule Onestack.MemberManager do
     case Onestack.MatrixAccounts.list_users() |> Enum.find(&(&1.email == email)) do
       nil ->
         # Email not found, proceed with registration
-        registration_token = "64629919445a7d83311275026d29b708c1939bd72242d56d0ef3b756c128a75f"
-        url = "https://matrix.onestack.cloud/_matrix/client/v3/register"
+        registration_token = System.get_env("MATRIX_REGISTRATION_TOKEN", "")
+        url = System.get_env("MATRIX_API_URL", "https://matrix.localhost") <> "/_matrix/client/v3/register"
 
         body =
           Jason.encode!(%{
@@ -110,11 +110,11 @@ defmodule Onestack.MemberManager do
 
       existing_user ->
         # Email found, update the existing user
-        url = "https://n8n.onestack.cloud/webhook/matrix/reset_password"
+        url = System.get_env("N8N_MATRIX_RESET_URL", "https://n8n.localhost/webhook/matrix/reset_password")
 
         headers = [
           {"Content-Type", "application/json"},
-          {"onestack_matrix", "27530ad6f47e83ee0a215f42699dd52fbd50956939fdfd2a6c0cd0304c597a0e"}
+          {"onestack_matrix", System.get_env("MATRIX_WEBHOOK_SECRET", "")}
         ]
 
         body = Jason.encode!(%{matrix_id: existing_user.matrix_id})
@@ -317,15 +317,16 @@ defmodule Onestack.MemberManager do
       {:ok, %Postgrex.Result{rows: []}} ->
         # User not found, proceed with new user creation
         name = extract_name_from_email(email)
+        {:ok, uuid_binary} = Ecto.UUID.dump(Ecto.UUID.generate())
         email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
 
         user_query = """
-        INSERT INTO "users" (name, email, "emailVerified")
-        VALUES ($1, $2, $3)
+        INSERT INTO "users" (uuid, name, email, "emailVerified")
+        VALUES ($1, $2, $3, $4)
         RETURNING id
         """
 
-        user_params = [name, email, email_verified]
+        user_params = [uuid_binary, name, email, email_verified]
 
         case Postgrex.query(pid, user_query, user_params) do
           {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
@@ -1509,11 +1510,11 @@ defmodule Onestack.MemberManager do
 
   def remove_member_from_product(email, "matrix" = _product_name) do
     {:ok, updated_user} = MatrixAccounts.update_matrix_user_by_email(email, %{active: false})
-    url = "https://n8n.onestack.cloud/webhook/matrix/deactivate"
+    url = System.get_env("N8N_MATRIX_DEACTIVATE_URL", "https://n8n.localhost/webhook/matrix/deactivate")
 
     headers = [
       {"Content-Type", "application/json"},
-      {"onestack_matrix", "27530ad6f47e83ee0a215f42699dd52fbd50956939fdfd2a6c0cd0304c597a0e"}
+      {"onestack_matrix", System.get_env("MATRIX_WEBHOOK_SECRET", "")}
     ]
 
     body = Jason.encode!(%{matrix_id: updated_user.matrix_id})

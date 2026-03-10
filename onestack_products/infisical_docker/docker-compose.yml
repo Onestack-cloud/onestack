@@ -1,0 +1,21 @@
+services:
+    infisical:
+        container_name: infisical-backend
+        restart: unless-stopped
+        image: infisical/infisical:latest
+        pull_policy: always
+        env_file: .env
+        environment:
+            - NODE_ENV=production
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.infisical.rule=Host(`infisical.onestack.cloud`)
+            - traefik.http.routers.infisical.tls=true
+            - traefik.http.routers.infisical.tls.certresolver=letsencrypt
+            - traefik.http.services.infisical.loadbalancer.server.port=8080
+        networks:
+            - traefik_default
+
+networks:
+    traefik_default:
+        external: true

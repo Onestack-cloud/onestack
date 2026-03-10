@@ -23,6 +23,10 @@ defmodule Onestack.StripeCache do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  defp stripe_available? do
+    Onestack.stripe_enabled?() and Process.whereis(__MODULE__) != nil
+  end
+
   @doc """
   Returns the list of active Stripe prices.
 
@@ -33,7 +37,7 @@ defmodule Onestack.StripeCache do
 
   """
   def list_prices do
-    GenServer.call(__MODULE__, :list_prices)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_prices), else: []
   end
 
   @doc """
@@ -46,7 +50,7 @@ defmodule Onestack.StripeCache do
 
   """
   def list_products do
-    GenServer.call(__MODULE__, :list_products)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_products), else: []
   end
 
   @doc """
@@ -59,11 +63,11 @@ defmodule Onestack.StripeCache do
 
   """
   def list_subscriptions do
-    GenServer.call(__MODULE__, :list_subscriptions)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_subscriptions), else: []
   end
 
   def list_combined_customers do
-    GenServer.call(__MODULE__, :list_combined_customers)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_combined_customers), else: []
   end
 
   @doc """
@@ -76,7 +80,7 @@ defmodule Onestack.StripeCache do
 
   """
   def list_customers do
-    GenServer.call(__MODULE__, :list_customers)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_customers), else: []
   end
 
   @doc """
@@ -89,15 +93,19 @@ defmodule Onestack.StripeCache do
 
   """
   def list_tax_rates do
-    GenServer.call(__MODULE__, :list_tax_rates)
+    if stripe_available?(), do: GenServer.call(__MODULE__, :list_tax_rates), else: []
   end
 
   def update_cache_for_new_customer(customer_id) do
-    GenServer.call(__MODULE__, {:update_customer, customer_id})
+    if stripe_available?(),
+      do: GenServer.call(__MODULE__, {:update_customer, customer_id}),
+      else: {:error, :stripe_disabled}
   end
 
   def delete_subscription_from_cache(subscription_id) do
-    GenServer.call(__MODULE__, {:delete_subscription, subscription_id})
+    if stripe_available?(),
+      do: GenServer.call(__MODULE__, {:delete_subscription, subscription_id}),
+      else: {:error, :stripe_disabled}
   end
 
   @doc """
@@ -154,11 +162,15 @@ defmodule Onestack.StripeCache do
   end
 
   def update_cache_for_subscription(subscription_id) do
-    GenServer.call(__MODULE__, {:update_subscription, subscription_id})
+    if stripe_available?(),
+      do: GenServer.call(__MODULE__, {:update_subscription, subscription_id}),
+      else: {:error, :stripe_disabled}
   end
 
   def get_upcoming_invoice(subscription_id) do
-    GenServer.call(__MODULE__, {:get_upcoming_invoice, subscription_id})
+    if stripe_available?(),
+      do: GenServer.call(__MODULE__, {:get_upcoming_invoice, subscription_id}),
+      else: nil
   end
 
   @doc """
@@ -166,7 +178,9 @@ defmodule Onestack.StripeCache do
   Returns nil if the product is not in the subscription.
   """
   def get_subscription_item_price(subscription_id, product_id) do
-    GenServer.call(__MODULE__, {:get_subscription_item_price, subscription_id, product_id})
+    if stripe_available?(),
+      do: GenServer.call(__MODULE__, {:get_subscription_item_price, subscription_id, product_id}),
+      else: nil
   end
 
   @doc false

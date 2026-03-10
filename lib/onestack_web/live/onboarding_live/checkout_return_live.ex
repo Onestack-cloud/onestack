@@ -3,6 +3,11 @@ defmodule OnestackWeb.CheckoutReturnLive do
   require Logger
   alias Onestack.Teams
 
+  def mount(_params, _session, socket) when not is_nil(nil) do
+    # Redirect to home when Stripe is disabled
+    {:ok, push_navigate(socket, to: "/")}
+  end
+
   def mount(%{"session_id" => "test_session"}, _session, socket) do
     mock_session = %{
       id: "test_session",
@@ -26,67 +31,67 @@ defmodule OnestackWeb.CheckoutReturnLive do
   end
 
   def mount(%{"session_id" => session_id}, session, socket) do
-    current_user =
-      case session["user_token"] do
-        nil -> nil
-        user_token -> Onestack.Accounts.get_user_by_session_token(user_token)
-      end
-
-    case fetch_checkout_session(session_id) do
-      {:ok, checkout_session} ->
-        # update_stripe_cache(checkout_session.customer, checkout_session.subscription)
-
-        # Extract product IDs from metadata
-        subscribed_products =
-          case checkout_session.metadata["selected_products"] do
-            nil ->
-              []
-
-            json_string ->
-              case Jason.decode(String.downcase(json_string)) do
-                {:ok, products} -> products
-                _ -> []
-              end
-          end
-
-        # Prepare the base socket with common assigns
-        socket =
-          socket
-          |> assign(:page_title, "Checkout Successful")
-          |> assign(:checkout_session, checkout_session)
-          |> assign(:selected_products, subscribed_products)
-
-        case Teams.get_team_by_admin(%{email: current_user.email}) do
-          nil ->
-            # Remember to update cache?
-            Teams.get_or_create_team(%{email: current_user.email, products: subscribed_products})
-
-            Onestack.MemberManager.add_member(
-              current_user.email,
-              subscribed_products
-            )
-
-            {:ok, socket}
-
-          existing_team ->
-            # User already exists, update team products and add member to products
-            Teams.update_team(existing_team, %{products: subscribed_products})
-            
-            Onestack.MemberManager.add_member(
-              current_user.email,
-              subscribed_products
-            )
-            
-            {:ok, assign(socket, :user_status, :existing)}
+    unless Onestack.stripe_enabled?() do
+      {:ok, push_navigate(socket, to: "/")}
+    else
+      current_user =
+        case session["user_token"] do
+          nil -> nil
+          user_token -> Onestack.Accounts.get_user_by_session_token(user_token)
         end
 
-      {:error, reason} ->
-        Logger.error("Failed to fetch checkout session: #{inspect(reason)}")
+      case fetch_checkout_session(session_id) do
+        {:ok, checkout_session} ->
+          # Extract product IDs from metadata
+          subscribed_products =
+            case checkout_session.metadata["selected_products"] do
+              nil ->
+                []
 
-        {:ok,
-         socket
-         |> assign(:page_title, "Checkout Error")
-         |> assign(:error, "Failed to load checkout information")}
+              json_string ->
+                case Jason.decode(String.downcase(json_string)) do
+                  {:ok, products} -> products
+                  _ -> []
+                end
+            end
+
+          # Prepare the base socket with common assigns
+          socket =
+            socket
+            |> assign(:page_title, "Checkout Successful")
+            |> assign(:checkout_session, checkout_session)
+            |> assign(:selected_products, subscribed_products)
+
+          case Teams.get_team_by_admin(%{email: current_user.email}) do
+            nil ->
+              Teams.get_or_create_team(%{email: current_user.email, products: subscribed_products})
+
+              Onestack.MemberManager.add_member(
+                current_user.email,
+                subscribed_products
+              )
+
+              {:ok, socket}
+
+            existing_team ->
+              Teams.update_team(existing_team, %{products: subscribed_products})
+
+              Onestack.MemberManager.add_member(
+                current_user.email,
+                subscribed_products
+              )
+
+              {:ok, assign(socket, :user_status, :existing)}
+          end
+
+        {:error, reason} ->
+          Logger.error("Failed to fetch checkout session: #{inspect(reason)}")
+
+          {:ok,
+           socket
+           |> assign(:page_title, "Checkout Error")
+           |> assign(:error, "Failed to load checkout information")}
+      end
     end
   end
 

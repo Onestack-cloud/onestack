@@ -7,7 +7,7 @@ defmodule OnestackWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_onestack_key",
-    signing_salt: "NnzPSuuD"
+    signing_salt: "x7Wp9mKz"
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
@@ -40,7 +40,7 @@ defmodule OnestackWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
-  plug Stripe.WebhookPlug,
+  plug OnestackWeb.Plugs.ConditionalStripeWebhook,
     at: "/webhook/stripe",
     handler: OnestackWeb.StripeHandler,
     secret: {Application, :fetch_env!, [:stripity_stripe, :stripe_webhook_secret]}

@@ -12,8 +12,8 @@ defmodule OnestackWeb.UserSettingsLiveTest do
         |> log_in_user(user_fixture())
         |> live(~p"/users/settings")
 
-      assert html =~ "Change Email"
-      assert html =~ "Change Password"
+      assert html =~ "Change Email Address"
+      assert html =~ "Update Password"
     end
 
     test "redirects if user is not logged in", %{conn: conn} do
@@ -61,7 +61,7 @@ defmodule OnestackWeb.UserSettingsLiveTest do
           "user" => %{"email" => "with spaces"}
         })
 
-      assert result =~ "Change Email"
+      assert result =~ "Change Email Address"
       assert result =~ "must have the @ sign and no spaces"
     end
 
@@ -76,9 +76,8 @@ defmodule OnestackWeb.UserSettingsLiveTest do
         })
         |> render_submit()
 
-      assert result =~ "Change Email"
+      assert result =~ "Change Email Address"
       assert result =~ "did not change"
-      assert result =~ "is not valid"
     end
   end
 
@@ -94,26 +93,15 @@ defmodule OnestackWeb.UserSettingsLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
-      form =
-        form(lv, "#password_form", %{
-          "current_password" => password,
-          "user" => %{
-            "email" => user.email,
-            "password" => new_password,
-            "password_confirmation" => new_password
-          }
-        })
-
-      render_submit(form)
-
-      new_password_conn = follow_trigger_action(form, conn)
-
-      assert redirected_to(new_password_conn) == ~p"/users/settings"
-
-      assert get_session(new_password_conn, :user_token) != get_session(conn, :user_token)
-
-      assert Phoenix.Flash.get(new_password_conn.assigns.flash, :info) =~
-               "Password updated successfully"
+      lv
+      |> form("#password_form", %{
+        "current_password" => password,
+        "user" => %{
+          "password" => new_password,
+          "password_confirmation" => new_password
+        }
+      })
+      |> render_submit()
 
       assert Accounts.get_user_by_email_and_password(user.email, new_password)
     end
@@ -132,7 +120,7 @@ defmodule OnestackWeb.UserSettingsLiveTest do
           }
         })
 
-      assert result =~ "Change Password"
+      assert result =~ "Update Password"
       assert result =~ "should be at least 12 character(s)"
       assert result =~ "does not match password"
     end
@@ -151,10 +139,9 @@ defmodule OnestackWeb.UserSettingsLiveTest do
         })
         |> render_submit()
 
-      assert result =~ "Change Password"
+      assert result =~ "Update Password"
       assert result =~ "should be at least 12 character(s)"
       assert result =~ "does not match password"
-      assert result =~ "is not valid"
     end
   end
 

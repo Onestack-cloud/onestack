@@ -8,9 +8,9 @@ defmodule OnestackWeb.UserLoginLiveTest do
     test "renders log in page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/log_in")
 
-      assert html =~ "Log in"
-      assert html =~ "Register"
-      assert html =~ "Forgot your password?"
+      assert html =~ "Sign in"
+      assert html =~ "Sign up here"
+      assert html =~ "Forgot password?"
     end
 
     test "redirects if already logged in", %{conn: conn} do
@@ -18,9 +18,9 @@ defmodule OnestackWeb.UserLoginLiveTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/log_in")
-        |> follow_redirect(conn, "/")
 
-      assert {:ok, _conn} = result
+      assert {:error, {:redirect, %{to: url}}} = result
+      assert url =~ "app.localhost"
     end
   end
 
@@ -36,7 +36,7 @@ defmodule OnestackWeb.UserLoginLiveTest do
 
       conn = submit_form(form, conn)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) =~ "app.localhost"
     end
 
     test "redirects to login page with a flash error if there are no valid credentials", %{
@@ -58,12 +58,12 @@ defmodule OnestackWeb.UserLoginLiveTest do
   end
 
   describe "login navigation" do
-    test "redirects to registration page when the Register button is clicked", %{conn: conn} do
+    test "redirects to registration page when the Sign up button is clicked", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/log_in")
 
       {:ok, _login_live, login_html} =
         lv
-        |> element(~s|main a:fl-contains("Sign up")|)
+        |> element("#log_in a", "Sign up here")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 
@@ -77,11 +77,11 @@ defmodule OnestackWeb.UserLoginLiveTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|main a:fl-contains("Forgot your password?")|)
+        |> element("#log_in a", "Forgot password?")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/reset_password")
 
-      assert conn.resp_body =~ "Forgot your password?"
+      assert conn.resp_body =~ "Forgot password?"
     end
   end
 end

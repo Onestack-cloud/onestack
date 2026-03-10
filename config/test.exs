@@ -17,7 +17,7 @@ config :onestack, Onestack.Repo,
 # you can enable the server option below.
 config :onestack, OnestackWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "HN5v21UHHEOcb1ecyuK9O2TWq0h7Y2XOVZqTAhHVGYGPDkdL5dk7qAwEnM+LsIfy",
+  secret_key_base: "test_only_placeholder_replace_me_with_mix_phx_gen_secret_output_at_least_64_chars_long!!",
   server: false
 
 # In test we don't send emails.

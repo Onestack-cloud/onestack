@@ -9,7 +9,7 @@ services:
       - '--server-name=coturn.onestack.cloud'
       - '--fingerprint'
       - '--listening-ip=0.0.0.0'
-      - '--external-ip=5.78.42.42'
+      - '--external-ip=${SERVER_IP:?Set SERVER_IP in .env}'
       - '--listening-port=3478'
       - '--min-port=49152'
       - '--max-port=65535'
@@ -17,7 +17,7 @@ services:
       - '--tls-listening-port=443'
       - '--use-auth-secret'
       - '--static-auth-secret='
-      - '--relay-ip=5.78.42.42'
+      - '--relay-ip=${SERVER_IP:?Set SERVER_IP in .env}'
       - '--syslog'
     # labels:
     #   - 'traefik.enable=true'

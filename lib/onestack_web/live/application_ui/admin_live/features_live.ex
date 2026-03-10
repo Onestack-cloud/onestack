@@ -140,12 +140,13 @@ defmodule OnestackWeb.Admin.FeaturesLive do
     case {action, current_products} do
       {"remove", [only_product]} when only_product == onestack_product_name ->
         # This is the last product and we're removing it -> cancel subscription
-        case find_customer_with_active_subscription(socket.assigns.current_user.email) do
-          {:ok, subscription_id} ->
-            send(self(), {:cancel_subscription, subscription_id})
-          {:error, _reason} ->
-            # No active subscription to cancel, just proceed
-            nil
+        if Onestack.stripe_enabled?() do
+          case find_customer_with_active_subscription(socket.assigns.current_user.email) do
+            {:ok, subscription_id} ->
+              send(self(), {:cancel_subscription, subscription_id})
+            {:error, _reason} ->
+              nil
+          end
         end
 
         # Remove member from team and delete team
@@ -161,13 +162,42 @@ defmodule OnestackWeb.Admin.FeaturesLive do
         {:noreply, assign(socket, updating: true)}
 
       _ ->
-        # Otherwise, proceed with the update
-        # Log that the product is being added to the stack
-
         Logger.info("Product #{onestack_product_name} is being #{action}ed to the stack")
 
-        send(self(), {:run_update_subscription, action, onestack_product_name})
-        {:noreply, assign(socket, updating: true)}
+        if Onestack.stripe_enabled?() do
+          send(self(), {:run_update_subscription, action, onestack_product_name})
+          {:noreply, assign(socket, updating: true)}
+        else
+          # Without Stripe, update team products directly
+          current_user = socket.assigns.current_user
+          team_member_emails = Teams.list_team_members_by_admin(current_user)
+
+          case action do
+            "add" ->
+              add_product_to_team(onestack_product_name, current_user)
+              Enum.each(team_member_emails, fn email ->
+                Onestack.MemberManager.add_member_to_product(email, onestack_product_name)
+              end)
+
+            "remove" ->
+              remove_product_from_team(onestack_product_name, current_user)
+              Enum.each(team_member_emails, fn email ->
+                Onestack.MemberManager.remove_member_from_product(email, onestack_product_name)
+              end)
+          end
+
+          stats = Stats.get_user_stats(current_user)
+          action_text = if action == "add", do: "added to", else: "removed from"
+
+          {:noreply,
+           socket
+           |> assign(updating: false)
+           |> assign(show_modal: false)
+           |> assign(modal_product: nil)
+           |> assign(modal_action: nil)
+           |> assign(selected_product_names: stats.subscribed_product_names)
+           |> put_flash(:info, "Product #{action_text} your stack successfully")}
+        end
     end
   end
 
@@ -391,21 +421,31 @@ defmodule OnestackWeb.Admin.FeaturesLive do
 
   @impl true
   def handle_info({:cancel_subscription, subscription_id}, socket) do
-    case Stripe.Subscription.cancel(subscription_id) do
-      {:ok, _canceled_subscription} ->
-        {:noreply,
-         socket
-         |> assign(updating: false)
-         |> assign(show_modal: false)
-         |> assign(modal_product: nil)
-         |> assign(modal_action: nil)
-         |> assign(selected_product_names: [])}
+    if Onestack.stripe_enabled?() do
+      case Stripe.Subscription.cancel(subscription_id) do
+        {:ok, _canceled_subscription} ->
+          {:noreply,
+           socket
+           |> assign(updating: false)
+           |> assign(show_modal: false)
+           |> assign(modal_product: nil)
+           |> assign(modal_action: nil)
+           |> assign(selected_product_names: [])}
 
-      {:error, _error} ->
-        {:noreply,
-         socket
-         |> assign(updating: false)
-         |> put_flash(:error, "Failed to cancel subscription")}
+        {:error, _error} ->
+          {:noreply,
+           socket
+           |> assign(updating: false)
+           |> put_flash(:error, "Failed to cancel subscription")}
+      end
+    else
+      {:noreply,
+       socket
+       |> assign(updating: false)
+       |> assign(show_modal: false)
+       |> assign(modal_product: nil)
+       |> assign(modal_action: nil)
+       |> assign(selected_product_names: [])}
     end
   end
 

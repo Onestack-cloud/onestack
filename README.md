@@ -83,7 +83,7 @@ Each tool has a ready-to-deploy Docker Compose configuration in [`onestack_produ
 
 ```bash
 # Clone the repository
-git clone https://github.com/curiousgeorgios/onestack.git
+git clone https://github.com/Onestack-cloud/onestack.git
 cd onestack
 
 # Copy environment config (Stripe keys are optional)

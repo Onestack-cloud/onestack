@@ -341,9 +341,11 @@ defmodule OnestackWeb.CoreComponents do
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: Enum.map(field.errors, &translate_error(&1)), else: []
+
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(:errors, errors)
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
@@ -356,7 +358,7 @@ defmodule OnestackWeb.CoreComponents do
       end)
 
     ~H"""
-    <div class="form-control" phx-feedback-for={@name}>
+    <div class="form-control">
       <div class="flex items-center">
         <div class="flex">
           <input type="hidden" name={@name} value="false" />
@@ -381,7 +383,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label for={@id}><%= @label %></.label>
       <div class="relative">
         <select
@@ -411,7 +413,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <.label for={@id}><%= @label %></.label>
       <textarea
         rows="3"
@@ -435,7 +437,7 @@ defmodule OnestackWeb.CoreComponents do
     assigns = assign(assigns, :class, "default-input-class #{extra_classes}")
 
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div>
       <div>
         <.label for={@id}><%= @label %></.label>
       </div>
@@ -479,7 +481,7 @@ defmodule OnestackWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 phx-no-feedback:hidden">
+    <p class="mt-3 flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400">
       <Lucide.render icon="circle-alert" class="h-4 w-4 flex-shrink-0" />
       <span><%= render_slot(@inner_block) %></span>
     </p>

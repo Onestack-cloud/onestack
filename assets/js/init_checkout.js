@@ -1,10 +1,9 @@
-// The public key can be found in the Stripe Dashboard
-const stripe = Stripe('REDACTED_STRIPE_PUBLISHABLE_KEY', { betas: ['custom_checkout_beta_5'] })
+// Read the Stripe publishable key from the meta tag injected by the server
+const stripeKey = document.querySelector('meta[name="stripe-key"]')?.content;
+const stripe = Stripe(stripeKey, { betas: ['custom_checkout_beta_5'] })
 
 export const InitCheckout = {
     mounted() {
-        console.log("InitCheckout hook mounted", this.el);
-        console.log("Dataset secret:", this.el.dataset.secret);
         const successCallback = paymentIntent => { this.pushEvent('payment-success', paymentIntent) }
         init(this.el, successCallback)
     }
@@ -100,7 +99,6 @@ const init = async (form, successCallback) => {
             layout: 'tabs',
         };
 
-        console.log("Creating payment element with options:", paymentElementOptions);
         const paymentElement = checkout.createElement('payment', paymentElementOptions);
 
         // We'll still use the address element for shipping/billing if needed
@@ -111,11 +109,9 @@ const init = async (form, successCallback) => {
         // Add change event listener to monitor payment element completeness
         let paymentElementComplete = false;
         paymentElement.on('change', (event) => {
-            console.log('Payment element change event:', event);
             paymentElementComplete = event.complete;
 
             if (event.error) {
-                console.log('Payment element error:', event.error.message);
                 errors.textContent = event.error.message;
             } else {
                 // Clear errors when fixed
@@ -145,15 +141,12 @@ const init = async (form, successCallback) => {
 
         button.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log("Payment button clicked");
 
             // Clear any validation errors
             errors.textContent = '';
 
             // Check if payment element is complete
-            console.log("Payment element complete status:", paymentElementComplete);
             if (!paymentElementComplete) {
-                console.log("Payment element is incomplete, cannot proceed");
                 errors.textContent = 'Please fill in all required payment information.';
                 return;
             }
@@ -165,7 +158,6 @@ const init = async (form, successCallback) => {
 
             checkout.confirm()
                 .then(result => {
-                    console.log("Checkout confirmation complete:", result);
 
                     if (result.error || result.type === 'error') {
                         const error = result.error || (result.type === 'error' ? result : null);
@@ -175,11 +167,9 @@ const init = async (form, successCallback) => {
                         button.textContent = 'Complete Payment';
                         button.style.backgroundColor = darkMode ? '#3B82F6' : '#2563EB';
                     } else if (result.paymentIntent) {
-                        console.log("Payment succeeded:", result.paymentIntent);
                         // Don't reset button here - we're redirecting
                         successCallback(result.paymentIntent);
                     } else {
-                        console.warn("Unknown payment result:", result);
                         errors.textContent = 'Unexpected payment response. Please try again.';
                         button.disabled = false;
                         button.textContent = 'Complete Payment';
@@ -195,7 +185,7 @@ const init = async (form, successCallback) => {
                 });
         });
 
-        console.log("Mounting payment element...");
+
         const paymentElementContainer = document.getElementById('payment-element');
         if (paymentElementContainer) {
             paymentElementContainer.style.backgroundColor = darkMode ? '#1F2937' : '#FFFFFF';
@@ -204,9 +194,7 @@ const init = async (form, successCallback) => {
             paymentElementContainer.style.border = darkMode ? '1px solid #4B5563' : '1px solid #E5E7EB';
         }
         paymentElement.mount('#payment-element');
-        console.log("Payment element mounted");
 
-        console.log("Mounting billing address element...");
         const billingAddressContainer = document.getElementById('billing-address');
         if (billingAddressContainer) {
             billingAddressContainer.style.backgroundColor = darkMode ? '#1F2937' : '#FFFFFF';

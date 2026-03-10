@@ -31,7 +31,7 @@ defmodule OnestackWeb.RoleRedirectLive do
           ~p"/"
       end
 
-    {:ok, push_redirect(socket, to: redirect_path)}
+    {:ok, push_navigate(socket, to: redirect_path)}
   end
 
   def render(assigns) do

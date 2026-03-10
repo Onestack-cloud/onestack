@@ -3,12 +3,17 @@ defmodule Onestack.Scripts.SyncStripeAdmins do
   require Logger
 
   def run do
+    unless Onestack.stripe_enabled?() do
+      Logger.warning("Stripe is not enabled. Skipping sync.")
+      :ok
+    else
     # Get all Stripe customers with active subscriptions
     stripe_customers = list_stripe_customers_with_subscriptions()
 
     Enum.each(stripe_customers, fn customer ->
       handle_customer(customer)
     end)
+    end
   end
 
   defp handle_customer(%Stripe.Customer{} = customer) do

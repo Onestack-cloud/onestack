@@ -9,11 +9,10 @@ defmodule OnestackWeb.UserForgotPasswordLiveTest do
 
   describe "Forgot password page" do
     test "renders email page", %{conn: conn} do
-      {:ok, lv, html} = live(conn, ~p"/users/reset_password")
+      {:ok, _lv, html} = live(conn, ~p"/users/reset_password")
 
-      assert html =~ "Forgot your password?"
-      assert has_element?(lv, ~s|a[href="#{~p"/users/register"}"]|, "Register")
-      assert has_element?(lv, ~s|a[href="#{~p"/users/log_in"}"]|, "Log in")
+      assert html =~ "Forgot password?"
+      assert html =~ "Sign in here"
     end
 
     test "redirects if already logged in", %{conn: conn} do
@@ -21,9 +20,9 @@ defmodule OnestackWeb.UserForgotPasswordLiveTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/reset_password")
-        |> follow_redirect(conn, ~p"/")
 
-      assert {:ok, _conn} = result
+      assert {:error, {:redirect, %{to: url}}} = result
+      assert url =~ "app.localhost"
     end
   end
 

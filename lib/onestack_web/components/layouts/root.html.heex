@@ -16,6 +16,10 @@
       name="csrf-token"
       content={Plug.CSRFProtection.get_csrf_token()}
     />
+    <meta
+      name="stripe-key"
+      content={Application.get_env(:stripity_stripe, :public_key, "")}
+    />
     <meta property="og:type" content="SaaS, Simplified" />
     <meta property="og:title" content="Onestack" />
     <meta

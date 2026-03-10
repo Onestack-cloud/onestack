@@ -22,7 +22,7 @@ defmodule OnestackWeb.UserAuthTest do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) =~ "app.localhost"
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -42,7 +42,7 @@ defmodule OnestackWeb.UserAuthTest do
 
       assert %{value: signed_token, max_age: max_age} = conn.resp_cookies[@remember_me_cookie]
       assert signed_token != get_session(conn, :user_token)
-      assert max_age == 5_184_000
+      assert max_age == 60 * 60 * 24 * 365
     end
   end
 
@@ -216,7 +216,7 @@ defmodule OnestackWeb.UserAuthTest do
     test "redirects if user is authenticated", %{conn: conn, user: user} do
       conn = conn |> assign(:current_user, user) |> UserAuth.redirect_if_user_is_authenticated([])
       assert conn.halted
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) =~ "app.localhost"
     end
 
     test "does not redirect if user is not authenticated", %{conn: conn} do

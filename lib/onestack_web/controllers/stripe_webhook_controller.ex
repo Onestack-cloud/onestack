@@ -2,9 +2,17 @@ defmodule OnestackWeb.StripeWebhookController do
   use OnestackWeb, :controller
   require Logger
 
-  @endpoint_secret Application.compile_env(:onestack, :stripe_webhook_secret, "whsec_test_secret")
+  @endpoint_secret Application.compile_env(:stripity_stripe, :stripe_webhook_secret, "")
 
-  def handle(conn, _params) do
+  def handle(conn, params) do
+    if Onestack.stripe_enabled?() do
+      handle_stripe(conn, params)
+    else
+      send_resp(conn, 404, "not found")
+    end
+  end
+
+  defp handle_stripe(conn, _params) do
     # Get the raw body and signature
     raw_body = conn.assigns[:raw_body] || Jason.encode!(conn.body_params)
     signature = get_req_header(conn, "stripe-signature") |> List.first()
@@ -15,10 +23,10 @@ defmodule OnestackWeb.StripeWebhookController do
         case OnestackWeb.StripeHandler.handle_event(event) do
           {:ok, _result} ->
             send_resp(conn, 200, "success")
-          
+
           :ok ->
             send_resp(conn, 200, "ok")
-          
+
           {:error, reason} ->
             Logger.error("Failed to handle webhook event: #{inspect(reason)}")
             send_resp(conn, 400, "error")

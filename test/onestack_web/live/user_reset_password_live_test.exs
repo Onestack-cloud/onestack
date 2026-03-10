@@ -93,11 +93,11 @@ defmodule OnestackWeb.UserResetPasswordLiveTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|main a:fl-contains("Log in")|)
+        |> element(~s|a[href="/users/log_in"]|, "Log in")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/log_in")
 
-      assert conn.resp_body =~ "Log in"
+      assert conn.resp_body =~ "Sign in"
     end
 
     test "redirects to registration page when the Register button is clicked", %{
@@ -108,7 +108,7 @@ defmodule OnestackWeb.UserResetPasswordLiveTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|main a:fl-contains("Register")|)
+        |> element(~s|a[href="/users/register"]|, "Register")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 

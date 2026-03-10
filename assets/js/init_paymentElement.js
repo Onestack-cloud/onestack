@@ -1,10 +1,9 @@
-// The public key can be found in the Stripe Dashboard
-const stripe = Stripe('REDACTED_STRIPE_PUBLISHABLE_KEY')
+// Read the Stripe publishable key from the meta tag injected by the server
+const stripeKey = document.querySelector('meta[name="stripe-key"]')?.content;
+const stripe = Stripe(stripeKey)
 
 export const InitCheckout = {
     mounted() {
-        console.log("InitCheckout hook mounted", this.el);
-        console.log("Dataset secret:", this.el.dataset.secret);
         const successCallback = paymentIntent => { this.pushEvent('payment-success', paymentIntent) }
         init(this.el, successCallback)
     }

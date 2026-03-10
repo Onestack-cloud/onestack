@@ -163,115 +163,114 @@ defmodule OnestackWeb.Admin.TeamsLive do
   def handle_event("remove_member", %{"email" => email}, socket) do
     current_user = socket.assigns.current_user
 
-    # First try to remove any pending invitation
-    invitation_removed = false
+    # Optimistically remove from UI immediately
+    updated_team_members =
+      Enum.reject(socket.assigns.team_members, fn member ->
+        member == email || (is_map(member) && Map.get(member, :email) == email)
+      end)
 
-    case Teams.get_pending_invitation_by_email(email) do
-      %Teams.Invitation{} = invitation ->
-        Teams.delete_invitation(invitation)
-        invitation_removed = true
+    socket =
+      socket
+      |> assign(team_members: updated_team_members)
+      |> assign(num_users: calculate_num_users(updated_team_members))
 
-      nil ->
-        :ok
-    end
+    # Perform actual removal in background
+    {:noreply,
+     start_async(socket, {:remove_member, email}, fn ->
+       # Remove pending invitation if exists
+       case Teams.get_pending_invitation_by_email(email) do
+         %Teams.Invitation{} = invitation -> Teams.delete_invitation(invitation)
+         nil -> :ok
+       end
 
-    # Then remove the team member
-    case Teams.remove_team_member(current_user, email) do
-      {:ok, _team} ->
-        product_names =
-          get_product_names(socket.assigns.stats.subscribed_products)
+       case Teams.remove_team_member(current_user, email) do
+         {:ok, _team} ->
+           product_names = get_product_names(socket.assigns.stats.subscribed_products)
+           Onestack.MemberManager.remove_member(email, product_names)
 
-        Onestack.MemberManager.remove_member(
-          email,
-          product_names
-        )
+           updated_team_members = Teams.list_team_members_by_admin(current_user)
+           update_subscription_pricing_after_member_change(current_user, updated_team_members, product_names)
 
-        updated_team_members = Teams.list_team_members_by_admin(current_user)
+           Phoenix.PubSub.broadcast(Onestack.PubSub, "team:#{current_user.id}", {:team_updated})
+           Phoenix.PubSub.broadcast(Onestack.PubSub, "team:#{current_user.id}", {:member_removed, email})
 
-        # Get updated pending invitations count if an invitation was removed
-        updated_pending_invitations_count = socket.assigns.pending_invitations_count
+           {:ok, email}
 
-        if invitation_removed do
-          pending_invitations =
-            Onestack.Teams.list_pending_invitations()
-            |> Enum.filter(fn invitation -> invitation.admin_email == current_user.email end)
-
-          updated_pending_invitations_count = length(pending_invitations)
-        end
-
-        # Update subscription pricing based on team member change
-        update_subscription_pricing_after_member_change(
-          current_user,
-          updated_team_members,
-          product_names
-        )
-
-        # Broadcast the update to all subscribers
-        Phoenix.PubSub.broadcast(
-          Onestack.PubSub,
-          "team:#{current_user.id}",
-          {:team_updated}
-        )
-
-        Phoenix.PubSub.broadcast(
-          Onestack.PubSub,
-          "team:#{current_user.id}",
-          {:member_removed, email}
-        )
-
-        {:noreply,
-         socket
-         |> assign(team_members: updated_team_members)
-         |> assign(num_users: calculate_num_users(updated_team_members))
-         |> assign(pending_invitations_count: updated_pending_invitations_count)}
-
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Team member not found")}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to remove team member")}
-    end
+         error ->
+           error
+       end
+     end)}
   end
 
-  # Helper function to update subscription pricing based on team member change
+  @impl true
+  def handle_async({:remove_member, email}, {:ok, {:ok, _email}}, socket) do
+    {:noreply, put_flash(socket, :info, "Team member #{email} removed successfully")}
+  end
+
+  def handle_async({:remove_member, _email}, {:ok, {:error, :not_found}}, socket) do
+    current_user = socket.assigns.current_user
+    team_members = Teams.list_team_members_by_admin(current_user)
+
+    {:noreply,
+     socket
+     |> assign(team_members: team_members)
+     |> assign(num_users: calculate_num_users(team_members))
+     |> put_flash(:error, "Team member not found")}
+  end
+
+  def handle_async({:remove_member, _email}, _result, socket) do
+    current_user = socket.assigns.current_user
+    team_members = Teams.list_team_members_by_admin(current_user)
+
+    {:noreply,
+     socket
+     |> assign(team_members: team_members)
+     |> assign(num_users: calculate_num_users(team_members))
+     |> put_flash(:error, "Failed to remove team member")}
+  end
+
+  # Helper function to update subscription pricing based on team member change.
+  # No-op when Stripe is disabled.
   defp update_subscription_pricing_after_member_change(
          current_user,
          updated_team_members,
          product_names
        ) do
-    # Get the number of products and team members
-    product_count = length(product_names)
-    member_count = length(updated_team_members)
+    if Onestack.stripe_enabled?() do
+      # Get the number of products and team members
+      product_count = length(product_names)
+      _member_count = length(updated_team_members)
 
-    # Only proceed if we have products
-    if product_count > 0 do
-      # Find customer and subscription directly through Stripe API
-      case Stripe.Customer.list(%{email: current_user.email, limit: 1}) do
-        {:ok, %{data: [customer | _]}} ->
-          # Find active subscription for this customer
-          case Stripe.Subscription.list(%{customer: customer.id, status: "active", limit: 1}) do
-            {:ok, %{data: [subscription | _]}} ->
-              subscription_id = subscription.id
+      # Only proceed if we have products
+      if product_count > 0 do
+        # Find customer and subscription directly through Stripe API
+        case Stripe.Customer.list(%{email: current_user.email, limit: 1}) do
+          {:ok, %{data: [customer | _]}} ->
+            # Find active subscription for this customer
+            case Stripe.Subscription.list(%{customer: customer.id, status: "active", limit: 1}) do
+              {:ok, %{data: [subscription | _]}} ->
+                subscription_id = subscription.id
 
-              # Calculate the new price using graduated pricing
-              plan_type = "team"
+                # Calculate the new price using graduated pricing
+                plan_type = "team"
 
-              # Calculate total price for all products using the graduated pricing model
-              new_price_dollars =
-                Onestack.CatalogMonthly.calculate_subscription_price(product_count, plan_type)
+                # Calculate total price for all products using the graduated pricing model
+                new_price_dollars =
+                  Onestack.CatalogMonthly.calculate_subscription_price(product_count, plan_type)
 
-              # Convert to cents for Stripe
-              new_price_cents = new_price_dollars * 100
+                # Convert to cents for Stripe
+                new_price_cents = new_price_dollars * 100
 
-              # Update the subscription with the new custom price
-              update_subscription_with_custom_price(subscription_id, new_price_cents)
+                # Update the subscription with the new custom price
+                update_subscription_with_custom_price(subscription_id, new_price_cents)
 
-            _ ->
-              IO.puts("No active subscription found for user #{current_user.email}")
-          end
+              _ ->
+                IO.puts("No active subscription found for user #{current_user.email}")
+            end
 
-        _ ->
-          IO.puts("No Stripe customer found for user #{current_user.email}")
+          _ ->
+            IO.puts("No Stripe customer found for user #{current_user.email}")
+        end
       end
     end
   end
@@ -442,7 +441,7 @@ defmodule OnestackWeb.Admin.TeamsLive do
 
   @spec get_product_names([List.t()]) :: [List.t()]
   def get_product_names(product_ids) do
-    stripe_products = StripeCache.list_products()
+    stripe_products = Onestack.StripeCache.list_products()
 
     product_map =
       Enum.reduce(stripe_products, %{}, fn product, acc ->

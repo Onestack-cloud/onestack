@@ -52,9 +52,9 @@ services:
         container_name: vectordb
         image: ankane/pgvector:latest
         environment:
-            POSTGRES_DB: mydatabase
-            POSTGRES_USER: myuser
-            POSTGRES_PASSWORD: mypassword
+            POSTGRES_DB: ${VECTORDB_NAME:-mydatabase}
+            POSTGRES_USER: ${VECTORDB_USER:-myuser}
+            POSTGRES_PASSWORD: ${VECTORDB_PASSWORD:?err}
         restart: always
         volumes:
             - pgdata2:/var/lib/postgresql/data
