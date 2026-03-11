@@ -105,4 +105,8 @@ USER nobody
 # above and adding an entrypoint. See https://github.com/krallin/tini for details
 # ENTRYPOINT ["/tini", "--"]
 
+LABEL org.opencontainers.image.source=https://github.com/Onestack-cloud/onestack
+LABEL org.opencontainers.image.description="Onestack: manage open source alternatives to SaaS tools from a single dashboard"
+LABEL org.opencontainers.image.licenses=AGPL-3.0
+
 CMD ["/app/bin/migrate_and_server"]
