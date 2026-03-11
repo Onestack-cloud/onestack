@@ -1,7 +1,7 @@
-<div class="min-h-screen">
+<div class="min-h-screen pb-20 sm:pb-24">
   <!-- Hero Section with Gradient Background -->
-  <div class="relative overflow-hidden pb-32">
-    <div class="relative mx-auto max-w-7xl px-6 pt-24 pb-32 sm:pt-32 lg:px-8">
+  <div class="relative overflow-hidden pb-20 sm:pb-32">
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-20 sm:pt-32 sm:pb-32 lg:px-8">
       <div class="mx-auto max-w-2xl text-center">
         <h1 class="mt-2 text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
           Unified workspace,
@@ -18,11 +18,11 @@
   </div>
   <!-- Sticky Pricing Summary (shows when scrolling) -->
   <%= if length(@selected_products) > 0 do %>
-    <div class="fixed bottom-0 left-0 right-0 z-50 bg-blue-50 dark:bg-blue-900 border-t border-blue-200 dark:border-blue-800 shadow-2xl transform transition-all duration-300 ease-in-out translate-y-0 hover:translate-y-1 hover:bg-blue-100 dark:hover:bg-blue-800">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <div class="flex -space-x-2">
+    <div class="fixed bottom-0 left-0 right-0 z-50 bg-blue-50 dark:bg-blue-900 border-t border-blue-200 dark:border-blue-800 shadow-2xl transform transition-all duration-300 ease-in-out translate-y-0">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <div class="hidden sm:flex -space-x-2">
               <%= for {product_id, i} <- Enum.with_index(@selected_products) do %>
                 <% product = Map.get(@products_by_id, product_id) %>
                 <%= if product && i < 3 do %>
@@ -36,52 +36,36 @@
               <% end %>
               <%= if length(@selected_products) > 3 do %>
                 <div class="relative z-0 h-8 w-8 rounded-full bg-white dark:bg-blue-700 border-2 border-blue-200 dark:border-blue-600 flex items-center justify-center">
-                  <span class="text-xs text-blue-600 dark:text-blue-200 group-hover:text-blue-800 dark:group-hover:text-blue-100 transition-colors duration-200">
+                  <span class="text-xs text-blue-600 dark:text-blue-200">
                     +<%= length(@selected_products) - 3 %>
                   </span>
                 </div>
               <% end %>
             </div>
-            <div>
-              <div class="font-medium text-blue-900 dark:text-blue-100">
-                Your Stack
+            <div class="min-w-0">
+              <div class="font-medium text-sm sm:text-base text-blue-900 dark:text-blue-100 truncate">
+                <%= length(@selected_products) %> tools · $<%= calculate_total(@selected_products, @selected_plan) %>/mo
               </div>
-              <div class="text-sm text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
-                <%= length(@selected_products) %> tools selected
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center gap-6">
-            <div class="text-right">
-              <div class="text-sm text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
-                Total Monthly
-              </div>
-              <div class="text-lg font-bold text-blue-700 dark:text-blue-200">
-                $<%= calculate_total(
-                  @selected_products,
-                  @selected_plan
-                ) %>
-              </div>
-              <p class="text-xs text-blue-600 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200 transition-colors duration-200">
+              <p class="text-xs text-blue-600 dark:text-blue-300 hidden sm:block">
                 14-day free trial, no credit card required
               </p>
             </div>
-            <button
-              phx-click="start_trial"
-              class="hover:cursor-pointer px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-blue-50 dark:focus:ring-offset-blue-900 transition-colors"
-            >
-              Start Free Trial
-            </button>
           </div>
+          <button
+            phx-click="start_trial"
+            class="hover:cursor-pointer flex-shrink-0 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-blue-50 dark:focus:ring-offset-blue-900 transition-colors"
+          >
+            Start Free Trial
+          </button>
         </div>
       </div>
     </div>
   <% end %>
   <!-- Main Content with Floating Card Effect -->
-  <div class="relative z-10 mx-auto -mt-32 max-w-5xl px-6 lg:px-8">
-    <div class="mx-auto -mb-8 max-w-3xl rounded-3xl bg-white dark:bg-gray-900/80 backdrop-blur-xl border border-gray-300 dark:border-gray-600 shadow-2xl sm:mt-8 p-8 lg:p-12">
+  <div class="relative z-10 mx-auto -mt-20 sm:-mt-32 max-w-5xl px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto -mb-8 max-w-3xl rounded-2xl sm:rounded-3xl bg-white dark:bg-gray-900/80 backdrop-blur-xl border border-gray-300 dark:border-gray-600 shadow-2xl sm:mt-8 p-5 sm:p-8 lg:p-12">
       <!-- Trust Indicators -->
-      <div class="mb-12 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm leading-6 text-gray-600 dark:text-gray-200">
+      <div class="mb-8 sm:mb-12 flex flex-wrap justify-center gap-x-4 sm:gap-x-8 gap-y-3 sm:gap-y-4 text-xs sm:text-sm leading-6 text-gray-600 dark:text-gray-200">
         <div class="flex items-center gap-2">
           <Lucide.render
             icon="shield-check"
@@ -159,8 +143,8 @@
       </p>
     </div>
 
-    <div class="grid gap-8 max-w-5xl mx-auto px-4">
-      <div class="border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-600 rounded-2xl p-8 backdrop-blur-sm mx-auto w-full max-w-4xl">
+    <div class="grid gap-6 sm:gap-8 max-w-5xl mx-auto px-0 sm:px-4">
+      <div class="border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-600 rounded-2xl p-4 sm:p-8 backdrop-blur-sm mx-auto w-full max-w-4xl">
         <div class="mb-6">
           <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
             Create your own stack
@@ -170,10 +154,10 @@
           </p>
         </div>
         <div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <%= for product <- @products do %>
-              <div class="flex items-center">
-                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-50 dark:hover:bg-gray-100 dark:hover:bg-gray-800 dark:bg-gray-800 transition-colors duration-200 cursor-pointer w-full [&:has(input:checked)]:bg-blue-50 dark:[&:has(input:checked)]:bg-blue-900/30 [&:has(input:checked)]:border-blue-500 dark:[&:has(input:checked)]:border-blue-400">
+              <div class="flex items-center min-w-0">
+                <label class="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:bg-gray-800 transition-colors duration-200 cursor-pointer w-full min-w-0 [&:has(input:checked)]:bg-blue-50 dark:[&:has(input:checked)]:bg-blue-900/30 [&:has(input:checked)]:border-blue-500 dark:[&:has(input:checked)]:border-blue-400">
                   <input
                     type="checkbox"
                     name="product_access[]"
@@ -183,13 +167,13 @@
                     phx-value-product={product.id}
                     class="sr-only peer"
                   />
-                  <div class="flex items-center justify-center w-10 h-10 rounded-full text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200 peer-checked:text-blue-400 group-has-[input:checked]:bg-blue-500 group-has-[input:checked]:text-blue">
+                  <div class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full text-gray-500 dark:text-gray-400 transition-colors duration-200 peer-checked:text-blue-400">
                     <Lucide.render
                       icon={product.icon_name}
-                      class="w-6 h-6"
+                      class="w-5 h-5 sm:w-6 sm:h-6"
                     />
                   </div>
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-600 dark:text-gray-300 transition-colors duration-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 group-has-[input:checked]:text-blue-600 dark:group-has-[input:checked]:text-blue-400">
+                  <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 min-w-0 break-words">
                     <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
                       product.feature_description
                     ) %>
@@ -201,35 +185,35 @@
         </div>
 
         <%= if length(@selected_products) > 0 do %>
-          <div class="mt-6 space-y-4 p-6 rounded-xl shadow-lg border border-gray-300 dark:border-gray-600">
+          <div class="mt-6 space-y-4 p-4 sm:p-6 rounded-xl shadow-lg border border-gray-300 dark:border-gray-600">
             <div class="text-sm font-medium text-gray-600 dark:text-gray-200 dark:text-gray-600 dark:text-gray-300">
               Your Stack Pricing:
             </div>
             <%= for {product_id, index} <- Enum.with_index(@selected_products) do %>
               <% product = Map.get(@products_by_id, product_id) %>
               <%= if product do %>
-                <div class="flex items-center justify-between animate-fade-in">
-                  <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between gap-2 animate-fade-in">
+                  <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                     <Lucide.render
                       icon={product.icon_name}
-                      class="h-6 w-6 text-blue-400 dark:text-blue-300"
+                      class="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 text-blue-400 dark:text-blue-300"
                     />
-                    <div class="flex flex-col">
-                      <span class="text-sm font-medium text-gray-800 dark:text-gray-600 dark:text-gray-200">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                         <%= Onestack.CatalogMonthly.ProductMetadata.display_name(
                           product.feature_description
                         ) %>
                       </span>
-                      <span class="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                      <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
                         <%= product.onestack_product_name %>
                       </span>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end">
-                    <span class="font-mono text-blue-600 dark:text-blue-400">
+                  <div class="flex flex-col items-end flex-shrink-0">
+                    <span class="font-mono text-sm sm:text-base text-blue-600 dark:text-blue-400">
                       $<%= get_product_price(index, @selected_plan) %>/mo
                     </span>
-                    <span class="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                       vs <%= product.closed_source_name %> @ $<%= product.closed_source_user_price %>/<%= String.downcase(
                         product.closed_source_currency
                       ) %>
@@ -245,7 +229,7 @@
               <% end %>
             <% end %>
             <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              <div class="flex justify-between items-baseline">
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-1 sm:gap-0">
                 <div>
                   <span class="font-medium text-gray-600 dark:text-gray-200">
                     Your Total
@@ -254,7 +238,7 @@
                     per user/month
                   </span>
                 </div>
-                <div class="text-right">
+                <div class="sm:text-right">
                   <span class="font-mono text-xl font-bold text-blue-400">
                     $<%= our_total =
                       calculate_total(
@@ -362,13 +346,13 @@
               </div>
             </div>
             <!-- FAQ Section -->
-            <div class="mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-8 max-w-3xl mx-auto w-full">
-              <h3 class="text-lg font-medium mb-6 text-gray-900 dark:text-gray-100">
+            <div class="mt-10 sm:mt-16 border-t border-gray-200 dark:border-gray-700/50 pt-6 sm:pt-8 max-w-3xl mx-auto w-full">
+              <h3 class="text-lg font-medium mb-4 sm:mb-6 text-gray-900 dark:text-gray-100">
                 Frequently asked questions
               </h3>
 
-              <div class="space-y-4">
-                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+              <div class="space-y-3 sm:space-y-4">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
                   <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
                     How does billing work?
                   </h4>
@@ -377,7 +361,7 @@
                   </p>
                 </div>
 
-                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
                   <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
                     Can I change plans later?
                   </h4>
@@ -386,7 +370,7 @@
                   </p>
                 </div>
 
-                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200">
                   <h4 class="font-medium mb-2 text-gray-900 dark:text-gray-100">
                     Is there a minimum commitment?
                   </h4>
@@ -399,7 +383,7 @@
             <!-- Savings Summary -->
             <%= if length(@selected_products) > 0 do %>
               <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700/50 max-w-3xl mx-auto w-full">
-                <div class="flex items-center justify-between mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-1">
                   <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
                     Your Monthly Savings
                   </h3>
@@ -580,7 +564,7 @@
                   </.link>
                 </div>
               </div>
-              <div class="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-300 transition-colors duration-200">
+              <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500 dark:text-gray-400">
                 <div class="flex items-center gap-2">
                   <Lucide.render
                     icon="shield-check"
@@ -687,26 +671,28 @@
         <% end %>
       </div>
       <!-- Enterprise Section -->
-      <div class="w-full max-w-4xl mx-auto items-center justify-center mb-20 bg-white dark:bg-gray-900 dark:bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-300 dark:border-gray-700 relative overflow-hidden group hover:border-blue-500/50 transition-colors duration-300">
+      <div class="w-full max-w-4xl mx-auto items-center justify-center mb-20 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-5 sm:p-6 border border-gray-300 dark:border-gray-700 relative overflow-hidden group hover:border-blue-500/50 transition-colors duration-300">
         <div class="absolute inset-0 opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA2LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6TTI0IDQ4YzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnptMC0yNGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA6LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6Ii8+PC9nPjwvc3ZnPg==')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]">
         </div>
-        <div class="relative flex items-center gap-4">
-          <div class="flex-shrink-0">
-            <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-500/20 text-blue-400 group-hover:scale-110 transition-transform duration-300">
-              <Lucide.render icon="building" class="h-6 w-6" />
+        <div class="relative flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex items-center gap-4 flex-grow">
+            <div class="flex-shrink-0">
+              <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-500/20 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                <Lucide.render icon="building" class="h-6 w-6" />
+              </div>
             </div>
-          </div>
-          <div class="flex-grow">
-            <h3 class="text-lg font-semibold dark:text-white">
-              Enterprise
-            </h3>
-            <p class="text-sm text-gray-600 dark:text-gray-300 group-hover:text-gray-600 dark:text-gray-200 transition-colors duration-200">
-              Custom solutions for large teams
-            </p>
+            <div>
+              <h3 class="text-lg font-semibold dark:text-white">
+                Enterprise
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-300 group-hover:text-gray-600 dark:text-gray-200 transition-colors duration-200">
+                Custom solutions for large teams
+              </p>
+            </div>
           </div>
           <button
             phx-click="start_trial"
-            class="hover:cursor-pointer flex-shrink-0 px-4 py-2 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-colors group-hover:bg-blue-500 group-hover:text-white hover:!bg-blue-600 hover:!text-white"
+            class="hover:cursor-pointer flex-shrink-0 w-full sm:w-auto px-4 py-2 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-colors group-hover:bg-blue-500 group-hover:text-white hover:!bg-blue-600 hover:!text-white text-center"
           >
             Contact Sales
           </button>
