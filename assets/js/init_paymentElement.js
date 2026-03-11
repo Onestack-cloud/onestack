@@ -1,6 +1,6 @@
 // Read the Stripe publishable key from the meta tag injected by the server
 const stripeKey = document.querySelector('meta[name="stripe-key"]')?.content;
-const stripe = Stripe(stripeKey)
+const stripe = stripeKey ? Stripe(stripeKey) : null;
 
 export const InitCheckout = {
     mounted() {
