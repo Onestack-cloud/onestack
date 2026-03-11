@@ -10,7 +10,12 @@ defmodule Onestack.MixProject do
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      releases: [
+        onestack: [
+          validate_compile_env: false
+        ]
+      ]
     ]
   end
 
