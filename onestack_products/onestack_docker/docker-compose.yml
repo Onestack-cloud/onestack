@@ -2,7 +2,7 @@ services:
     onestack:
         env_file:
             - .env
-        image: registry.gitlab.com/curiousgeorge/onestack/website
+        image: ghcr.io/onestack-cloud/onestack:latest
         labels:
             - traefik.enable=true
             # Define the service once
