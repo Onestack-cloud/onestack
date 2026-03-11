@@ -60,8 +60,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GHCR_TOKEN
           script: |
+            set -e
             if [ -n "$GHCR_TOKEN" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u onestack-cloud --password-stdin
             fi
-            cd /root/onestack_docker && docker compose pull && docker compose up -d
+            cd /root/onestack_docker
+            docker compose pull
+            docker compose up -d
             docker image prune -af
