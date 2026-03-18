@@ -96,6 +96,13 @@ apps:
     domain: "status.{{ base_domain }}"
     port: 3001
 
+  meilisearch:
+    enabled: true
+    domain: "search.{{ base_domain }}"
+    image: getmeili/meilisearch:latest
+    port: 7700
+    dumpless_upgrade: true
+
   matrix:
     enabled: false
     domain: "matrix.{{ base_domain }}"

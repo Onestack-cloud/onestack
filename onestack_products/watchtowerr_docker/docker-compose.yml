@@ -9,5 +9,7 @@ services:
     restart: unless-stopped
     environment:
       - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_ROLLING_RESTART=true
+      - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_SCHEDULE=0 0 2 * * *
       - TZ=Australia/Sydney
