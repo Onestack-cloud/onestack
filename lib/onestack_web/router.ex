@@ -21,10 +21,6 @@ defmodule OnestackWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :stripe_webhook do
-    plug :accepts, ["json"]
-    plug OnestackWeb.Plugs.RawBodyReader
-  end
 
   scope "/", OnestackWeb do
     pipe_through :browser
@@ -98,12 +94,8 @@ defmodule OnestackWeb.Router do
   #   pipe_through :api
   # end
 
-  # Stripe webhook endpoint
-  scope "/webhooks", OnestackWeb do
-    pipe_through :stripe_webhook
-    
-    post "/stripe", StripeWebhookController, :handle
-  end
+  # Stripe webhook is handled at the endpoint level by ConditionalStripeWebhook
+  # (before Plug.Parsers) so the raw body is available for signature verification.
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:onestack, :dev_routes) do
