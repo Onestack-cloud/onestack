@@ -41,7 +41,7 @@ defmodule OnestackWeb.Endpoint do
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug OnestackWeb.Plugs.ConditionalStripeWebhook,
-    at: "/webhooks/stripe",
+    at: "/webhook/stripe",
     handler: OnestackWeb.StripeHandler,
     secret: {Application, :fetch_env!, [:stripity_stripe, :stripe_webhook_secret]}
 

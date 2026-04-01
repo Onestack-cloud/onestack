@@ -9,7 +9,7 @@ defmodule OnestackWeb.Plugs.ConditionalStripeWebhook do
   def init(opts), do: Stripe.WebhookPlug.init(opts)
 
   @impl true
-  def call(%Plug.Conn{request_path: "/webhooks/stripe"} = conn, opts) do
+  def call(%Plug.Conn{request_path: "/webhook/stripe"} = conn, opts) do
     if Onestack.stripe_enabled?() do
       Stripe.WebhookPlug.call(conn, opts)
     else
