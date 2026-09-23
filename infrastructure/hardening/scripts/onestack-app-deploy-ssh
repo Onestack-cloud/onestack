@@ -189,6 +189,8 @@ def backup_allbids_database(sha):
         os.replace(pending, backup)
     finally:
         pending.unlink(missing_ok=True)
+        pathlib.Path(str(pending) + "-shm").unlink(missing_ok=True)
+        pathlib.Path(str(pending) + "-wal").unlink(missing_ok=True)
     return backup
 
 
