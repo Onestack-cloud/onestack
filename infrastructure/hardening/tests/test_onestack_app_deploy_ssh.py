@@ -2,7 +2,9 @@
 
 import importlib.machinery
 import importlib.util
+import os
 import pathlib
+import tempfile
 import unittest
 
 
@@ -51,6 +53,22 @@ class ClassifyTests(unittest.TestCase):
             deploy.classify("allbids", "onestack-deploy-check"),
             ("check", ["allbids"], None),
         )
+
+    def test_backup_retention_ignores_other_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = pathlib.Path(temporary)
+            for day in range(1, 5):
+                backup = directory / f"pre-{self.SHA}-202609{day:02d}T010000Z.db"
+                backup.touch()
+                os.utime(backup, (day, day))
+            unrelated = directory / "manual-backup.db"
+            unrelated.touch()
+
+            deploy.prune_allbids_backups(directory)
+
+            self.assertFalse((directory / f"pre-{self.SHA}-20260901T010000Z.db").exists())
+            self.assertEqual(len(list(directory.glob("pre-*.db"))), 3)
+            self.assertTrue(unrelated.exists())
 
 
 if __name__ == "__main__":

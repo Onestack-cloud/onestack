@@ -7,6 +7,7 @@ import os
 import pathlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,7 @@ ALLBIDS_PROJECT_ID = "b237189a-4660-43fe-954e-e1d458f07b81"
 ALLBIDS_TOKEN_FILE = pathlib.Path("/etc/onestack-allbids/infisical-token")
 ALLBIDS_RUNTIME_DIR = pathlib.Path("/run/onestack-allbids")
 ALLBIDS_BACKUP_DIR = pathlib.Path("/var/lib/onestack-deploy/allbids/backups")
+ALLBIDS_BACKUP_COUNT = 3
 
 
 def classify(scope, original):
@@ -158,6 +160,8 @@ def backup_allbids_database(sha):
     if not database.is_file():
         raise RuntimeError("AllBids database is missing")
     root_directory(ALLBIDS_BACKUP_DIR)
+    if shutil.disk_usage(ALLBIDS_BACKUP_DIR).free < database.stat().st_size + 10 * 1024**3:
+        raise RuntimeError("Not enough free space for an AllBids backup and safety margin")
     timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     backup = ALLBIDS_BACKUP_DIR / f"pre-{sha}-{timestamp}.db"
     pending = pathlib.Path(str(backup) + ".pending")
@@ -186,6 +190,22 @@ def backup_allbids_database(sha):
     finally:
         pending.unlink(missing_ok=True)
     return backup
+
+
+def prune_allbids_backups(directory=ALLBIDS_BACKUP_DIR):
+    """Retain the newest three backups made by this wrapper, never other backups."""
+    pattern = re.compile(r"pre-[0-9a-f]{40}-[0-9]{8}T[0-9]{6}Z\.db")
+    backups = sorted(
+        (
+            path
+            for path in directory.iterdir()
+            if pattern.fullmatch(path.name) and path.is_file() and not path.is_symlink()
+        ),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for old in backups[ALLBIDS_BACKUP_COUNT:]:
+        old.unlink()
 
 
 def verify_containers(containers):
@@ -236,6 +256,7 @@ def deploy_allbids(sha):
         timeout=240,
     )
     verify_containers(containers)
+    prune_allbids_backups()
     print(f"AllBids {sha} is healthy; verified pre-deploy backup: {backup}")
 
 
