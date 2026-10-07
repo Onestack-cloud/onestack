@@ -115,6 +115,37 @@ describe("usual-suspects-api when Loki does not enforce tenancy", () => {
   });
 });
 
+describe("usual-suspects-api probe edge cases", () => {
+  test("a 401 that is not Loki's missing tenant error does not count as enforced", async () => {
+    const loki = await startFakeLoki({ unauthorisedBody: "gateway says no\n" });
+    const api = await startService(script, { API_TOKEN: apiToken, LOKI_URL: loki.url });
+    try {
+      const response = await fetch(`${api.url}/usual-suspects-logs/loki/api/v1/query_range`, {
+        headers: { authorization: `Bearer ${apiToken}` },
+      });
+      assert.equal(response.status, 503);
+    } finally {
+      await api.stop();
+      await loki.close();
+    }
+  });
+
+  test("unknown paths are 404 without probing Loki", async () => {
+    const loki = await startFakeLoki({ requireTenant: false });
+    const api = await startService(script, { API_TOKEN: apiToken, LOKI_URL: loki.url });
+    try {
+      const response = await fetch(`${api.url}/usual-suspects-logs/loki/api/v1/labels`, {
+        headers: { authorization: `Bearer ${apiToken}` },
+      });
+      assert.equal(response.status, 404);
+      assert.equal(loki.requests.length, 0);
+    } finally {
+      await api.stop();
+      await loki.close();
+    }
+  });
+});
+
 describe("usual-suspects-api tenant configuration", () => {
   test("refuses to start with a multi-tenant LOKI_TENANT", async () => {
     const result = await runToExit(script, { API_TOKEN: apiToken, LOKI_TENANT: "usual-suspects|cloudflare-workers" });

@@ -60,13 +60,13 @@ Create `.env` from `.env.example`, then run:
 
 ```bash
 docker compose config
-docker compose up -d --build
-docker compose up -d --force-recreate loki grafana
+docker compose up -d --build --force-recreate
 ```
 
-`up -d --build` does not recreate a container when only a bind-mounted config
-file changed, so the last command makes Loki and Grafana pick up
-`loki/config.yml` and the datasource provisioning. Then check that
+`--force-recreate` matters: without it Compose keeps a container whose only
+change is a bind-mounted config file, so Loki and Grafana would not pick up
+`loki/config.yml` or the datasource provisioning. Recreating everything in one
+step also stops the new ingest from writing into the old single-tenant Loki. Then check that
 `/usual-suspects-logs/health` reports `"tenancyEnforced": true`.
 
 ## Cloudflare Logpush destination

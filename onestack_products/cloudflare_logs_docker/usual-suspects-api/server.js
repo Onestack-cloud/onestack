@@ -109,16 +109,24 @@ function buildQuery(searchParams) {
 }
 
 // The tenant header only isolates anything while Loki runs with auth_enabled.
-// Loki answers a read without X-Scope-OrgID with 401 in that mode, so anything
-// else (a stale container with the old config, an error) fails closed.
-async function lokiEnforcesTenancy() {
+// Loki answers a read without X-Scope-OrgID with 401 "no org id" in that mode,
+// so anything else (a stale container with the old config, an outage) fails
+// closed. Returns null when enforced, otherwise the reason it is not.
+async function tenancyProblem() {
   try {
     const nowNs = String(BigInt(Date.now()) * 1000000n);
-    const probe = await fetch(`${lokiBaseUrl}/loki/api/v1/labels?start=${nowNs}&end=${nowNs}`);
-    await probe.text();
-    return probe.status === 401;
-  } catch {
-    return false;
+    const probe = await fetch(`${lokiBaseUrl}/loki/api/v1/labels?start=${nowNs}&end=${nowNs}`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    const body = await probe.text();
+    if (probe.status === 401 && /no org id/i.test(body)) {
+      return null;
+    }
+    return probe.ok
+      ? "Loki accepted a read without X-Scope-OrgID (auth_enabled is off)"
+      : `Loki tenancy probe returned ${probe.status}`;
+  } catch (error) {
+    return `Loki tenancy probe failed: ${error.message}`;
   }
 }
 
@@ -176,6 +184,14 @@ async function proxyQuery(requestUrl, response) {
   await proxyToLoki("/loki/api/v1/query", params, response);
 }
 
+const routes = {
+  "/usual-suspects-logs/health": "health",
+  "/usual-suspects-logs/api/v1/query_range": "query_range",
+  "/usual-suspects-logs/loki/api/v1/query_range": "query_range",
+  "/usual-suspects-logs/api/v1/query": "query",
+  "/usual-suspects-logs/loki/api/v1/query": "query",
+};
+
 async function handle(request, response) {
   const requestUrl = new URL(request.url, "http://localhost");
 
@@ -194,12 +210,19 @@ async function handle(request, response) {
     return;
   }
 
-  const tenancyEnforced = await lokiEnforcesTenancy();
+  const route = routes[requestUrl.pathname];
+  if (!route) {
+    sendJson(response, 404, { error: "not_found" });
+    return;
+  }
 
-  if (requestUrl.pathname === "/usual-suspects-logs/health") {
-    sendJson(response, tenancyEnforced ? 200 : 503, {
-      ok: tenancyEnforced,
-      tenancyEnforced,
+  const problem = await tenancyProblem();
+
+  if (route === "health") {
+    sendJson(response, problem ? 503 : 200, {
+      ok: !problem,
+      tenancyEnforced: !problem,
+      ...(problem ? { problem } : {}),
       selector: baseSelector,
       tenant: lokiTenant,
       labelPlaceholder: "__USUAL_SUSPECTS_LABELS__",
@@ -210,29 +233,17 @@ async function handle(request, response) {
     return;
   }
 
-  if (!tenancyEnforced) {
-    console.error("Loki accepted a read without X-Scope-OrgID; refusing to proxy until auth_enabled is on");
+  if (problem) {
+    console.error(`Refusing to proxy: ${problem}`);
     sendJson(response, 503, { error: "loki_tenancy_not_enforced" });
     return;
   }
 
-  if (
-    requestUrl.pathname === "/usual-suspects-logs/api/v1/query_range" ||
-    requestUrl.pathname === "/usual-suspects-logs/loki/api/v1/query_range"
-  ) {
+  if (route === "query_range") {
     await proxyQueryRange(requestUrl, response);
-    return;
-  }
-
-  if (
-    requestUrl.pathname === "/usual-suspects-logs/api/v1/query" ||
-    requestUrl.pathname === "/usual-suspects-logs/loki/api/v1/query"
-  ) {
+  } else {
     await proxyQuery(requestUrl, response);
-    return;
   }
-
-  sendJson(response, 404, { error: "not_found" });
 }
 
 const server = http.createServer((request, response) => {

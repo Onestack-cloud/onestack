@@ -21,8 +21,9 @@ function freePort() {
 
 // Records every request so tests can assert on what the services send to Loki.
 // Like Loki with auth_enabled, it rejects reads without X-Scope-OrgID unless
-// requireTenant is false.
-async function startFakeLoki({ requireTenant = true } = {}) {
+// requireTenant is false. unauthorisedBody mimics a 401 from something other
+// than Loki's tenant check.
+async function startFakeLoki({ requireTenant = true, unauthorisedBody = "no org id\n" } = {}) {
   const requests = [];
   const server = http.createServer((request, response) => {
     const chunks = [];
@@ -36,7 +37,7 @@ async function startFakeLoki({ requireTenant = true } = {}) {
       });
       if (requireTenant && !request.headers["x-scope-orgid"]) {
         response.writeHead(401, { "content-type": "text/plain" });
-        response.end("no org id\n");
+        response.end(unauthorisedBody);
         return;
       }
       response.writeHead(request.method === "POST" ? 204 : 200, { "content-type": "application/json" });

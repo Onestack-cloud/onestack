@@ -171,6 +171,8 @@ describe("Loki tenant isolation (integration)", { skip: !enabled && "set LOKI_IN
   test("Loki rejects a read without a tenant", async () => {
     const response = await fetch(`${lokiUrl}/loki/api/v1/labels`);
     assert.equal(response.status, 401);
+    // The proxy's probe relies on this exact error.
+    assert.match(await response.text(), /no org id/);
   });
 
   for (const [name, { type, parses, query }] of Object.entries(bypassQueries)) {
