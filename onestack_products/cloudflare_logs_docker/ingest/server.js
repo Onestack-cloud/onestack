@@ -277,29 +277,26 @@ function convertRecordToStreams(record, streamsByTenant) {
 // the push. Retrying cannot help, so a 400 made only of those lines is logged
 // and treated as delivered; any other 400 still fails the batch.
 const permanentRejection = /entry too far behind|entry out of order|timestamp too (old|new)|Max entry size '\d+' bytes exceeded/;
-const rejectionSummary = /^user '[^']*', total ignored: (\d+) out of \d+ for stream/;
+const rejectionSummary = /^user '[^']*', total ignored: \d+ out of \d+ for stream/;
 
-// Loki lists at most ten rejected entries per stream, so the listed entries
-// must account for every entry it reports as ignored; otherwise some may have
-// been rejected for a reason that a retry would fix.
+// Every line must be a permanent rejection or Loki's per-stream summary, with
+// at least one rejection listed. Loki lists at most ten rejected entries per
+// stream, but the unlisted ones are final too: per-entry rejections in a 400
+// are all permanent, and rate limits come back as a 429 for the whole push.
 function onlyPermanentRejections(body) {
   const lines = body
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
   let listed = 0;
-  let ignored = 0;
   for (const line of lines) {
-    const summary = line.match(rejectionSummary);
-    if (summary) {
-      ignored += Number(summary[1]);
-    } else if (permanentRejection.test(line)) {
+    if (permanentRejection.test(line)) {
       listed += 1;
-    } else {
+    } else if (!rejectionSummary.test(line)) {
       return false;
     }
   }
-  return listed > 0 && listed === ignored;
+  return listed > 0;
 }
 
 async function pushToLoki(streamsByTenant) {

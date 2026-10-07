@@ -70,10 +70,18 @@ describe("ingest handling of Loki rejections", () => {
     });
   });
 
-  test("a rejection that lists fewer entries than Loki ignored still fails", async () => {
-    // Loki lists at most ten rejected entries per stream; the rest may have
-    // been rejected for a reason that a retry would fix.
+  test("a rejection listing fewer entries than Loki ignored is still final", async () => {
+    // Seen in production: Loki lists at most ten rejected entries per stream.
+    // Per-entry rejections in a 400 are all permanent (rate limits are a 429
+    // for the whole push), so the unlisted ones cannot succeed on retry either.
     const body = tooFarBehind.replace("total ignored: 1 out of 1", "total ignored: 12 out of 40");
+    await withIngest(() => ({ status: 400, body }), {}, async ({ ingest }) => {
+      assert.equal((await logpush(ingest, record("usual-suspects"))).status, 202);
+    });
+  });
+
+  test("a 400 with only a summary and no listed rejection still fails", async () => {
+    const body = "user 'usual-suspects', total ignored: 3 out of 3 for stream: {a=\"b\"}\n";
     await withIngest(() => ({ status: 400, body }), {}, async ({ ingest }) => {
       assert.equal((await logpush(ingest, record("usual-suspects"))).status, 502);
     });
