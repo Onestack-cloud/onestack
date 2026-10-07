@@ -10,3 +10,9 @@ datasources:
     editable: false
     jsonData:
       maxLines: 1000
+      httpHeaderName1: X-Scope-OrgID
+    secureJsonData:
+      # Admin view across every tenant. "fake" holds logs written before
+      # tenancy was enabled and can be dropped once retention (14 days) has
+      # expired them.
+      httpHeaderValue1: usual-suspects|cloudflare-workers|fake

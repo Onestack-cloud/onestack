@@ -20,6 +20,42 @@ if (!authToken) {
   process.exit(1);
 }
 
+const tenantIdPattern = /^[A-Za-z0-9_.-]{1,150}$/;
+
+// Maps exact Worker script names to the Loki tenant (X-Scope-OrgID) their logs
+// are written to, e.g. "usual-suspects=usual-suspects". Scripts without a
+// route go to the default tenant, which may not be a routed tenant, so an
+// unknown or look-alike script can never land in a restricted tenant.
+function parseTenantRouting(routesValue, defaultTenant) {
+  const routes = new Map();
+  for (const route of routesValue.split(",").map((value) => value.trim()).filter(Boolean)) {
+    const [scriptName, tenant, ...rest] = route.split("=").map((value) => value.trim());
+    if (!scriptName || !tenantIdPattern.test(tenant || "") || rest.length > 0) {
+      throw new Error(`LOKI_TENANT_BY_SCRIPT has an invalid route: ${route}`);
+    }
+    routes.set(scriptName, tenant);
+  }
+  if (!tenantIdPattern.test(defaultTenant) || [...routes.values()].includes(defaultTenant)) {
+    throw new Error("LOKI_DEFAULT_TENANT must be a single Loki tenant ID that no script is routed to");
+  }
+  return { routes, defaultTenant };
+}
+
+let tenantRouting;
+try {
+  tenantRouting = parseTenantRouting(
+    process.env.LOKI_TENANT_BY_SCRIPT || "",
+    process.env.LOKI_DEFAULT_TENANT ?? "cloudflare-workers",
+  );
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
+function tenantForScript(scriptName) {
+  return tenantRouting.routes.get(scriptName) ?? tenantRouting.defaultTenant;
+}
+
 function safeEquals(left, right) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
@@ -138,7 +174,11 @@ function extractRequestSummary(event) {
   };
 }
 
-function addValue(streams, labels, timestamp, line) {
+function addValue(streamsByTenant, tenant, labels, timestamp, line) {
+  if (!streamsByTenant.has(tenant)) {
+    streamsByTenant.set(tenant, new Map());
+  }
+  const streams = streamsByTenant.get(tenant);
   const key = JSON.stringify(labels);
   const existing = streams.get(key);
   if (existing) {
@@ -152,11 +192,13 @@ function shouldAcceptScript(scriptName) {
   return allowedScriptNames.size === 0 || allowedScriptNames.has(scriptName);
 }
 
-function convertRecordToStreams(record, streams) {
+function convertRecordToStreams(record, streamsByTenant) {
   const scriptName = record.ScriptName || record.scriptName || "unknown";
   if (!shouldAcceptScript(scriptName)) {
     return { accepted: 0, filtered: 1 };
   }
+
+  const tenant = tenantForScript(scriptName);
 
   const baseLabels = {
     source: "cloudflare-workers",
@@ -185,7 +227,8 @@ function convertRecordToStreams(record, streams) {
     scriptVersion: safeRecord.ScriptVersion,
   });
   addValue(
-    streams,
+    streamsByTenant,
+    tenant,
     { ...baseLabels, kind: "invocation", responseStatus: labelValue(requestSummary.responseStatus) },
     baseTimestamp,
     invocationLine,
@@ -204,7 +247,8 @@ function convertRecordToStreams(record, streams) {
       event: safeEvent,
     });
     addValue(
-      streams,
+      streamsByTenant,
+      tenant,
       {
         ...baseLabels,
         kind: "console",
@@ -226,7 +270,8 @@ function convertRecordToStreams(record, streams) {
       event: safeEvent,
     });
     addValue(
-      streams,
+      streamsByTenant,
+      tenant,
       { ...baseLabels, kind: "exception", level: "error", responseStatus: labelValue(requestSummary.responseStatus) },
       timestampNs(exception.timestamp || exception.Timestamp || record.EventTimestampMs),
       line,
@@ -237,20 +282,18 @@ function convertRecordToStreams(record, streams) {
   return { accepted, filtered: 0 };
 }
 
-async function pushToLoki(streams) {
-  if (streams.size === 0) {
-    return;
-  }
+async function pushToLoki(streamsByTenant) {
+  for (const [tenant, streams] of streamsByTenant) {
+    const response = await fetch(lokiUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Scope-OrgID": tenant },
+      body: JSON.stringify({ streams: [...streams.values()] }),
+    });
 
-  const response = await fetch(lokiUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ streams: [...streams.values()] }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`loki push failed: ${response.status} ${body}`);
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`loki push failed for tenant ${tenant}: ${response.status} ${body}`);
+    }
   }
 }
 
@@ -264,7 +307,7 @@ async function handleLogpush(request, response) {
   const body = await collectRequestBody(request);
   const text = decodePayload(body, request);
   const records = parsePayload(text);
-  const streams = new Map();
+  const streamsByTenant = new Map();
   let accepted = 0;
   let filtered = 0;
 
@@ -272,12 +315,12 @@ async function handleLogpush(request, response) {
     if (record && record.content === "tests" && Object.keys(record).length === 1) {
       continue;
     }
-    const result = convertRecordToStreams(record, streams);
+    const result = convertRecordToStreams(record, streamsByTenant);
     accepted += result.accepted;
     filtered += result.filtered;
   }
 
-  await pushToLoki(streams);
+  await pushToLoki(streamsByTenant);
 
   response.writeHead(202, { "content-type": "application/json" });
   response.end(JSON.stringify({ accepted, filtered, records: records.length }) + "\n");

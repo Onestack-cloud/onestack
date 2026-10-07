@@ -1,4 +1,7 @@
-auth_enabled: false
+# Every request needs an X-Scope-OrgID tenant. Usual Suspects logs live in
+# the "usual-suspects" tenant and the usual-suspects-api proxy can only read
+# that tenant, whatever LogQL it is sent.
+auth_enabled: true
 
 server:
   http_listen_port: 3100
@@ -32,6 +35,11 @@ compactor:
   working_directory: /loki/compactor
   retention_enabled: true
   delete_request_store: filesystem
+
+querier:
+  # Lets the admin Grafana datasource read several tenants with
+  # "tenant-a|tenant-b". Services that must stay in one tenant reject "|".
+  multi_tenant_queries_enabled: true
 
 analytics:
   reporting_enabled: false

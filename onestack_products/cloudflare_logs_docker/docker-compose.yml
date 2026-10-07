@@ -70,6 +70,8 @@ services:
       AUTH_TOKEN: "${INGEST_BEARER_TOKEN}"
       LOKI_URL: "http://loki:3100/loki/api/v1/push"
       ALLOWED_SCRIPT_NAMES: "${ALLOWED_SCRIPT_NAMES}"
+      LOKI_TENANT_BY_SCRIPT: "usual-suspects=usual-suspects,usual-suspects-production=usual-suspects"
+      LOKI_DEFAULT_TENANT: "cloudflare-workers"
       MAX_BODY_BYTES: "25000000"
     networks:
       - cloudflare_logs_internal
@@ -104,6 +106,7 @@ services:
       PORT: "8081"
       API_TOKEN: "${USUAL_SUSPECTS_LOGS_API_TOKEN}"
       LOKI_URL: "http://loki:3100"
+      LOKI_TENANT: "usual-suspects"
       MAX_LIMIT: "5000"
       LOGQL_SELECTOR: "{source=~\"cloudflare-workers|cloudflare-workers-backfill-full\
         \",scriptName=~\"usual-suspects|usual-suspects-production\"}"

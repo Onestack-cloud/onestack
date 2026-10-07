@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
+import { pathToFileURL } from "node:url";
+
 const API_BASE = "https://api.cloudflare.com/client/v4";
 const DEFAULT_ACCOUNT_ID = "663b85e4f509df63c1735f6e77db4370";
 const DEFAULT_SCRIPT_NAMES = ["usual-suspects", "usual-suspects-production"];
 const DEFAULT_LOKI_URL = "http://loki:3100/loki/api/v1/push";
+const DEFAULT_TENANT_BY_SCRIPT = DEFAULT_SCRIPT_NAMES.map((name) => `${name}=usual-suspects`).join(",");
+const TENANT_ID_PATTERN = /^[A-Za-z0-9_.-]{1,150}$/;
 const MAX_LIMIT = 2000;
 
 function parseArgs(argv) {
@@ -23,6 +27,10 @@ function parseArgs(argv) {
     datasets: [],
     sourceLabel: process.env.BACKFILL_SOURCE_LABEL || "cloudflare-workers-backfill",
     pageSleepMs: 250,
+    tenantRouting: parseTenantRouting(
+      process.env.LOKI_TENANT_BY_SCRIPT ?? DEFAULT_TENANT_BY_SCRIPT,
+      process.env.LOKI_DEFAULT_TENANT ?? "cloudflare-workers",
+    ),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -85,6 +93,24 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+// Same routing rules as the ingest service: exact script names map to a Loki
+// tenant and everything else goes to a default tenant that no script is routed
+// to, so backfilled logs land in the same tenant as live ones.
+export function parseTenantRouting(routesValue, defaultTenant) {
+  const routes = new Map();
+  for (const route of routesValue.split(",").map((value) => value.trim()).filter(Boolean)) {
+    const [scriptName, tenant, ...rest] = route.split("=").map((value) => value.trim());
+    if (!scriptName || !TENANT_ID_PATTERN.test(tenant || "") || rest.length > 0) {
+      throw new Error(`LOKI_TENANT_BY_SCRIPT has an invalid route: ${route}`);
+    }
+    routes.set(scriptName, tenant);
+  }
+  if (!TENANT_ID_PATTERN.test(defaultTenant) || [...routes.values()].includes(defaultTenant)) {
+    throw new Error("LOKI_DEFAULT_TENANT must be a single Loki tenant ID that no script is routed to");
+  }
+  return { routes, defaultTenant };
 }
 
 function parseTime(value, flag) {
@@ -341,21 +367,29 @@ function groupForLoki(entries) {
   return [...streams.values()];
 }
 
-async function pushToLoki(options, entries) {
+export async function pushToLoki(options, entries) {
   if (entries.length === 0 || options.dryRun) {
     return;
   }
 
-  const streams = groupForLoki(entries);
-  const response = await fetch(options.lokiUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ streams }),
-  });
+  const { routes, defaultTenant } = options.tenantRouting;
+  const entriesByTenant = new Map();
+  for (const entry of entries) {
+    const tenant = routes.get(entry.scriptName) ?? defaultTenant;
+    entriesByTenant.set(tenant, [...(entriesByTenant.get(tenant) || []), entry]);
+  }
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Loki push failed ${response.status}: ${body.slice(0, 1000)}`);
+  for (const [tenant, tenantEntries] of entriesByTenant) {
+    const response = await fetch(options.lokiUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Scope-OrgID": tenant },
+      body: JSON.stringify({ streams: groupForLoki(tenantEntries) }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Loki push failed for tenant ${tenant} ${response.status}: ${body.slice(0, 1000)}`);
+    }
   }
 }
 
@@ -473,7 +507,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

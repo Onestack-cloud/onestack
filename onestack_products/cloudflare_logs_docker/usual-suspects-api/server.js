@@ -12,9 +12,17 @@ const baseSelector =
   process.env.LOGQL_SELECTOR ||
   '{source=~"cloudflare-workers|cloudflare-workers-backfill-full",scriptName=~"usual-suspects|usual-suspects-production"}';
 const baseLabels = baseSelector.replace(/^\{|\}$/g, "");
+// Loki tenant that holds only Usual Suspects logs. Isolation comes from this
+// header, so it must name exactly one tenant ("|" would make it multi-tenant).
+const lokiTenant = process.env.LOKI_TENANT ?? "usual-suspects";
 
 if (!apiToken) {
   console.error("API_TOKEN is required");
+  process.exit(1);
+}
+
+if (!/^[A-Za-z0-9_.-]{1,150}$/.test(lokiTenant)) {
+  console.error("LOKI_TENANT must be a single Loki tenant ID (letters, digits, '_', '.', '-')");
   process.exit(1);
 }
 
@@ -61,43 +69,6 @@ function appendLineFilters(query, searchParams) {
   return `${query} |~ ${JSON.stringify(grep)}`;
 }
 
-function compactQuery(value) {
-  return value.replace(/\s+/g, "");
-}
-
-function extractLogqlSelectors(query) {
-  const selectors = [];
-  let inString = false;
-  let escaped = false;
-  let selectorStart = -1;
-
-  for (let index = 0; index < query.length; index += 1) {
-    const character = query[index];
-
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (character === "\\") {
-        escaped = true;
-      } else if (character === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (character === "\"") {
-      inString = true;
-    } else if (character === "{" && selectorStart === -1) {
-      selectorStart = index + 1;
-    } else if (character === "}" && selectorStart !== -1) {
-      selectors.push(query.slice(selectorStart, index));
-      selectorStart = -1;
-    }
-  }
-
-  return selectors;
-}
-
 function materializeDashboardQuery(searchParams) {
   const incomingQuery = searchParams.get("query");
   if (!incomingQuery) {
@@ -108,17 +79,11 @@ function materializeDashboardQuery(searchParams) {
     return null;
   }
 
-  const query = incomingQuery
+  // No query text checks here: every request is pinned to lokiTenant, so a
+  // query can only ever read the Usual Suspects tenant.
+  return incomingQuery
     .replaceAll("__USUAL_SUSPECTS_SELECTOR__", baseSelector)
     .replaceAll("__USUAL_SUSPECTS_LABELS__", baseLabels);
-
-  const compactBaseLabels = compactQuery(baseLabels);
-  const selectors = extractLogqlSelectors(query).map(compactQuery);
-  if (selectors.length === 0 || selectors.some((selector) => !selector.includes(compactBaseLabels))) {
-    throw new Error("query must use only the Usual Suspects log selector");
-  }
-
-  return query;
 }
 
 function buildSelector(searchParams) {
@@ -143,6 +108,19 @@ function buildQuery(searchParams) {
   return materializeDashboardQuery(searchParams) || appendLineFilters(buildSelector(searchParams), searchParams);
 }
 
+// Never forwards caller headers: the tenant is always lokiTenant.
+async function proxyToLoki(path, params, response) {
+  const lokiResponse = await fetch(`${lokiBaseUrl}${path}?${params.toString()}`, {
+    headers: { "X-Scope-OrgID": lokiTenant },
+  });
+  const text = await lokiResponse.text();
+  response.writeHead(lokiResponse.status, {
+    "content-type": lokiResponse.headers.get("content-type") || "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  response.end(text);
+}
+
 async function proxyQueryRange(requestUrl, response) {
   const now = Date.now();
   const start = parseTimeNs(requestUrl.searchParams.get("start") || requestUrl.searchParams.get("from"), now - 24 * 60 * 60 * 1000);
@@ -163,13 +141,7 @@ async function proxyQueryRange(requestUrl, response) {
     params.set("step", step);
   }
 
-  const lokiResponse = await fetch(`${lokiBaseUrl}/loki/api/v1/query_range?${params.toString()}`);
-  const text = await lokiResponse.text();
-  response.writeHead(lokiResponse.status, {
-    "content-type": lokiResponse.headers.get("content-type") || "application/json; charset=utf-8",
-    "cache-control": "no-store",
-  });
-  response.end(text);
+  await proxyToLoki("/loki/api/v1/query_range", params, response);
 }
 
 async function proxyQuery(requestUrl, response) {
@@ -187,13 +159,7 @@ async function proxyQuery(requestUrl, response) {
     params.set("time", time);
   }
 
-  const lokiResponse = await fetch(`${lokiBaseUrl}/loki/api/v1/query?${params.toString()}`);
-  const text = await lokiResponse.text();
-  response.writeHead(lokiResponse.status, {
-    "content-type": lokiResponse.headers.get("content-type") || "application/json; charset=utf-8",
-    "cache-control": "no-store",
-  });
-  response.end(text);
+  await proxyToLoki("/loki/api/v1/query", params, response);
 }
 
 async function handle(request, response) {
@@ -218,6 +184,7 @@ async function handle(request, response) {
     sendJson(response, 200, {
       ok: true,
       selector: baseSelector,
+      tenant: lokiTenant,
       labelPlaceholder: "__USUAL_SUSPECTS_LABELS__",
       selectorPlaceholder: "__USUAL_SUSPECTS_SELECTOR__",
       defaultLimit,
