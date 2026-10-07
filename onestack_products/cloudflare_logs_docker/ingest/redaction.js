@@ -12,7 +12,12 @@ const MAX_DEPTH = 64;
 
 // Object keys and query parameter names whose values are credentials.
 const sensitiveKeyPattern =
-  /authori[sz]ation|^auth$|[-_]auth$|cookie|passw(or)?d|^pwd$|secret|token|api[-_]?key|jwt|session|private[-_]?key|credential|signature|^sig$|^otp$|auth[-_]?code/i;
+  /authori[sz]ation|^auth$|[-_]auth$|cookie|passw(or)?d|^pwd$|secret|token|api[-_]?key|jwt|session|private[-_]?key|credential|signature|^sig$|^otp$|^pin$|auth[-_]?code/i;
+// Numbers under a sensitive key stay visible only when the key names a
+// counter, size or duration (tokenCount, sessionTtl), not an OTP or PIN.
+const counterKeyPattern = /count|total|length|size|ttl|expir|attempts/i;
+// A bare credential name, as in console.log("authorization", value).
+const namePattern = /^[A-Za-z0-9_.-]{1,64}$/;
 // Query parameters only: OAuth and one-time codes (without catching
 // country_code, status_code or postcode) and bare API "key" parameters.
 const sensitiveParamPattern = /^(key|code|.*(auth|otp|verification|reset|access|refresh)[-_]?code)$/i;
@@ -20,6 +25,11 @@ const sensitiveParamPattern = /^(key|code|.*(auth|otp|verification|reset|access|
 // The scheme length is bounded to keep matching linear.
 const urlPattern = /\b[a-z][a-z0-9+.-]{0,31}:\/\/[^\s"'<>]+/gi;
 const trailingPunctuation = new Set([")", ".", ",", ";", ":", "!", "?", "]"]);
+// Free text: "Bearer <token>" and "password=..." or "token: ...". The
+// lookbehind makes a name start only at a word boundary, keeping this linear.
+// Credentials are at least eight characters, so "Basic plan" is left alone.
+const schemeCredentialPattern = /\b([Bb]earer|[Bb]asic)\s+[A-Za-z0-9._~+/=-]{8,}/g;
+const textPairPattern = /(?<![A-Za-z0-9_.-])([A-Za-z0-9_.-]{1,64})(\s*[:=]\s*)([^\s,;&"']+)/g;
 
 function isSensitiveKey(key) {
   return sensitiveKeyPattern.test(key);
@@ -75,7 +85,12 @@ function redactString(value, depth) {
       }
     }
   }
-  return value.replace(urlPattern, redactUrlText);
+  return value
+    .replace(urlPattern, redactUrlText)
+    .replace(schemeCredentialPattern, `$1 ${REDACTED}`)
+    .replace(textPairPattern, (match, name, separator, secret) =>
+      isSensitiveKey(name) && !secret.startsWith(REDACTED) ? `${name}${separator}${REDACTED}` : match,
+    );
 }
 
 function isPair(value) {
@@ -88,9 +103,11 @@ function redactValue(value, depth) {
   }
 
   if (Array.isArray(value)) {
-    // Header lists such as [["authorization", "Bearer ..."], ...]. Only lists
-    // made entirely of pairs count, so console.log("Session expired", id) is
-    // left alone.
+    if (value.length === 2 && typeof value[0] === "string" && namePattern.test(value[0]) && isSensitiveKey(value[0])) {
+      return [value[0], REDACTED];
+    }
+    // Header lists such as [["authorization", "Bearer ..."], ...]. Only bare
+    // names count, so console.log("Session expired", id) is left alone.
     if (value.length > 0 && value.every(isPair)) {
       return value.map(([name, nested]) => [
         name,
@@ -106,8 +123,13 @@ function redactValue(value, depth) {
     return Object.fromEntries(
       Object.entries(value).map(([key, nested]) => {
         const hides = (sensitiveNameValue && key === "value") || isSensitiveKey(key);
-        // Numbers and flags such as tokenCount or passwordResetSent stay visible.
-        if (hides && (typeof nested === "string" || (nested && typeof nested === "object"))) {
+        // Flags (passwordResetSent) and counters (tokenCount) stay visible.
+        const visible =
+          nested === null ||
+          nested === undefined ||
+          typeof nested === "boolean" ||
+          (typeof nested === "number" && counterKeyPattern.test(key));
+        if (hides && !visible) {
           return [key, REDACTED];
         }
         return [key, redactValue(nested, depth + 1)];

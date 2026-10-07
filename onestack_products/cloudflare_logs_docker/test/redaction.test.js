@@ -139,3 +139,36 @@ describe("redaction edge cases from review", () => {
     assert.equal(output.code, "ERR_TIMEOUT");
   });
 });
+
+describe("redaction follow-up from the security scan", () => {
+  test("numeric secrets are hidden while counters and flags stay visible", () => {
+    const output = redact({ otp: 123456, pin: 4321, apiKey: 998877, tokenCount: 3, sessionTtl: 900, passwordResetSent: true });
+    assertHidden(output, "123456");
+    assertHidden(output, "998877");
+    assert.equal(output.tokenCount, 3);
+    assert.equal(output.sessionTtl, 900);
+    assert.equal(output.passwordResetSent, true);
+  });
+
+  test("a credential name followed by its value in console arguments", () => {
+    assertHidden(normalizeMessage(["authorization", "Bearer ARG1"]), "ARG1");
+    assertHidden(normalizeMessage(["x-api-key", "ARG2"]), "ARG2");
+  });
+
+  test("Bearer and Basic credentials and key=value secrets in free text", () => {
+    const output = redact(
+      "auth header was Bearer FREE1abcdefgh then Basic FREE2abcdefgh== and password=FREE3, token: FREE4; user=sam",
+    );
+    for (const secret of ["FREE1", "FREE2", "FREE3", "FREE4"]) {
+      assertHidden(output, secret);
+    }
+    assert.match(output, /user=sam/);
+    assert.equal(redact("Error: token expired on the Basic plan"), "Error: token expired on the Basic plan");
+  });
+
+  test("free text rules stay linear", () => {
+    const started = process.hrtime.bigint();
+    redact(`${"a".repeat(200000)} ${"Bearer ".repeat(20000)} ${"x=".repeat(50000)}`);
+    assert.ok(Number(process.hrtime.bigint() - started) / 1e6 < 500);
+  });
+});
