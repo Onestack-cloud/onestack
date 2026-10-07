@@ -6,6 +6,7 @@ const baseUrl = process.env.GRAFANA_URL || "http://grafana:3000";
 const adminUser = process.env.GRAFANA_ADMIN_USER;
 const adminPassword = process.env.GRAFANA_ADMIN_PASSWORD;
 const filteredApiToken = process.env.USUAL_SUSPECTS_LOGS_API_TOKEN;
+const usualSuspectsApiUrl = process.env.USUAL_SUSPECTS_API_URL || "http://usual-suspects-api:8081/usual-suspects-logs";
 
 const orgName = "Usual Suspects Logs";
 const orgSlug = "usual-suspects-logs";
@@ -121,7 +122,7 @@ async function upsertDatasource(orgId) {
     uid: datasourceUid,
     type: "loki",
     access: "proxy",
-    url: "http://usual-suspects-api:8081/usual-suspects-logs",
+    url: usualSuspectsApiUrl,
     isDefault: true,
     editable: false,
     jsonData: {
