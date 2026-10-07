@@ -57,6 +57,16 @@ describe("backfill tenant routing", () => {
     assert.deepEqual(Object.keys(byTenant).sort(), ["cloudflare-workers", "usual-suspects"]);
   });
 
+  test("redacts sensitive query parameters, including signed URL parts", () => {
+    const redacted = backfill.redactUrl(
+      "GET https://x.example/cb?code=C1&state=keep&X-Amz-Signature=S1&X-Amz-Credential=K1&access_token=T1",
+    );
+    for (const secret of ["C1", "S1", "K1", "T1"]) {
+      assert.ok(!redacted.includes(`=${secret}`), `${secret} survived: ${redacted}`);
+    }
+    assert.match(redacted, /state=keep/);
+  });
+
   test("rejects routes that would write to several tenants at once", () => {
     assert.throws(() => backfill.parseTenantRouting("usual-suspects=a|b", "cloudflare-workers"), /LOKI_TENANT_BY_SCRIPT/);
     assert.throws(() => backfill.parseTenantRouting("usual-suspects=usual-suspects", "x|y"), /LOKI_DEFAULT_TENANT/);

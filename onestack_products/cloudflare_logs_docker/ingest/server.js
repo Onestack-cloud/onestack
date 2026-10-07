@@ -122,6 +122,28 @@ function parsePayload(text) {
     .map((line) => JSON.parse(line));
 }
 
+const sensitiveKeyPattern = /authorization|cookie|password|secret|token|api[-_]?key/i;
+// Query parameters that carry credentials: the keys above plus OAuth codes and
+// signed URL parts such as X-Amz-Signature and X-Amz-Credential.
+const sensitiveParamPattern = /authorization|cookie|password|secret|token|api[-_]?key|code|signature|credential/i;
+
+// Redacts sensitive query parameter values in every URL found in a string.
+function redactUrl(value) {
+  return value.replace(/https?:\/\/[^\s"'<>]+/g, (candidate) => {
+    try {
+      const url = new URL(candidate);
+      for (const key of [...url.searchParams.keys()]) {
+        if (sensitiveParamPattern.test(key)) {
+          url.searchParams.set(key, "[redacted]");
+        }
+      }
+      return url.toString();
+    } catch {
+      return candidate;
+    }
+  });
+}
+
 function redact(value) {
   if (Array.isArray(value)) {
     return value.map(redact);
@@ -130,12 +152,16 @@ function redact(value) {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, nested]) => {
-        if (/authorization|cookie|password|secret|token|api[-_]?key/i.test(key)) {
+        if (sensitiveKeyPattern.test(key)) {
           return [key, "[redacted]"];
         }
         return [key, redact(nested)];
       }),
     );
+  }
+
+  if (typeof value === "string") {
+    return redactUrl(value);
   }
 
   return value;
@@ -241,7 +267,7 @@ function convertRecordToStreams(record, streamsByTenant) {
       kind: "console",
       level,
       scriptName,
-      message: normalizeMessage(log.message || log.Message || ""),
+      message: normalizeMessage(redact(log.message || log.Message || "")),
       ...requestSummary,
       log: redact(log),
       event: safeEvent,
@@ -306,7 +332,13 @@ async function handleLogpush(request, response) {
 
   const body = await collectRequestBody(request);
   const text = decodePayload(body, request);
-  const records = parsePayload(text);
+  let records;
+  try {
+    records = parsePayload(text);
+  } catch {
+    // JSON.parse errors quote part of the payload, which may hold secrets.
+    throw new Error("invalid JSON payload");
+  }
   const streamsByTenant = new Map();
   let accepted = 0;
   let filtered = 0;

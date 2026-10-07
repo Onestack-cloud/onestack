@@ -14,6 +14,7 @@ const secrets = {
   messageToken: "MESSAGE_TOKEN_5c2e",
   apiKey: "API_KEY_d04f",
   nestedSecret: "NESTED_SECRET_88aa",
+  signedUrl: "AMZ_SIGNATURE_3e1c",
 };
 
 function logpushRecord() {
@@ -34,6 +35,11 @@ function logpushRecord() {
       { Level: "log", Message: ["login attempt", { user: "sam", password: secrets.password }], TimestampMs: now },
       { Level: "log", Message: [`calling https://api.example/v1/items?access_token=${secrets.messageToken}`], TimestampMs: now },
       { Level: "log", Message: [{ request: { headers: { "x-client-secret": secrets.nestedSecret } } }], TimestampMs: now },
+      {
+        Level: "log",
+        Message: [`uploading to https://bucket.example/obj?X-Amz-Credential=AKIA&X-Amz-Signature=${secrets.signedUrl}`],
+        TimestampMs: now,
+      },
     ],
     Exceptions: [
       { Name: "Error", Message: `fetch https://api.example/v1/x?api_key=${secrets.apiKey} failed`, TimestampMs: now },

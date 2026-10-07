@@ -11,8 +11,16 @@ https://logs.onestack.cloud/cloudflare-logpush
 ```
 
 Traefik routes that path to the ingest adapter. The adapter validates the
-`Authorization: Bearer ...` header, redacts sensitive keys, filters allowed
-Worker script names and writes to Loki. Grafana is exposed on the same host.
+`Authorization: Bearer ...` header, filters allowed Worker script names, redacts
+secrets and writes to Loki. Grafana is exposed on the same host.
+
+Redaction replaces the values of sensitive keys (authorisation, cookies,
+passwords, secrets, tokens and API keys) anywhere in a record, including inside
+`console.log` arguments, and the values of sensitive query parameters (the same
+names plus OAuth `code` and signed URL `signature` and `credential` parts) in
+any URL inside a string. Free text without a URL or key is stored as logged, so
+Workers must not log secrets in plain messages. Malformed payloads are rejected
+without quoting them back.
 
 ## Tenant isolation
 

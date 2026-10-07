@@ -143,7 +143,7 @@ function authHeaders() {
   throw new Error("Missing Cloudflare auth. Set CLOUDFLARE_API_TOKEN or CF_API_EMAIL + CF_API_KEY.");
 }
 
-function redactUrl(value) {
+export function redactUrl(value) {
   if (typeof value !== "string") {
     return value;
   }
@@ -152,7 +152,8 @@ function redactUrl(value) {
     try {
       const url = new URL(candidate);
       for (const key of [...url.searchParams.keys()]) {
-        if (/authorization|cookie|password|secret|token|api[-_]?key|code/i.test(key)) {
+        // Includes OAuth codes and signed URL parts (X-Amz-Signature, X-Amz-Credential).
+        if (/authorization|cookie|password|secret|token|api[-_]?key|code|signature|credential/i.test(key)) {
           url.searchParams.set(key, "[redacted]");
         }
       }
