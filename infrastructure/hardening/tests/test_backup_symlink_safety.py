@@ -112,6 +112,12 @@ class SqliteSnapshotTests(Fixture):
         self.assertEqual(manifest['sqlite_exports'], [])
         self.assertEqual(self.staged_files(), [])
 
+    def test_file_level_exclusion_skips_only_that_database(self):
+        make_sqlite(self.volume / 'keep.db')
+        make_sqlite(self.volume / 'nested/old-copy.db')
+        excluded = [str(self.volume / 'nested/old-copy.db')]
+        self.assertEqual(self.snapshot(excluded), [str(self.volume / 'keep.db')])
+
     def test_symlink_swapped_in_while_sqlite_opens_is_detected_and_discarded(self):
         make_sqlite(self.volume / 'app.db')
         original = backup.backup_sqlite

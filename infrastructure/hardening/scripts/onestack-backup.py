@@ -658,7 +658,7 @@ def snapshot_sqlite(containers, stage, manifest, exclude_paths=()):
         for directory, dirnames, filenames, dir_fd in os.fwalk(real_root, follow_symlinks=False):
             dirnames[:] = [d for d in dirnames if not within_any(os.path.join(directory, d), excluded)]
             for name in sorted(filenames):
-                if not name.endswith(SQLITE_SUFFIXES):
+                if not name.endswith(SQLITE_SUFFIXES) or within_any(os.path.join(directory, name), excluded):
                     continue
                 header = read_header(name, 16, dir_fd)
                 if header is None or header[0] != SQLITE_HEADER:

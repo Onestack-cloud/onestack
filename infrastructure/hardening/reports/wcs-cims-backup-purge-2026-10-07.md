@@ -62,6 +62,18 @@ This change also hardens how the root backup handles container- and guest-contro
 - the guest root is mounted `ro,noload,nosuid,nodev,noexec`;
 - rsync no longer recreates guest device nodes or FIFOs.
 
+Before deploying, check the VPS SQLite version and run the symlink tests there once. They need only Python and `sqlite3`, not Borg, and they create and remove their own temporary files:
+
+```sh
+ssh onestack-admin 'python3 -c "import sqlite3, sys; print(sys.version.split()[0], sqlite3.sqlite_version)"'
+scp -r infrastructure/hardening/scripts infrastructure/hardening/tests onestack-admin:/root/onestack-backup-tests/
+ssh onestack-admin 'cd /root/onestack-backup-tests && python3 -m unittest tests.test_backup_symlink_safety tests.test_sqlite_backup; rm -rf /root/onestack-backup-tests'
+```
+
+All tests must pass. In particular, `test_symlinked_wal_sidecar_is_refused` depends on that SQLite version refusing symlinked `-wal` and `-shm` files, which SQLite 3.51 and 3.53 do locally. If a test fails, do not deploy; report the output.
+
+**One deliberate behaviour change.** If a container replaces a SQLite database file while the backup is copying it, the backup now discards that copy and fails the run instead of archiving whatever was opened. A one-off failure of this kind is safe to retry. A repeated one points at a container that swaps its database files, or at a symlink planted in a volume, and needs investigating.
+
 Watch the next scheduled run (00:00 or 12:00 UTC), or start one:
 
 ```sh
@@ -248,19 +260,17 @@ Borg builds each replacement as `<name>.recreate` and only removes the original 
 borg list --consider-checkpoints --format '{archive}{NL}' | grep '\.recreate$'
 ```
 
-For each name printed, check the original:
+Every leftover `<name>.recreate` must be deleted before the rerun, whatever state the original is in. Borg aborts on any existing `.recreate` archive, so keeping one blocks the rerun. Optionally, first check whether the original still holds CIMS paths, for the record:
 
 ```sh
 borg list --format '{path}{NL}' --patterns-from "$WORK/cims-only.patterns" "::<name>"
 ```
 
-- **If it still lists CIMS paths**, the replacement was not finished. Delete it:
+Then delete the leftover (required):
 
-  ```sh
-  borg delete "::<name>.recreate"
-  ```
-
-- **If the original lists nothing**, the original was already replaced. Inspect the leftover before deleting it.
+```sh
+borg delete "::<name>.recreate"
+```
 
 Then rerun the full command. It processes every archive again, which is harmless for those already clean.
 
@@ -326,7 +336,7 @@ while IFS= read -r a; do
 done < "$WORK/names.txt" | tee "$WORK/remaining-after.txt"
 
 borg check --lock-wait 600 2>&1 | tee "$WORK/check.txt"
-borg extract --stdout "::$(grep -E '^onestack-[0-9]{4}-' "$WORK/names.txt" | tail -n 1)" etc/hostname
+borg extract --stdout "::$(grep -E '^onestack-[0-9]{4}-' "$WORK/names.txt" | grep -v '\.checkpoint$' | tail -n 1)" etc/hostname
 ```
 
 Expected results:
