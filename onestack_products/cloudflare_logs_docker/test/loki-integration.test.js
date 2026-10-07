@@ -196,6 +196,20 @@ describe("Loki tenant isolation (integration)", { skip: !enabled && "set LOKI_IN
     }
   }
 
+  test("a late Logpush entry Loki refuses does not make the batch fail", async () => {
+    const send = (timestamp) =>
+      fetch(`${ingest.url}/cloudflare-logpush`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${ingestToken}` },
+        body: JSON.stringify({ ScriptName: "usual-suspects", Outcome: "canceled", EventType: "fetch", EventTimestampMs: timestamp }),
+      });
+    assert.equal((await send(Date.now())).status, 202);
+    // Four hours behind the stream's newest entry: Loki 3.7 rejects it as
+    // "entry too far behind" and a retry can never succeed.
+    const late = await send(Date.now() - 4 * 60 * 60 * 1000);
+    assert.equal(late.status, 202, await late.text());
+  });
+
   test("the admin multi-tenant header still sees every tenant", async () => {
     const params = new URLSearchParams({ query: '{source=~".+"}', limit: "1000" });
     const response = await fetch(`${lokiUrl}/loki/api/v1/query_range?${params}`, {
