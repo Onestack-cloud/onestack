@@ -21,7 +21,7 @@ if (!apiToken) {
   process.exit(1);
 }
 
-if (!/^[A-Za-z0-9_.-]{1,150}$/.test(lokiTenant)) {
+if (!/^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,150}$/.test(lokiTenant)) {
   console.error("LOKI_TENANT must be a single Loki tenant ID (letters, digits, '_', '.', '-')");
   process.exit(1);
 }
@@ -108,6 +108,20 @@ function buildQuery(searchParams) {
   return materializeDashboardQuery(searchParams) || appendLineFilters(buildSelector(searchParams), searchParams);
 }
 
+// The tenant header only isolates anything while Loki runs with auth_enabled.
+// Loki answers a read without X-Scope-OrgID with 401 in that mode, so anything
+// else (a stale container with the old config, an error) fails closed.
+async function lokiEnforcesTenancy() {
+  try {
+    const nowNs = String(BigInt(Date.now()) * 1000000n);
+    const probe = await fetch(`${lokiBaseUrl}/loki/api/v1/labels?start=${nowNs}&end=${nowNs}`);
+    await probe.text();
+    return probe.status === 401;
+  } catch {
+    return false;
+  }
+}
+
 // Never forwards caller headers: the tenant is always lokiTenant.
 async function proxyToLoki(path, params, response) {
   const lokiResponse = await fetch(`${lokiBaseUrl}${path}?${params.toString()}`, {
@@ -180,9 +194,12 @@ async function handle(request, response) {
     return;
   }
 
+  const tenancyEnforced = await lokiEnforcesTenancy();
+
   if (requestUrl.pathname === "/usual-suspects-logs/health") {
-    sendJson(response, 200, {
-      ok: true,
+    sendJson(response, tenancyEnforced ? 200 : 503, {
+      ok: tenancyEnforced,
+      tenancyEnforced,
       selector: baseSelector,
       tenant: lokiTenant,
       labelPlaceholder: "__USUAL_SUSPECTS_LABELS__",
@@ -190,6 +207,12 @@ async function handle(request, response) {
       defaultLimit,
       maxLimit,
     });
+    return;
+  }
+
+  if (!tenancyEnforced) {
+    console.error("Loki accepted a read without X-Scope-OrgID; refusing to proxy until auth_enabled is on");
+    sendJson(response, 503, { error: "loki_tenancy_not_enforced" });
     return;
   }
 

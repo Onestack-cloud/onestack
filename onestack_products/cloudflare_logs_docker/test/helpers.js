@@ -20,7 +20,9 @@ function freePort() {
 }
 
 // Records every request so tests can assert on what the services send to Loki.
-async function startFakeLoki() {
+// Like Loki with auth_enabled, it rejects reads without X-Scope-OrgID unless
+// requireTenant is false.
+async function startFakeLoki({ requireTenant = true } = {}) {
   const requests = [];
   const server = http.createServer((request, response) => {
     const chunks = [];
@@ -32,6 +34,11 @@ async function startFakeLoki() {
         headers: request.headers,
         body: Buffer.concat(chunks).toString("utf8"),
       });
+      if (requireTenant && !request.headers["x-scope-orgid"]) {
+        response.writeHead(401, { "content-type": "text/plain" });
+        response.end("no org id\n");
+        return;
+      }
       response.writeHead(request.method === "POST" ? 204 : 200, { "content-type": "application/json" });
       response.end(request.method === "POST" ? "" : JSON.stringify({ status: "success", data: { result: [] } }));
     });
@@ -103,21 +110,52 @@ function runToExit(relativeScript, env) {
 
 // LogQL that the old hand-rolled selector check let through, or that tries to
 // read streams outside the Usual Suspects Worker logs. With tenant isolation
-// none of these may reach data outside the Usual Suspects tenant.
+// none of these may reach data outside the Usual Suspects tenant. "type" says
+// which endpoints Loki accepts it on; "parses" is false for queries Loki
+// rejects outright, which must still never leak.
 const BASE_LABELS = "__USUAL_SUSPECTS_LABELS__";
 const bypassQueries = {
-  "backtick string desynchronises the quote tracker":
-    `sum(count_over_time({${BASE_LABELS}} |= \`"\` [1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"} |= \`"\` [1h]))`,
-  "base labels smuggled into a backtick value of a wide selector":
-    '{scriptName=~".+", note!=`source=~"cloudflare-workers|cloudflare-workers-backfill-full",scriptName=~"usual-suspects|usual-suspects-production"`}',
-  "base selector widened with an extra regex matcher": `{${BASE_LABELS}, job=~".*"}`,
-  "second selector hidden inside a string literal":
-    `sum(count_over_time({${BASE_LABELS}} |= "{" [1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"} |= \`}\` [1h]))`,
-  "or across selectors": `sum(count_over_time({${BASE_LABELS}}[1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"}[1h]))`,
-  "binary operation across selectors": `sum(count_over_time({${BASE_LABELS}}[1h])) + on() group_left sum(count_over_time({scriptName!=""}[1h]))`,
-  "unicode quotes around a wide matcher": `{${BASE_LABELS}} or {scriptName=~“.+”}`,
-  "line content promoted into a label from a foreign stream":
-    `sum by (msg) (count_over_time({${BASE_LABELS}} or {scriptName=~".+"} | json | label_format msg="{{.message}}" [1h]))`,
+  "backtick string desynchronises the quote tracker": {
+    type: "metric",
+    parses: true,
+    query: `sum(count_over_time({${BASE_LABELS}} |= \`"\` [1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"} |= \`"\` [1h]))`,
+  },
+  "base labels smuggled into a backtick value of a wide selector": {
+    type: "log",
+    parses: true,
+    query:
+      '{scriptName=~".+", note!=`source=~"cloudflare-workers|cloudflare-workers-backfill-full",scriptName=~"usual-suspects|usual-suspects-production"`}',
+  },
+  "base selector widened with an extra regex matcher": {
+    type: "log",
+    parses: true,
+    query: `{${BASE_LABELS}, job=~".*"}`,
+  },
+  "second selector hidden inside a string literal": {
+    type: "metric",
+    parses: true,
+    query: `sum(count_over_time({${BASE_LABELS}} |= "{" [1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"} |= \`}\` [1h]))`,
+  },
+  "or across selectors": {
+    type: "metric",
+    parses: true,
+    query: `sum(count_over_time({${BASE_LABELS}}[1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"}[1h]))`,
+  },
+  "binary operation across selectors": {
+    type: "metric",
+    parses: true,
+    query: `sum by (scriptName) (count_over_time({scriptName=~".+"}[1h])) + ignoring(scriptName) group_left() (0 * sum(count_over_time({${BASE_LABELS}}[1h])))`,
+  },
+  "unicode quotes around a wide matcher": {
+    type: "log",
+    parses: false,
+    query: `{${BASE_LABELS}, scriptName=~“.+”}`,
+  },
+  "line content promoted into a label from a foreign stream": {
+    type: "metric",
+    parses: true,
+    query: `sum by (msg) (count_over_time({${BASE_LABELS}} | json | __error__="" | label_format msg="{{.message}}" [1h])) or sum by (msg) (count_over_time({scriptName=~".+"} | json | __error__="" | label_format msg="{{.message}}" [1h]))`,
+  },
 };
 
 module.exports = { stackRoot, freePort, startFakeLoki, startService, runToExit, bypassQueries };

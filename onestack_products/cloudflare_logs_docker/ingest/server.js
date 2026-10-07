@@ -20,7 +20,7 @@ if (!authToken) {
   process.exit(1);
 }
 
-const tenantIdPattern = /^[A-Za-z0-9_.-]{1,150}$/;
+const tenantIdPattern = /^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,150}$/;
 
 // Maps exact Worker script names to the Loki tenant (X-Scope-OrgID) their logs
 // are written to, e.g. "usual-suspects=usual-suspects". Scripts without a

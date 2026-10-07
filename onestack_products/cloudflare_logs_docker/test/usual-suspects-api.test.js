@@ -27,10 +27,11 @@ describe("usual-suspects-api tenant isolation", () => {
       headers: { authorization: `Bearer ${apiToken}`, ...headers },
     });
     await response.text();
-    return { response, lokiRequests: loki.requests.slice(before) };
+    const lokiRequests = loki.requests.slice(before).filter((request) => /\/query(_range)?$/.test(request.url.pathname));
+    return { response, lokiRequests };
   }
 
-  for (const [name, query] of Object.entries(bypassQueries)) {
+  for (const [name, { query }] of Object.entries(bypassQueries)) {
     for (const endpoint of ["query_range", "query"]) {
       test(`${endpoint}: ${name} is scoped to the usual-suspects tenant`, async () => {
         const { lokiRequests } = await get(
@@ -83,9 +84,46 @@ describe("usual-suspects-api tenant isolation", () => {
   });
 });
 
+describe("usual-suspects-api when Loki does not enforce tenancy", () => {
+  let loki;
+  let api;
+
+  before(async () => {
+    loki = await startFakeLoki({ requireTenant: false });
+    api = await startService(script, { API_TOKEN: apiToken, LOKI_URL: loki.url });
+  });
+
+  after(async () => {
+    await api.stop();
+    await loki.close();
+  });
+
+  test("refuses to forward queries", async () => {
+    const response = await fetch(
+      `${api.url}/usual-suspects-logs/loki/api/v1/query_range?query=${encodeURIComponent('{scriptName=~".+"}')}`,
+      { headers: { authorization: `Bearer ${apiToken}` } },
+    );
+    assert.equal(response.status, 503);
+    assert.equal(loki.requests.filter((request) => /\/query(_range)?$/.test(request.url.pathname)).length, 0);
+  });
+
+  test("reports unhealthy", async () => {
+    const response = await fetch(`${api.url}/usual-suspects-logs/health`, {
+      headers: { authorization: `Bearer ${apiToken}` },
+    });
+    assert.equal(response.status, 503);
+  });
+});
+
 describe("usual-suspects-api tenant configuration", () => {
   test("refuses to start with a multi-tenant LOKI_TENANT", async () => {
     const result = await runToExit(script, { API_TOKEN: apiToken, LOKI_TENANT: "usual-suspects|cloudflare-workers" });
+    assert.notEqual(result.code, 0);
+    assert.match(result.output, /LOKI_TENANT/);
+  });
+
+  test("refuses to start with a LOKI_TENANT Loki would reject", async () => {
+    const result = await runToExit(script, { API_TOKEN: apiToken, LOKI_TENANT: ".." });
     assert.notEqual(result.code, 0);
     assert.match(result.output, /LOKI_TENANT/);
   });

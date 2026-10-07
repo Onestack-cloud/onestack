@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
@@ -7,7 +8,7 @@ const DEFAULT_ACCOUNT_ID = "663b85e4f509df63c1735f6e77db4370";
 const DEFAULT_SCRIPT_NAMES = ["usual-suspects", "usual-suspects-production"];
 const DEFAULT_LOKI_URL = "http://loki:3100/loki/api/v1/push";
 const DEFAULT_TENANT_BY_SCRIPT = DEFAULT_SCRIPT_NAMES.map((name) => `${name}=usual-suspects`).join(",");
-const TENANT_ID_PATTERN = /^[A-Za-z0-9_.-]{1,150}$/;
+const TENANT_ID_PATTERN = /^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,150}$/;
 const MAX_LIMIT = 2000;
 
 function parseArgs(argv) {
@@ -507,7 +508,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);

@@ -116,16 +116,37 @@ describe("Loki tenant isolation (integration)", { skip: !enabled && "set LOKI_IN
     }
   });
 
+  const foreignIndicators = [markers.foreign, markers.impostor, markers.legacy, "other-worker", "legacy-worker"];
+  const baseLabels =
+    'source=~"cloudflare-workers|cloudflare-workers-backfill-full",scriptName=~"usual-suspects|usual-suspects-production"';
+
+  function timeParams(endpoint) {
+    const nowNs = BigInt(Date.now()) * 1000000n;
+    return endpoint === "query"
+      ? { time: String(nowNs) }
+      : { start: String(nowNs - 3600n * 1000000000n), end: String(nowNs), limit: "1000" };
+  }
+
   async function viaProxy(endpoint, query) {
-    const params = new URLSearchParams({ query, ...(endpoint === "query" ? { time: String(Date.now() * 1e6) } : {}) });
+    const params = new URLSearchParams({ query, ...timeParams(endpoint) });
     const response = await fetch(`${api.url}/usual-suspects-logs/loki/api/v1/${endpoint}?${params}`, {
       headers: { authorization: `Bearer ${apiToken}` },
     });
     return { status: response.status, body: await response.text() };
   }
 
+  // The same query sent straight to Loki across every tenant, to prove it
+  // would have read foreign data without tenant isolation.
+  async function asAdmin(endpoint, query) {
+    const params = new URLSearchParams({ query: query.replaceAll("__USUAL_SUSPECTS_LABELS__", baseLabels), ...timeParams(endpoint) });
+    const response = await fetch(`${lokiUrl}/loki/api/v1/${endpoint}?${params}`, {
+      headers: { "x-scope-orgid": "usual-suspects|cloudflare-workers|fake" },
+    });
+    return { status: response.status, body: await response.text() };
+  }
+
   function assertNoForeignData(body) {
-    for (const marker of [markers.foreign, markers.impostor, markers.legacy, "other-worker", "legacy-worker"]) {
+    for (const marker of foreignIndicators) {
       assert.ok(!body.includes(marker), `response leaked ${marker}: ${body.slice(0, 500)}`);
     }
   }
@@ -147,11 +168,28 @@ describe("Loki tenant isolation (integration)", { skip: !enabled && "set LOKI_IN
     assertNoForeignData(body);
   });
 
-  for (const [name, query] of Object.entries(bypassQueries)) {
-    for (const endpoint of ["query_range", "query"]) {
+  test("Loki rejects a read without a tenant", async () => {
+    const response = await fetch(`${lokiUrl}/loki/api/v1/labels`);
+    assert.equal(response.status, 401);
+  });
+
+  for (const [name, { type, parses, query }] of Object.entries(bypassQueries)) {
+    for (const endpoint of type === "metric" ? ["query_range", "query"] : ["query_range"]) {
       test(`${endpoint}: ${name} cannot read other tenants`, async () => {
-        const { body } = await viaProxy(endpoint, query);
-        assertNoForeignData(body);
+        const admin = await asAdmin(endpoint, query);
+        const proxied = await viaProxy(endpoint, query);
+        if (parses) {
+          assert.equal(admin.status, 200, admin.body);
+          assert.ok(
+            foreignIndicators.some((marker) => admin.body.includes(marker)),
+            `query does not reach foreign data even across tenants, so it proves nothing: ${admin.body.slice(0, 300)}`,
+          );
+          assert.equal(proxied.status, 200, proxied.body);
+        } else {
+          assert.equal(admin.status, 400, admin.body);
+          assert.equal(proxied.status, 400, proxied.body);
+        }
+        assertNoForeignData(proxied.body);
       });
     }
   }

@@ -12,7 +12,7 @@ https://logs.onestack.cloud/cloudflare-logpush
 
 Traefik routes that path to the ingest adapter. The adapter validates the
 `Authorization: Bearer ...` header, redacts sensitive keys, filters allowed
-Worker script names, and writes to Loki. Grafana is exposed on the same host.
+Worker script names and writes to Loki. Grafana is exposed on the same host.
 
 ## Tenant isolation
 
@@ -42,6 +42,10 @@ Cloudflare still retains.
 
 Deploy Loki, ingest, the proxy and Grafana together. An ingest push without a
 tenant is rejected once Loki has `auth_enabled: true`, and Logpush retries it.
+Loki and Grafana only read their config at startup, so recreate them (see
+Deploy). The proxy checks that Loki rejects a read without a tenant before
+every query and answers 503 until it does, so a Loki still running the old
+config fails closed rather than exposing every tenant.
 
 ## Tests
 
@@ -57,7 +61,13 @@ Create `.env` from `.env.example`, then run:
 ```bash
 docker compose config
 docker compose up -d --build
+docker compose up -d --force-recreate loki grafana
 ```
+
+`up -d --build` does not recreate a container when only a bind-mounted config
+file changed, so the last command makes Loki and Grafana pick up
+`loki/config.yml` and the datasource provisioning. Then check that
+`/usual-suspects-logs/health` reports `"tenancyEnforced": true`.
 
 ## Cloudflare Logpush destination
 
