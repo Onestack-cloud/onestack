@@ -41,6 +41,33 @@ describe("Grafana access isolation checks", () => {
     assert.throws(() => configure.assertOnlyMemberOf([], 7), /not a member/);
   });
 
+  test("only the proxy datasource may exist in the Usual Suspects org", () => {
+    assert.doesNotThrow(() => configure.assertOnlyExpectedDatasources([{ uid: "usual-suspects-loki", name: "Usual Suspects Loki" }]));
+    assert.throws(
+      () =>
+        configure.assertOnlyExpectedDatasources([
+          { uid: "usual-suspects-loki", name: "Usual Suspects Loki" },
+          { uid: "raw", name: "Raw Loki" },
+        ]),
+      /Raw Loki/,
+    );
+  });
+
+  test("only the admin and the UI user (as Viewer) may be org members", () => {
+    const admin = { userId: 1, login: "admin@example.test", role: "Admin" };
+    const ui = { userId: 5, login: "usual-suspects-logs", role: "Viewer" };
+    assert.doesNotThrow(() => configure.assertOnlyExpectedMembers([admin, ui], 1));
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, ui, { userId: 9, login: "eve", role: "Editor" }], 1), /eve/);
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, { ...ui, role: "Editor" }], 1), /Viewer/);
+    // Matching is by id, so another user named like the admin does not pass.
+    assert.throws(() => configure.assertOnlyExpectedMembers([{ userId: 7, login: "admin@example.test", role: "Admin" }], 1), /admin@example\.test/);
+  });
+
+  test("service accounts in the org must be Viewers", () => {
+    assert.doesNotThrow(() => configure.assertServiceAccountsAreViewers([{ name: "usual-suspects-logs-api", role: "Viewer" }]));
+    assert.throws(() => configure.assertServiceAccountsAreViewers([{ name: "ci", role: "Editor" }]), /ci/);
+  });
+
   test("script labels are read from log streams and metric series", () => {
     const labels = configure.scriptLabelsFrom({
       data: {
