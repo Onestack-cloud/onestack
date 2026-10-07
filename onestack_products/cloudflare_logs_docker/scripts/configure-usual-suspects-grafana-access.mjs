@@ -145,6 +145,58 @@ export function assertOnlyMemberOf(orgs, orgId) {
   }
 }
 
+// Any other datasource in the org could bypass the tenant-pinned proxy.
+export function assertOnlyExpectedDatasources(datasources) {
+  const unexpected = datasources.filter((datasource) => datasource.uid !== datasourceUid);
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Usual Suspects org has unexpected datasources: ${unexpected.map((datasource) => `${datasource.name} (${datasource.uid})`).join(", ")}`,
+    );
+  }
+}
+
+// The admin who created the org stays a member; the UI user must be a Viewer.
+export function assertOnlyExpectedMembers(members, adminLogin) {
+  for (const member of members) {
+    if (member.login === adminLogin) {
+      continue;
+    }
+    if (member.login !== userLogin) {
+      throw new Error(`Usual Suspects org has an unexpected member: ${member.login} (${member.role})`);
+    }
+    if (member.role !== "Viewer") {
+      throw new Error(`UI user must be a Viewer in the Usual Suspects org, not ${member.role}`);
+    }
+  }
+}
+
+// A service account above Viewer could add a datasource that bypasses the proxy.
+export function assertServiceAccountsAreViewers(accounts) {
+  const elevated = accounts.filter((account) => account.role !== "Viewer");
+  if (elevated.length > 0) {
+    throw new Error(
+      `Usual Suspects org has service accounts above Viewer: ${elevated.map((account) => `${account.name} (${account.role})`).join(", ")}`,
+    );
+  }
+}
+
+async function auditOrg(orgId) {
+  assertOnlyExpectedDatasources(await must("GET", "/api/datasources", undefined, { orgId }));
+  assertOnlyExpectedMembers(await must("GET", "/api/org/users", undefined, { orgId }), adminUser);
+  const accounts = await must("GET", "/api/serviceaccounts/search?perpage=1000", undefined, { orgId });
+  assertServiceAccountsAreViewers(accounts.serviceAccounts || []);
+
+  const uiUser = await request("GET", `/api/users/lookup?loginOrEmail=${encodeURIComponent(userLogin)}`);
+  if (uiUser.ok) {
+    assertOnlyMemberOf(await must("GET", `/api/users/${uiUser.json.id}/orgs`), orgId);
+    if (uiUser.json.isGrafanaAdmin) {
+      throw new Error("UI user is a Grafana server admin");
+    }
+  } else if (uiUser.status !== 404) {
+    throw new Error(`UI user lookup failed: ${uiUser.status}`);
+  }
+}
+
 export function scriptLabelsFrom(proxied) {
   const series = proxied?.data?.result || [];
   return [...new Set(series.map((item) => (item.stream || item.metric)?.scriptName).filter(Boolean))];
@@ -503,6 +555,9 @@ async function verifyUiUser(orgId, userId, password) {
     },
     { auth: userAuth, orgId },
   );
+  if (!query.ok || query.json?.results?.A?.error) {
+    throw new Error(`UI user cannot query the Usual Suspects datasource: ${query.status} ${query.json?.results?.A?.error || ""}`);
+  }
   return { dashboardCount: search.length, queryStatus: query.status, adminDatasourceStatus: adminDatasourceQuery.status };
 }
 
@@ -557,6 +612,7 @@ async function main() {
     await upsertDatasource(orgId);
     await upsertFolder(orgId);
     await upsertDashboard(orgId);
+    await auditOrg(orgId);
     await waitForDatasourceCache();
     // Grafana replaces the caller's Authorization with the datasource's own
     // header, so this checks the datasource exactly as the client uses it.
@@ -587,6 +643,7 @@ async function main() {
   let uiVerification;
   let serviceVerification;
   try {
+    await auditOrg(orgId);
     await waitForDatasourceCache();
     uiVerification = await verifyUiUser(orgId, user.id, uiPassword);
     serviceVerification = await verifyDatasourceIsolation(orgId, `Bearer ${serviceAccountToken.key}`);

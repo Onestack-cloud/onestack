@@ -41,6 +41,31 @@ describe("Grafana access isolation checks", () => {
     assert.throws(() => configure.assertOnlyMemberOf([], 7), /not a member/);
   });
 
+  test("only the proxy datasource may exist in the Usual Suspects org", () => {
+    assert.doesNotThrow(() => configure.assertOnlyExpectedDatasources([{ uid: "usual-suspects-loki", name: "Usual Suspects Loki" }]));
+    assert.throws(
+      () =>
+        configure.assertOnlyExpectedDatasources([
+          { uid: "usual-suspects-loki", name: "Usual Suspects Loki" },
+          { uid: "raw", name: "Raw Loki" },
+        ]),
+      /Raw Loki/,
+    );
+  });
+
+  test("only the admin and the UI user (as Viewer) may be org members", () => {
+    const admin = { login: "admin", role: "Admin" };
+    const ui = { login: "usual-suspects-logs", role: "Viewer" };
+    assert.doesNotThrow(() => configure.assertOnlyExpectedMembers([admin, ui], "admin"));
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, ui, { login: "eve", role: "Editor" }], "admin"), /eve/);
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, { ...ui, role: "Editor" }], "admin"), /Viewer/);
+  });
+
+  test("service accounts in the org must be Viewers", () => {
+    assert.doesNotThrow(() => configure.assertServiceAccountsAreViewers([{ name: "usual-suspects-logs-api", role: "Viewer" }]));
+    assert.throws(() => configure.assertServiceAccountsAreViewers([{ name: "ci", role: "Editor" }]), /ci/);
+  });
+
   test("script labels are read from log streams and metric series", () => {
     const labels = configure.scriptLabelsFrom({
       data: {

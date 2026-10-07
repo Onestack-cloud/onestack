@@ -12,9 +12,10 @@ The Usual Suspects client reaches its logs through a dedicated Grafana org ("Usu
 
 Org membership is the isolation boundary for Usual Suspects Grafana users. The configure script creates the UI user directly in the Usual Suspects org as a Viewer, removes it from every other org and clears the Grafana server admin flag on each run, which also cleans up existing deployments. The service account is kept at Viewer. Before it prints any credentials the script verifies isolation, and if any check fails it exits non-zero and deletes the token it just created:
 
+- The Usual Suspects org contains only the proxy datasource, the admin, the UI user and Viewer service accounts, since any other datasource could bypass the proxy.
 - The UI user is a Viewer in the Usual Suspects org, belongs to no other org and is not a server admin.
 - The UI user gets 403 from the admin org's `Loki` datasource, which the admin can query.
-- Asked through the Usual Suspects datasource for every script name, only Usual Suspects scripts come back. `--dashboard-only` runs this check too.
+- Asked through the Usual Suspects datasource for every script name, only Usual Suspects scripts come back. `--dashboard-only` runs this check and the org audit too.
 
 ## Consequences
 

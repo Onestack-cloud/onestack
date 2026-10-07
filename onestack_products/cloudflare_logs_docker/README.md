@@ -105,12 +105,14 @@ removed from every other org, including Grafana's admin org whose `Loki`
 datasource reads every tenant, and is never a Grafana server admin. The service
 account is kept at Viewer.
 
-Before printing credentials the script checks that the UI user has no other
-org and gets 403 from the admin datasource (which the admin can query), and
-that the service account token only sees Usual Suspects script names even for
-a query that asks for all of them. If any check fails it exits non-zero, prints
+Before printing credentials the script checks that the org holds only the
+proxy datasource, the admin, the UI user and Viewer service accounts (another
+datasource could bypass the proxy), that the UI user has no other org, can
+query its own datasource and gets 403 from the admin datasource (which the
+admin can query), and that the service account token only sees Usual Suspects
+script names even for a query that asks for all of them. If any check fails it exits non-zero, prints
 no credentials and deletes the token it just created. `--dashboard-only` runs
-the datasource check too. `verification.conclusive` is `false` when no other
+the org audit and the datasource check too. `verification.conclusive` is `false` when no other
 script has logs in the last 24 hours, because the check cannot then prove
 isolation.
 
