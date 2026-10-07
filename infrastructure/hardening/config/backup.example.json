@@ -1,0 +1,104 @@
+{
+  "backup_scope": "huly-retired-v1",
+  "sources": [
+    "/root",
+    "/etc",
+    "/home",
+    "/opt",
+    "/usr/local",
+    "/var/lib/docker/volumes",
+    "/var/lib/libvirt/qemu/nvram",
+    "/var/lib/onestack-maintenance",
+    "/var/lib/onestack-backup",
+    "/var/lib/postgresql",
+    "/var/lib/tailscale/tailscaled.state"
+  ],
+  "guest_backups": {
+    "onestack-codex": {
+      "paths": ["/etc", "/root", "/usr/local", "/home/codex"],
+      "required": [
+        "/etc/systemd/system/cloudflared.service",
+        "/home/codex/.codex/sessions",
+        "/home/codex/.config/systemd/user/open-inspect-web.service",
+        "/home/codex/.local/share/docker/volumes/open-inspect_control-plane-data/_data",
+        "/home/codex/workspace",
+        "/home/codex/open-inspect/docker-compose.yml"
+      ],
+      "excludes": [
+        "**/node_modules/***", "**/.next/***", "**/.open-next/***",
+        "/workspace/workspace/**/.wrangler/***", "/.cache/***", "/.npm/***",
+        "/.bun/***", "/.codex/packages/***", "/.codex/cache/***",
+        "/.codex/log/***", "/.codex/tmp/***",
+        "/.local/share/docker/containerd/***", "/.local/share/docker/buildkit/***",
+        "/.local/share/Trash/***"
+      ]
+    },
+    "onestack-ci-runner": {
+      "paths": ["/etc", "/root", "/usr/local", "/opt/github-actions-runner", "/var/lib/docker/volumes"],
+      "required": [
+        "/etc/gitlab-runner/config.toml",
+        "/opt/github-actions-runner/compose.yaml",
+        "/var/lib/docker/volumes/github-actions-runner_usual-suspects-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_usual-suspects-02-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_usual-suspects-03-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_run-buddy-organizer-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_studio-messa-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_cims-export-worker-data/_data/.runner",
+        "/var/lib/docker/volumes/github-actions-runner_wcs-pbi-reporting-data/_data/.runner"
+      ],
+      "excludes": ["**/_work/***", "**/_diag/***", "**/home/.cache/***", "**/home/.bun/***", "**/home/.npm/***"]
+    },
+    "onestack-sandbox": {
+      "paths": ["/etc", "/root", "/usr/local", "/opt/e2b", "/home/sandbox", "/var/lib/docker/volumes"],
+      "required": [
+        "/etc/systemd/system/e2b-embed.service",
+        "/etc/systemd/system/onestack-sandbox-egress.service",
+        "/home/sandbox/e2b-sdk.env",
+        "/home/sandbox/open-inspect/docker-compose.yml",
+        "/var/lib/docker/volumes/e2b_postgres/_data",
+        "/var/lib/docker/volumes/e2b_clickhouse/_data",
+        "/var/lib/docker/volumes/e2b_redis/_data",
+        "/var/lib/docker/volumes/e2b_seed-state/_data"
+      ],
+      "excludes": ["**/node_modules/***", "**/.cache/***"]
+    }
+  },
+  "sqlite_exclude_paths": ["/root/allbids_app/data/backups"],
+  "exclude": [
+    "pp:/root/.cache",
+    "pp:/root/.config/borg/security",
+    "pp:/root/.codex/log",
+    "pp:/root/.codex/tmp",
+    "pp:/root/.codex/sqlite",
+    "pp:/root/db_backups",
+    "pp:/root/allbids_app/data/backups",
+    "sh:**/node_modules",
+    "sh:**/.git/index.lock",
+    "pp:/var/lib/docker/volumes/metadata.db",
+    "pp:/root/.codex/logs",
+    "sh:root/*/pg_log",
+    "sh:root/*/db-data/pgroot/pg_log",
+    "sh:root/*/logs",
+    "sh:root/*/log",
+    "pp:/var/lib/onestack-maintenance/2026-09-07/twenty-stage/pgdata",
+    "pp:/var/lib/docker/volumes/f738645e67a2f625f459b48b31ad64a084361018b6cc760e5d7d52e662db2c99/_data",
+    "pp:/opt/cims-export-worker",
+    "pp:/etc/cims-export-worker",
+    "pp:/var/lib/onestack-cims",
+    "pp:/var/log/cims-export-worker.log",
+    "sh:**/opt/cims-export-worker*",
+    "sh:**/etc/cims-export-worker*",
+    "sh:**/var/lib/onestack-cims*",
+    "sh:**/var/log/cims-export-worker.log*",
+    "sh:**/cims-export-worker/data*",
+    "sh:**/cims-export-worker/exports*",
+    "sh:**/cims-export-worker/.dev.vars*",
+    "sh:**/wcs-curate-*",
+    "sh:**/wcs-cims-*"
+  ],
+  "repository": "ssh://u437236@u437236.your-storagebox.de:23/./backups/onestack_monolith",
+  "borg_environment": {
+    "BORG_PASSCOMMAND": "cat /etc/onestack-backup/borg-passphrase",
+    "BORG_RSH": "ssh -i /root/.ssh/storagebox_append_only -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=20"
+  }
+}
