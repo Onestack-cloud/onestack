@@ -139,3 +139,75 @@ describe("redaction edge cases from review", () => {
     assert.equal(output.code, "ERR_TIMEOUT");
   });
 });
+
+describe("redaction follow-up from the security scan", () => {
+  test("numeric secrets are hidden while counters and flags stay visible", () => {
+    const output = redact({ otp: 123456, pin: 4321, apiKey: 998877, tokenCount: 3, sessionTtl: 900, passwordResetSent: true });
+    assertHidden(output, "123456");
+    assertHidden(output, "998877");
+    assert.equal(output.tokenCount, 3);
+    assert.equal(output.sessionTtl, 900);
+    assert.equal(output.passwordResetSent, true);
+  });
+
+  test("a credential name followed by its value in console arguments", () => {
+    assertHidden(normalizeMessage(["authorization", "Bearer ARG1"]), "ARG1");
+    assertHidden(normalizeMessage(["x-api-key", "ARG2"]), "ARG2");
+  });
+
+  test("Bearer and Basic credentials and key=value secrets in free text", () => {
+    const output = redact(
+      "auth header was Bearer FREE1abcdefgh then Basic FREE2abcdefgh== and password=FREE3, token: FREE4; user=sam",
+    );
+    for (const secret of ["FREE1", "FREE2", "FREE3", "FREE4"]) {
+      assertHidden(output, secret);
+    }
+    assert.match(output, /user=sam/);
+    assert.equal(redact("Error: token expired on the Basic plan"), "Error: token expired on the Basic plan");
+  });
+
+  test("free text rules stay linear", () => {
+    const started = process.hrtime.bigint();
+    redact(`${"a".repeat(200000)} ${"Bearer ".repeat(20000)} ${"x=".repeat(50000)}`);
+    assert.ok(Number(process.hrtime.bigint() - started) / 1e6 < 500);
+  });
+});
+
+describe("redaction gaps from the second review", () => {
+  test("a credential name anywhere in console arguments hides the next argument", () => {
+    assertHidden(normalizeMessage(["password:", "ARGS1"]), "ARGS1");
+    assertHidden(normalizeMessage(["user", "sam", "token", "ARGS2", "extra"]), "ARGS2");
+    assert.equal(normalizeMessage(["Session expired for user", "u-123"]), "Session expired for user u-123");
+  });
+
+  test("counter exceptions only apply to counter-like names", () => {
+    const output = redact({ accountPassword: 482913, accountToken: 12345678, settlementSecret: 777, tokenCount: 2, tokenExpiresAt: 1700000000 });
+    for (const secret of ["482913", "12345678", "777"]) {
+      assertHidden(output, secret);
+    }
+    assert.equal(output.tokenCount, 2);
+    assert.equal(output.tokenExpiresAt, 1700000000);
+  });
+
+  test("one-time codes and PINs under longer names", () => {
+    const output = redact({ otpCode: "OTPC1", verificationCode: "VC1", mfaCode: "MFA1", userPin: "PIN1", errorCode: "E_TIMEOUT" });
+    for (const secret of ["OTPC1", "VC1", "MFA1", "PIN1"]) {
+      assertHidden(output, secret);
+    }
+    assert.equal(output.errorCode, "E_TIMEOUT");
+    assertHidden(redact("sent otp_code=OTPC2 to user"), "OTPC2");
+  });
+
+  test("quoted names and values in free text", () => {
+    for (const [input, secret] of [
+      ['body: {"password":"QUOTE1","user":"sam"} truncated', "QUOTE1"],
+      ['"token": "QUOTE2"', "QUOTE2"],
+      ["password: 'QUOTE3 with spaces'", "QUOTE3"],
+      ['secret="QUOTE4 more words"', "QUOTE4"],
+      ["password => QUOTE5", "QUOTE5"],
+    ]) {
+      assertHidden(redact(input), secret);
+    }
+    assert.match(redact('body: {"password":"x","user":"sam"} truncated'), /"user":"sam"/);
+  });
+});
