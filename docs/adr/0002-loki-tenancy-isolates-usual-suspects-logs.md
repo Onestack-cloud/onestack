@@ -14,7 +14,7 @@ Isolation is enforced by Loki multi-tenancy. Loki runs with `auth_enabled: true`
 
 - The ingest adapter and the backfill script route each Worker by exact script name through `LOKI_TENANT_BY_SCRIPT` (`script=tenant,...`).
 - Scripts without a route go to `LOKI_DEFAULT_TENANT` (`cloudflare-workers`), which must not be a routed tenant, so unknown or look-alike scripts can never land in a restricted tenant.
-- Single-tenant services reject tenant IDs containing `|`, `.` or `..` at startup.
+- Services reject tenant IDs at startup that contain `|` (which Loki treats as a multi-tenant list) or that are `.` or `..`.
 - Before every query the proxy checks that Loki answers a tenantless read with 401 "no org id", and returns 503 otherwise, so a Loki still running without tenancy fails closed.
 - The admin Grafana datasource reads several tenants at once with `multi_tenant_queries_enabled`.
 
