@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 import crypto from "node:crypto";
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const baseUrl = process.env.GRAFANA_URL || "http://grafana:3000";
 const adminUser = process.env.GRAFANA_ADMIN_USER;
 const adminPassword = process.env.GRAFANA_ADMIN_PASSWORD;
 const filteredApiToken = process.env.USUAL_SUSPECTS_LOGS_API_TOKEN;
+const usualSuspectsApiUrl = process.env.USUAL_SUSPECTS_API_URL || "http://usual-suspects-api:8081/usual-suspects-logs";
 
 const orgName = "Usual Suspects Logs";
 const orgSlug = "usual-suspects-logs";
@@ -18,10 +21,13 @@ const folderUid = "usual-suspects-logs";
 const dashboardUid = "usual-suspects-worker-logs";
 const selectorLabels = "__USUAL_SUSPECTS_LABELS__";
 const selector = `{${selectorLabels},kind=~"$kind",responseStatus=~"$status"} |~ "$search"`;
-
-if (!adminUser || !adminPassword || !filteredApiToken) {
-  throw new Error("GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD, and USUAL_SUSPECTS_LOGS_API_TOKEN are required");
-}
+// Grafana's default org, whose provisioned "Loki" datasource reads every tenant.
+const adminOrgId = 1;
+const adminDatasourceUid = "Loki";
+const usualSuspectsScripts = ["usual-suspects", "usual-suspects-production"];
+// Asks for every script name. The proxy pins the Loki tenant, so only Usual
+// Suspects scripts may come back; anything else means isolation is broken.
+export const serviceTokenProbeQuery = `sum by (scriptName) (count_over_time({${selectorLabels}}[1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"}[1h]))`;
 
 const adminAuth = `Basic ${Buffer.from(`${adminUser}:${adminPassword}`).toString("base64")}`;
 
@@ -69,7 +75,7 @@ async function findOrCreateOrg() {
   return created.orgId;
 }
 
-async function findOrCreateUser(password) {
+async function findOrCreateUser(password, orgId) {
   const existing = await request("GET", `/api/users/lookup?loginOrEmail=${encodeURIComponent(userLogin)}`);
   if (existing.ok) {
     await must("PUT", `/api/admin/users/${existing.json.id}/password`, { password });
@@ -83,7 +89,7 @@ async function findOrCreateUser(password) {
     email: userEmail,
     login: userLogin,
     password,
-    OrgId: 1,
+    OrgId: orgId,
   });
   return { id: created.id, created: true };
 }
@@ -95,7 +101,7 @@ async function setOrgRole(userId, orgId, role) {
   }
 
   const adminPatched = await request("PATCH", `/api/orgs/${orgId}/users/${userId}`, { role });
-  if (adminPatched.ok || adminPatched.status === 404) {
+  if (adminPatched.ok) {
     return;
   }
 
@@ -111,8 +117,44 @@ async function addUserToOrg(userId, orgId) {
     throw new Error(`add user to org failed: ${added.status} ${added.text}`);
   }
   await setOrgRole(userId, orgId, "Viewer");
-  await setOrgRole(userId, 1, "None");
   await request("POST", `/api/users/${userId}/using/${orgId}`);
+  // A server admin can add itself back to any org.
+  await must("PUT", `/api/admin/users/${userId}/permissions`, { isGrafanaAdmin: false });
+
+  // Older runs created the user in the admin org with role None. Membership
+  // anywhere else is removed outright rather than relying on a role.
+  const memberships = await must("GET", `/api/users/${userId}/orgs`);
+  for (const membership of memberships) {
+    if (membership.orgId !== orgId) {
+      await must("DELETE", `/api/orgs/${membership.orgId}/users/${userId}`);
+    }
+  }
+}
+
+export function assertOnlyMemberOf(orgs, orgId) {
+  if (!orgs.some((org) => org.orgId === orgId)) {
+    throw new Error(`UI user is not a member of org ${orgId}`);
+  }
+  const others = orgs.filter((org) => org.orgId !== orgId);
+  if (others.length > 0) {
+    throw new Error(`UI user is still a member of other orgs: ${others.map((org) => `${org.name} (${org.orgId})`).join(", ")}`);
+  }
+  const role = orgs.find((org) => org.orgId === orgId).role;
+  if (role !== "Viewer") {
+    throw new Error(`UI user must be a Viewer in org ${orgId}, not ${role}`);
+  }
+}
+
+export function scriptLabelsFrom(proxied) {
+  const series = proxied?.data?.result || [];
+  return [...new Set(series.map((item) => (item.stream || item.metric)?.scriptName).filter(Boolean))];
+}
+
+export function assertOnlyUsualSuspectsScripts(scriptLabels) {
+  const foreign = scriptLabels.filter((name) => !usualSuspectsScripts.includes(name));
+  if (foreign.length > 0) {
+    throw new Error(`Usual Suspects datasource can read other scripts: ${foreign.join(", ")}`);
+  }
 }
 
 async function upsertDatasource(orgId) {
@@ -121,7 +163,7 @@ async function upsertDatasource(orgId) {
     uid: datasourceUid,
     type: "loki",
     access: "proxy",
-    url: "http://usual-suspects-api:8081/usual-suspects-logs",
+    url: usualSuspectsApiUrl,
     isDefault: true,
     editable: false,
     jsonData: {
@@ -378,6 +420,10 @@ async function findOrCreateServiceAccount(orgId) {
   );
   const existing = (search.serviceAccounts || []).find((account) => account.name === serviceAccountName);
   if (existing) {
+    // A higher role could add a datasource that bypasses the proxy.
+    if (existing.role !== "Viewer") {
+      await must("PATCH", `/api/serviceaccounts/${existing.id}`, { role: "Viewer" }, { orgId });
+    }
     return existing.id;
   }
 
@@ -397,12 +443,45 @@ async function createServiceAccountToken(orgId, serviceAccountId) {
     { name: `usual-suspects-logs-${new Date().toISOString()}` },
     { orgId },
   );
-  return created.key;
+  return { id: created.id, key: created.key };
 }
 
-async function verifyUiUser(orgId, password) {
+async function deleteServiceAccountToken(orgId, serviceAccountId, tokenId) {
+  await must("DELETE", `/api/serviceaccounts/${serviceAccountId}/tokens/${tokenId}`, undefined, { orgId });
+}
+
+// Grafana caches datasources by UID for about five seconds, so a check run
+// straight after updating the datasource can still go to the old URL.
+function waitForDatasourceCache() {
+  return new Promise((resolve) => setTimeout(resolve, 6000));
+}
+
+async function verifyUiUser(orgId, userId, password) {
   const userAuth = `Basic ${Buffer.from(`${userLogin}:${password}`).toString("base64")}`;
   const search = await must("GET", "/api/search?query=Usual", undefined, { auth: userAuth, orgId });
+  assertOnlyMemberOf(await must("GET", "/api/user/orgs", undefined, { auth: userAuth }), orgId);
+  if ((await must("GET", `/api/users/${userId}`)).isGrafanaAdmin) {
+    throw new Error("UI user is a Grafana server admin");
+  }
+
+  // The admin must be able to run the query, so the UI user's 403 is a real
+  // denial rather than a missing or renamed datasource.
+  const adminDatasourceBody = {
+    from: "now-1h",
+    to: "now",
+    queries: [{ refId: "A", datasource: { uid: adminDatasourceUid, type: "loki" }, expr: '{scriptName=~".+"}' }],
+  };
+  const asAdmin = await request("POST", "/api/ds/query", adminDatasourceBody, { orgId: adminOrgId });
+  if (!asAdmin.ok) {
+    throw new Error(`admin cannot query the "${adminDatasourceUid}" datasource in org ${adminOrgId}: ${asAdmin.status}`);
+  }
+  const adminDatasourceQuery = await request("POST", "/api/ds/query", adminDatasourceBody, {
+    auth: userAuth,
+    orgId: adminOrgId,
+  });
+  if (adminDatasourceQuery.status !== 403) {
+    throw new Error(`UI user query to the admin Loki datasource returned ${adminDatasourceQuery.status}, expected 403`);
+  }
   const now = Date.now();
   const query = await request(
     "POST",
@@ -424,82 +503,144 @@ async function verifyUiUser(orgId, password) {
     },
     { auth: userAuth, orgId },
   );
-  return { dashboardCount: search.length, queryStatus: query.status };
+  return { dashboardCount: search.length, queryStatus: query.status, adminDatasourceStatus: adminDatasourceQuery.status };
 }
 
-async function verifyServiceToken(orgId, token) {
-  const auth = `Bearer ${token}`;
-  const params = new URLSearchParams({
-    from: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    to: new Date().toISOString(),
-    limit: "10",
-    direction: "backward",
-    query: '{scriptName="linear-gratis"}',
-  });
+// Queries the Usual Suspects datasource as `auth` for every script name. The
+// same query through the admin datasource shows whether other scripts have
+// logs in the window at all; without any, the check cannot prove isolation
+// and is reported as inconclusive rather than passed.
+async function verifyDatasourceIsolation(orgId, auth) {
+  const nowNs = BigInt(Date.now()) * 1000000n;
+  const window = {
+    start: String(nowNs - 24n * 3600n * 1000000000n),
+    end: String(nowNs),
+    step: "3600",
+  };
+  const everyScript = await must(
+    "GET",
+    `/api/datasources/proxy/uid/${adminDatasourceUid}/loki/api/v1/query_range?${new URLSearchParams({
+      ...window,
+      query: 'sum by (scriptName) (count_over_time({scriptName=~".+"}[1h]))',
+    })}`,
+    undefined,
+    { orgId: adminOrgId },
+  );
+  const foreignScriptsInWindow = scriptLabelsFrom(everyScript).filter((name) => !usualSuspectsScripts.includes(name));
+
   const proxied = await must(
     "GET",
-    `/api/datasources/proxy/uid/${datasourceUid}/loki/api/v1/query_range?${params.toString()}`,
+    `/api/datasources/proxy/uid/${datasourceUid}/loki/api/v1/query_range?${new URLSearchParams({
+      ...window,
+      query: serviceTokenProbeQuery,
+    })}`,
     undefined,
     { auth, orgId },
   );
-  const streams = proxied.data?.result || [];
+  const scriptLabels = scriptLabelsFrom(proxied);
+  assertOnlyUsualSuspectsScripts(scriptLabels);
   return {
-    entries: streams.reduce((count, stream) => count + (stream.values?.length || 0), 0),
-    scriptLabels: [...new Set(streams.map((stream) => stream.stream?.scriptName).filter(Boolean))],
+    series: proxied.data?.result?.length || 0,
+    scriptLabels,
+    foreignScriptsInWindow,
+    conclusive: foreignScriptsInWindow.length > 0,
   };
 }
 
-const orgId = await findOrCreateOrg();
-if (process.argv.includes("--dashboard-only")) {
+async function main() {
+  if (!adminUser || !adminPassword || !filteredApiToken) {
+    throw new Error("GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD and USUAL_SUSPECTS_LOGS_API_TOKEN are required");
+  }
+
+  const orgId = await findOrCreateOrg();
+  if (process.argv.includes("--dashboard-only")) {
+    await upsertDatasource(orgId);
+    await upsertFolder(orgId);
+    await upsertDashboard(orgId);
+    await waitForDatasourceCache();
+    // Grafana replaces the caller's Authorization with the datasource's own
+    // header, so this checks the datasource exactly as the client uses it.
+    const verification = await verifyDatasourceIsolation(orgId, adminAuth);
+    console.log(
+      JSON.stringify(
+        {
+          orgId,
+          orgName,
+          verification,
+          dashboardUrl: `https://logs.onestack.cloud/d/${dashboardUid}/usual-suspects-worker-logs?orgId=${orgId}`,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  const uiPassword = crypto.randomBytes(18).toString("base64url");
+  const user = await findOrCreateUser(uiPassword, orgId);
+  await addUserToOrg(user.id, orgId);
   await upsertDatasource(orgId);
   await upsertFolder(orgId);
   await upsertDashboard(orgId);
+  const serviceAccountId = await findOrCreateServiceAccount(orgId);
+  const serviceAccountToken = await createServiceAccountToken(orgId, serviceAccountId);
+  let uiVerification;
+  let serviceVerification;
+  try {
+    await waitForDatasourceCache();
+    uiVerification = await verifyUiUser(orgId, user.id, uiPassword);
+    serviceVerification = await verifyDatasourceIsolation(orgId, `Bearer ${serviceAccountToken.key}`);
+  } catch (error) {
+    // Never leave a valid token behind that nobody was given. The rotated UI
+    // password is not printed either, so the client stays locked out until
+    // the problem is fixed and the script is run again.
+    await deleteServiceAccountToken(orgId, serviceAccountId, serviceAccountToken.id).catch((deleteError) => {
+      console.error(`Could not delete the unused service account token ${serviceAccountToken.id}: ${deleteError.message}`);
+    });
+    throw error;
+  }
+
   console.log(
     JSON.stringify(
       {
         orgId,
         orgName,
-        dashboardUrl: `https://logs.onestack.cloud/d/${dashboardUid}/usual-suspects-worker-logs?orgId=${orgId}`,
+        ui: {
+          login: userLogin,
+          email: userEmail,
+          password: uiPassword,
+          dashboardUrl: `https://logs.onestack.cloud/d/${dashboardUid}/usual-suspects-worker-logs?orgId=${orgId}`,
+          verification: uiVerification,
+        },
+        serviceAccount: {
+          name: serviceAccountName,
+          token: serviceAccountToken.key,
+          grafanaProxyQueryRangeUrl: `https://logs.onestack.cloud/api/datasources/proxy/uid/${datasourceUid}/loki/api/v1/query_range?orgId=${orgId}`,
+          directFilteredQueryRangeUrl: "https://logs.onestack.cloud/usual-suspects-logs/api/v1/query_range",
+          verification: serviceVerification,
+        },
       },
       null,
       2,
     ),
   );
-  process.exit(0);
 }
 
-const uiPassword = crypto.randomBytes(18).toString("base64url");
-const user = await findOrCreateUser(uiPassword);
-await addUserToOrg(user.id, orgId);
-await upsertDatasource(orgId);
-await upsertFolder(orgId);
-await upsertDashboard(orgId);
-const serviceAccountId = await findOrCreateServiceAccount(orgId);
-const serviceAccountToken = await createServiceAccountToken(orgId, serviceAccountId);
-const uiVerification = await verifyUiUser(orgId, uiPassword);
-const serviceVerification = await verifyServiceToken(orgId, serviceAccountToken);
+function isEntryPoint() {
+  if (!process.argv[1] || process.argv[1] === "-") {
+    console.error("Run this script by path, e.g. node scripts/configure-usual-suspects-grafana-access.mjs");
+    process.exit(1);
+  }
+  try {
+    return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+}
 
-console.log(
-  JSON.stringify(
-    {
-      orgId,
-      orgName,
-      ui: {
-        login: userLogin,
-        email: userEmail,
-        password: uiPassword,
-        dashboardUrl: `https://logs.onestack.cloud/d/${dashboardUid}/usual-suspects-worker-logs?orgId=${orgId}`,
-        verification: uiVerification,
-      },
-      serviceAccount: {
-        name: serviceAccountName,
-        token: serviceAccountToken,
-        grafanaProxyQueryRangeUrl: `https://logs.onestack.cloud/api/datasources/proxy/uid/${datasourceUid}/loki/api/v1/query_range?orgId=${orgId}`,
-        directFilteredQueryRangeUrl: "https://logs.onestack.cloud/usual-suspects-logs/api/v1/query_range",
-        verification: serviceVerification,
-      },
-    },
-    null,
-    2,
-  ),
-);
+if (isEntryPoint()) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}
