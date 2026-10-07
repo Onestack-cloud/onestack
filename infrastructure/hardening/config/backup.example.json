@@ -81,7 +81,16 @@
     "sh:root/*/logs",
     "sh:root/*/log",
     "pp:/var/lib/onestack-maintenance/2026-09-07/twenty-stage/pgdata",
-    "pp:/var/lib/docker/volumes/f738645e67a2f625f459b48b31ad64a084361018b6cc760e5d7d52e662db2c99/_data"
+    "pp:/var/lib/docker/volumes/f738645e67a2f625f459b48b31ad64a084361018b6cc760e5d7d52e662db2c99/_data",
+    "sh:opt/cims-export-worker*",
+    "sh:etc/cims-export-worker*",
+    "sh:var/lib/onestack-cims*",
+    "sh:var/log/cims-export-worker.log*",
+    "sh:**/cims-export-worker/data",
+    "sh:**/cims-export-worker/exports",
+    "sh:**/cims-export-worker/.dev.vars*",
+    "sh:**/wcs-curate-*",
+    "sh:**/wcs-cims-*"
   ],
   "repository": "ssh://u437236@u437236.your-storagebox.de:23/./backups/onestack_monolith",
   "borg_environment": {
