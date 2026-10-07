@@ -57,14 +57,23 @@ describe("backfill tenant routing", () => {
     assert.deepEqual(Object.keys(byTenant).sort(), ["cloudflare-workers", "usual-suspects"]);
   });
 
-  test("redacts sensitive query parameters, including signed URL parts", () => {
-    const redacted = backfill.redactUrl(
-      "GET https://x.example/cb?code=C1&state=keep&X-Amz-Signature=S1&X-Amz-Credential=K1&access_token=T1",
-    );
-    for (const secret of ["C1", "S1", "K1", "T1"]) {
-      assert.ok(!redacted.includes(`=${secret}`), `${secret} survived: ${redacted}`);
+  test("entries carry no secrets from messages, errors or URLs", () => {
+    const event = {
+      timestamp: Date.now(),
+      source: ["calling", { password: "BF1" }],
+      $metadata: {
+        id: "evt-1",
+        message: "GET https://x.example/cb?code=BF2&state=ok",
+        error: "connect postgres://app:BF3@db/main failed",
+        trigger: "GET https://x.example/hook?token=BF4",
+      },
+      $workers: { scriptName: "usual-suspects", event: { request: { url: "https://x.example/?api_key=BF5" } } },
+    };
+    const entry = backfill.eventToLokiEntry(event, { sourceLabel: "cloudflare-workers-backfill" });
+    for (const secret of ["BF1", "BF2", "BF3", "BF4", "BF5"]) {
+      assert.ok(!entry.line.includes(secret), `${secret} survived: ${entry.line}`);
     }
-    assert.match(redacted, /state=keep/);
+    assert.match(entry.line, /state=ok/);
   });
 
   test("rejects routes that would write to several tenants at once", () => {

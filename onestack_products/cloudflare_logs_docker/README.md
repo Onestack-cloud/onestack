@@ -14,13 +14,16 @@ Traefik routes that path to the ingest adapter. The adapter validates the
 `Authorization: Bearer ...` header, filters allowed Worker script names, redacts
 secrets and writes to Loki. Grafana is exposed on the same host.
 
-Redaction replaces the values of sensitive keys (authorisation, cookies,
-passwords, secrets, tokens and API keys) anywhere in a record, including inside
-`console.log` arguments, and the values of sensitive query parameters (the same
-names plus OAuth `code` and signed URL `signature` and `credential` parts) in
-any URL inside a string. Free text without a URL or key is stored as logged, so
-Workers must not log secrets in plain messages. Malformed payloads are rejected
-without quoting them back.
+Redaction lives in `ingest/redaction.js`, which the backfill script shares. It
+replaces the values of sensitive keys (authorisation, cookies, passwords,
+secrets, tokens, API keys, JWTs, sessions, private keys, credentials and
+signatures) anywhere in a record, including inside `console.log` arguments,
+header pair lists and JSON encoded in a string. In any `scheme://` URL inside a
+string it redacts userinfo passwords and sensitive query or fragment parameters
+(the same names plus OAuth and one-time `code`s), leaving the rest of the URL as
+logged. Secrets in URL paths (such as webhook URLs) or in free text are stored as
+logged, so Workers must not log them. Malformed payloads are rejected without
+quoting them back.
 
 ## Tenant isolation
 
@@ -125,10 +128,10 @@ that shares the ingest service network:
 
 ```bash
 docker run --rm --network container:cloudflare-logs-ingest \
-  -v /root/cloudflare_logs_docker/scripts:/scripts:ro \
+  -v /root/cloudflare_logs_docker:/stack:ro \
   -e CF_API_EMAIL -e CF_API_KEY -e CF_ACCOUNT_ID \
   cloudflare_logs_docker-ingest \
-  node /scripts/backfill-workers-observability.mjs \
+  node /stack/scripts/backfill-workers-observability.mjs \
     --source-label cloudflare-workers-backfill-full \
     --from "2026-06-02T00:00:00.000Z" \
     --to "2026-06-09T04:18:00.000Z" \
