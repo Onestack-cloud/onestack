@@ -14,7 +14,7 @@ LibreChat (with its RAG API, vector database, Meilisearch and the MongoDB server
 
 ## Consequences
 
-The host expects 27 containers, and the backup coverage contract requires seven native database identities instead of ten. The off-host retention check, its test and the hardening README were updated to match. Password changes no longer fail for members of teams that list Plane or Matrix; Onestack does not manage Matrix passwords. Archives in `/root/backups/apps-retired-20261007-095516` allow restoring any of these services' data. The DNS records for their hostnames and the Matrix and Plane catalogue entries, which also have no running service, were left for a separate decision. The standalone `meilisearch` service is in use and was kept.
+The host expects 27 containers, and the backup coverage contract requires seven native database identities instead of ten. The off-host retention check, its test and the hardening README were updated to match. Password changes no longer fail for members of teams that list Plane or Matrix; Onestack does not manage Matrix passwords. Archives in `/root/backups/apps-retired-20261007-095516` allow restoring any of these services' data. The DNS records for their hostnames and the Matrix and Plane catalogue entries, which also have no running service, were left for a separate decision. The standalone `meilisearch` service is in use and was kept. NocoDB, whose unused database was removed in the follow-up cleanup the same day, was added to the retired products, and an unused NocoDB Cloud client with a hard-coded API token was deleted.
 
 ## Alternatives considered
 
