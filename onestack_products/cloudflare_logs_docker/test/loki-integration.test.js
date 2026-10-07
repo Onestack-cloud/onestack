@@ -210,6 +210,46 @@ describe("Loki tenant isolation (integration)", { skip: !enabled && "set LOKI_IN
     assert.equal(late.status, 202, await late.text());
   });
 
+  test("copying legacy history makes it visible through the proxy, redacted and only once", async () => {
+    // Inside the one-hour range viaProxy queries.
+    const at = Date.now() - 30 * 60 * 1000;
+    const legacy = { source: "cloudflare-workers", scriptName: "usual-suspects", kind: "console", outcome: "ok" };
+    const pushLegacy = (labels, ms, line) =>
+      fetch(`${lokiUrl}/loki/api/v1/push`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-scope-orgid": "fake" },
+        body: JSON.stringify({ streams: [{ stream: labels, values: [[String(BigInt(ms) * 1000000n), line]] }] }),
+      });
+    assert.ok((await pushLegacy(legacy, at, JSON.stringify({ message: `HISTORY_${run} https://x.example/cb?code=HISTSECRET_${run}` }))).ok);
+    assert.ok((await pushLegacy({ ...legacy, scriptName: "other-worker" }, at + 1, `FOREIGN_HISTORY_${run}`)).ok);
+
+    const copy = () =>
+      new Promise((resolve) => {
+        const child = require("node:child_process").spawn(
+          process.execPath,
+          [path.join(stackRoot, "scripts/copy-legacy-tenant-logs.mjs"), "--from", new Date(at - 60000).toISOString(), "--to", new Date(at + 60000).toISOString(), "--selector", '{scriptName=~".+"}'],
+          { env: { PATH: process.env.PATH, LOKI_URL: lokiUrl } },
+        );
+        let output = "";
+        child.stdout.on("data", (chunk) => (output += chunk));
+        child.stderr.on("data", (chunk) => (output += chunk));
+        child.on("exit", (code) => resolve({ code, output }));
+      });
+    const first = await copy();
+    assert.equal(first.code, 0, first.output);
+    assert.match(first.output, /"copied":1/);
+    assert.match(first.output, /"foreign":1/);
+    const second = await copy();
+    assert.equal(second.code, 0, second.output);
+    assert.match(second.output, /"copied":0/);
+
+    const { status, body } = await viaProxy("query_range", "{__USUAL_SUSPECTS_LABELS__}");
+    assert.equal(status, 200, body);
+    assert.equal(body.split(`HISTORY_${run}`).length - 1, 1, "history should appear exactly once");
+    assert.ok(!body.includes(`HISTSECRET_${run}`), "copied history was not re-redacted");
+    assert.ok(!body.includes(`FOREIGN_HISTORY_${run}`), "another script's history was copied");
+  });
+
   test("the admin multi-tenant header still sees every tenant", async () => {
     const params = new URLSearchParams({ query: '{source=~".+"}', limit: "1000" });
     const response = await fetch(`${lokiUrl}/loki/api/v1/query_range?${params}`, {
