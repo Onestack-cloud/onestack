@@ -172,3 +172,42 @@ describe("redaction follow-up from the security scan", () => {
     assert.ok(Number(process.hrtime.bigint() - started) / 1e6 < 500);
   });
 });
+
+describe("redaction gaps from the second review", () => {
+  test("a credential name anywhere in console arguments hides the next argument", () => {
+    assertHidden(normalizeMessage(["password:", "ARGS1"]), "ARGS1");
+    assertHidden(normalizeMessage(["user", "sam", "token", "ARGS2", "extra"]), "ARGS2");
+    assert.equal(normalizeMessage(["Session expired for user", "u-123"]), "Session expired for user u-123");
+  });
+
+  test("counter exceptions only apply to counter-like names", () => {
+    const output = redact({ accountPassword: 482913, accountToken: 12345678, settlementSecret: 777, tokenCount: 2, tokenExpiresAt: 1700000000 });
+    for (const secret of ["482913", "12345678", "777"]) {
+      assertHidden(output, secret);
+    }
+    assert.equal(output.tokenCount, 2);
+    assert.equal(output.tokenExpiresAt, 1700000000);
+  });
+
+  test("one-time codes and PINs under longer names", () => {
+    const output = redact({ otpCode: "OTPC1", verificationCode: "VC1", mfaCode: "MFA1", userPin: "PIN1", errorCode: "E_TIMEOUT" });
+    for (const secret of ["OTPC1", "VC1", "MFA1", "PIN1"]) {
+      assertHidden(output, secret);
+    }
+    assert.equal(output.errorCode, "E_TIMEOUT");
+    assertHidden(redact("sent otp_code=OTPC2 to user"), "OTPC2");
+  });
+
+  test("quoted names and values in free text", () => {
+    for (const [input, secret] of [
+      ['body: {"password":"QUOTE1","user":"sam"} truncated', "QUOTE1"],
+      ['"token": "QUOTE2"', "QUOTE2"],
+      ["password: 'QUOTE3 with spaces'", "QUOTE3"],
+      ['secret="QUOTE4 more words"', "QUOTE4"],
+      ["password => QUOTE5", "QUOTE5"],
+    ]) {
+      assertHidden(redact(input), secret);
+    }
+    assert.match(redact('body: {"password":"x","user":"sam"} truncated'), /"user":"sam"/);
+  });
+});
