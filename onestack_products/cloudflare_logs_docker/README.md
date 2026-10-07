@@ -20,14 +20,21 @@ secrets, tokens, API keys, JWTs, sessions, private keys, credentials and
 signatures) anywhere in a record, including inside `console.log` arguments,
 header lists and strings that are entirely JSON. Flags and counters with such
 names (`passwordResetSent`, `tokenCount`) stay visible; other numbers, such as a
-numeric OTP or PIN, do not. In any `scheme://` URL inside a string it redacts
+numeric OTP or PIN, do not. In any `scheme://` URL inside a string (JSON-escaped `scheme:\/\/` too, and
+URLs percent-encoded inside a parameter) it redacts
 userinfo and sensitive query or fragment parameters (the same names plus OAuth
 and one-time `code`s and API `key`s), leaving the rest of the URL as logged. In
 free text it redacts `Bearer` and `Basic` credentials and `name=value` or
 `name: value` pairs with a sensitive name. Secrets in URL paths (such as webhook
 URLs), in JSON with a prefix or in prose without a name are stored as logged, so
 Workers must not log them. Malformed payloads are rejected without quoting them
-back.
+back, and gzip bodies that decompress beyond `MAX_DECODED_BYTES` (100 MB by
+default) are refused with 413.
+
+When Loki drops entries it will never accept, such as a late Logpush entry
+behind a stream's acceptance window (`entry too far behind`), the adapter logs
+a warning and still answers 202, because a retry cannot succeed. Any other Loki
+error answers 502 so that Logpush retries the batch.
 
 The backfill command mounts only `ingest/` and `scripts/`, so the stack's
 `.env` stays out of the container.

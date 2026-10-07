@@ -9,6 +9,9 @@ const port = Number.parseInt(process.env.PORT || "8080", 10);
 const authToken = process.env.AUTH_TOKEN || "";
 const lokiUrl = process.env.LOKI_URL || "http://loki:3100/loki/api/v1/push";
 const maxBodyBytes = Number.parseInt(process.env.MAX_BODY_BYTES || "25000000", 10);
+// Caps a gzip body once decompressed, so a small compressed request cannot
+// exhaust memory.
+const maxDecodedBytes = Number.parseInt(process.env.MAX_DECODED_BYTES || "100000000", 10);
 const allowedScriptNames = new Set(
   (process.env.ALLOWED_SCRIPT_NAMES || "")
     .split(",")
@@ -96,7 +99,14 @@ function looksGzipped(buffer) {
 function decodePayload(buffer, request) {
   const contentEncoding = String(request.headers["content-encoding"] || "").toLowerCase();
   if (contentEncoding.includes("gzip") || looksGzipped(buffer)) {
-    return zlib.gunzipSync(buffer).toString("utf8");
+    try {
+      return zlib.gunzipSync(buffer, { maxOutputLength: maxDecodedBytes }).toString("utf8");
+    } catch (error) {
+      if (error.code === "ERR_BUFFER_TOO_LARGE" || error instanceof RangeError) {
+        throw Object.assign(new Error("decompressed payload too large"), { statusCode: 413 });
+      }
+      throw error;
+    }
   }
   return buffer.toString("utf8");
 }
@@ -253,6 +263,21 @@ function convertRecordToStreams(record, streamsByTenant) {
   return { accepted, filtered: 0 };
 }
 
+// Loki answers 400 when it drops entries it will never accept, such as a late
+// Logpush entry behind the stream's acceptance window, and keeps the rest of
+// the push. Retrying cannot help, so a 400 made only of those lines is logged
+// and treated as delivered; any other 400 still fails the batch.
+const permanentRejection = /entry too far behind|entry out of order|timestamp too (old|new)/;
+const rejectionSummary = /^user '[^']*', total ignored: \d+ out of \d+ for stream/;
+
+function onlyPermanentRejections(body) {
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 && lines.every((line) => permanentRejection.test(line) || rejectionSummary.test(line));
+}
+
 async function pushToLoki(streamsByTenant) {
   for (const [tenant, streams] of streamsByTenant) {
     const response = await fetch(lokiUrl, {
@@ -263,6 +288,10 @@ async function pushToLoki(streamsByTenant) {
 
     if (!response.ok) {
       const body = await response.text();
+      if (response.status === 400 && onlyPermanentRejections(body)) {
+        console.warn(`loki dropped entries it will never accept for tenant ${tenant}: ${body.slice(0, 1000)}`);
+        continue;
+      }
       throw new Error(`loki push failed for tenant ${tenant}: ${response.status} ${body.slice(0, 1000)}`);
     }
   }
@@ -324,7 +353,7 @@ const server = http.createServer((request, response) => {
 
   handleLogpush(request, response).catch((error) => {
     console.error(error);
-    const status = /too large|JSON/.test(error.message) ? 400 : 502;
+    const status = error.statusCode || (/too large|JSON/.test(error.message) ? 400 : 502);
     response.writeHead(status, { "content-type": "text/plain" });
     response.end(`${error.message}\n`);
   });

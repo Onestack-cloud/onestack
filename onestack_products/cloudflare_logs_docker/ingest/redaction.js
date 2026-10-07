@@ -24,9 +24,12 @@ const namePattern = /^[A-Za-z0-9_.-]{1,64}$/;
 // Query parameters only: OAuth and one-time codes (without catching
 // country_code, status_code or postcode) and bare API "key" parameters.
 const sensitiveParamPattern = /^(key|code|.*(auth|otp|verification|reset|access|refresh)[-_]?code)$/i;
-// Any scheme://..., so postgres://, redis://, wss:// and friends are covered.
+// Any scheme://..., so postgres://, redis://, wss:// and friends are covered,
+// including the JSON-escaped form scheme:\/\/... found in serialised payloads.
 // The scheme length is bounded to keep matching linear.
-const urlPattern = /\b[a-z][a-z0-9+.-]{0,31}:\/\/[^\s"'<>]+/gi;
+const urlPattern = /\b[a-z][a-z0-9+.-]{0,31}:(?:\/\/|\\\/\\\/)[^\s"'<>]+/gi;
+// A parameter value that is itself a percent-encoded URL (redirect_uri=https%3A%2F%2F...).
+const encodedUrlPattern = /%3A(?:%2F|\/){2}/i;
 const trailingPunctuation = new Set([")", ".", ",", ";", ":", "!", "?", "]"]);
 // Free text: "Bearer <token>" and "password=..." or "token: ...". The
 // lookbehind makes a name start only at a word boundary, keeping this linear.
@@ -70,14 +73,35 @@ function redactUrlText(candidate) {
     end -= 1;
   }
   let core = candidate.slice(0, end);
-  core = core.replace(/^([a-z][a-z0-9+.-]{0,31}:\/\/)([^/?#@\s]*)@/i, (match, scheme, userinfo) => {
+  core = core.replace(/^([a-z][a-z0-9+.-]{0,31}:(?:\/\/|\\\/\\\/))([^/?#@\s]*)@/i, (match, scheme, userinfo) => {
     const colon = userinfo.indexOf(":");
     return colon === -1 ? `${scheme}${REDACTED}@` : `${scheme}${userinfo.slice(0, colon)}:${REDACTED}@`;
   });
-  core = core.replace(/([?&#;])([^=&#;?]+)=([^&#;?]*)/g, (match, separator, name) =>
-    isSensitiveParam(name) ? `${separator}${name}=${REDACTED}` : match,
-  );
+  core = core.replace(/([?&#;])([^=&#;?]+)=([^&#;?]*)/g, (match, separator, name, value) => {
+    if (isSensitiveParam(name)) {
+      return `${separator}${name}=${REDACTED}`;
+    }
+    const nested = redactEncodedUrl(value);
+    return nested === value ? match : `${separator}${name}=${nested}`;
+  });
   return core + candidate.slice(end);
+}
+
+// Decodes a percent-encoded URL value, redacts it with the same rules and
+// re-encodes it only if something changed. Each nested level is shorter than
+// the last, so this terminates.
+function redactEncodedUrl(value) {
+  if (!encodedUrlPattern.test(value)) {
+    return value;
+  }
+  let decoded;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+  const redacted = decoded.replace(urlPattern, redactUrlText);
+  return redacted === decoded ? value : encodeURIComponent(redacted);
 }
 
 function redactString(value, depth) {
