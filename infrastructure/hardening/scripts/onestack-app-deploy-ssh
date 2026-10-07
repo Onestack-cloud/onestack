@@ -1,0 +1,328 @@
+#!/usr/bin/python3
+"""Run a fixed, app-scoped deployment for each restricted CI SSH key."""
+
+import fcntl
+import json
+import os
+import pathlib
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+APPS = {
+    "allbids": ("/root/allbids_app", ["allbids_app"]),
+    "onestack": ("/root/onestack_docker", ["onestack"]),
+    "onestack-dev": ("/root/onestack_dev_docker", ["onestack_dev"]),
+}
+ALLBIDS_IMAGE = "registry.gitlab.com/digitalnachos-prototypes/allbids_app/main"
+ALLBIDS_PROJECT_ID = "b237189a-4660-43fe-954e-e1d458f07b81"
+ALLBIDS_TOKEN_FILE = pathlib.Path("/etc/onestack-allbids/infisical-token")
+ALLBIDS_RUNTIME_DIR = pathlib.Path("/run/onestack-allbids")
+ALLBIDS_BACKUP_DIR = pathlib.Path("/var/lib/onestack-deploy/allbids/backups")
+ALLBIDS_BACKUP_COUNT = 3
+
+
+def classify(scope, original):
+    try:
+        args = shlex.split(original)
+    except ValueError:
+        return None
+
+    permitted = ["allbids"] if scope == "allbids" else ["onestack", "onestack-dev"]
+    if original == "onestack-deploy-check":
+        return ("check", permitted, None)
+
+    if scope == "allbids":
+        if (
+            len(args) == 3
+            and args[:2] == ["onestack-deploy", "allbids"]
+            and re.fullmatch(r"[0-9a-f]{40}", args[2])
+        ):
+            return ("deploy", "allbids", args[2])
+        return None
+
+    # Keep the existing restricted deployment protocol for the other apps.
+    if args[:3] == ["docker", "login", "registry.gitlab.com"]:
+        return ("noop", None, None)
+    if args == ["docker", "image", "prune", "-af"]:
+        return ("noop", None, None)
+    for name in permitted:
+        directory, _ = APPS[name]
+        if original in (
+            f"cd {directory} && docker compose pull && docker compose up -d",
+            f"onestack-deploy {name}",
+        ):
+            return ("deploy", name, None)
+    return None
+
+
+def checked(command, *, label, **kwargs):
+    result = subprocess.run(command, capture_output=True, text=True, check=False, **kwargs)
+    if result.returncode:
+        raise RuntimeError(f"{label} failed; administrator investigation required")
+    return result.stdout
+
+
+def root_directory(path):
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    info = path.lstat()
+    if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o077:
+        raise RuntimeError("Deployment directory must be private and administrator-owned")
+
+
+def read_infisical_token():
+    info = ALLBIDS_TOKEN_FILE.lstat()
+    if (
+        ALLBIDS_TOKEN_FILE.is_symlink()
+        or info.st_uid != 0
+        or info.st_mode & 0o077
+    ):
+        raise RuntimeError("Infisical credential must be private and administrator-owned")
+    token = ALLBIDS_TOKEN_FILE.read_text().strip()
+    if not token:
+        raise RuntimeError("Infisical credential is empty")
+    return token
+
+
+def refresh_allbids_secrets():
+    root_directory(ALLBIDS_RUNTIME_DIR)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix="secrets.", suffix=".pending", dir=ALLBIDS_RUNTIME_DIR
+    )
+    os.close(descriptor)
+    try:
+        environment = {
+            "PATH": "/usr/local/bin:/usr/bin:/bin",
+            "HOME": "/root",
+            "INFISICAL_TOKEN": read_infisical_token(),
+        }
+        checked(
+            [
+                "infisical",
+                "export",
+                "--silent",
+                "--domain",
+                "https://infisical.onestack.cloud/api",
+                "--projectId",
+                ALLBIDS_PROJECT_ID,
+                "--env",
+                "prod",
+                "--path",
+                "/",
+                "--format",
+                "dotenv",
+                "--output-file",
+                temporary,
+            ],
+            label="Infisical secret retrieval",
+            env=environment,
+            timeout=60,
+        )
+        if not pathlib.Path(temporary).stat().st_size:
+            raise RuntimeError("Infisical returned no AllBids production secrets")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, ALLBIDS_RUNTIME_DIR / "secrets.env")
+    finally:
+        pathlib.Path(temporary).unlink(missing_ok=True)
+
+
+def validate(name, image=None):
+    directory, containers = APPS[name]
+    for part in (pathlib.Path(directory), pathlib.Path(directory) / "docker-compose.yml"):
+        info = part.lstat()
+        if part.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:
+            raise RuntimeError("Compose inputs must remain administrator-owned")
+    environment = {
+        "PATH": "/usr/local/bin:/usr/bin:/bin",
+        "HOME": "/root",
+        "PWD": directory,
+        "DOCKER_CONFIG": "/etc/onestack-registry/"
+        + ("allbids" if name == "allbids" else "onestack"),
+    }
+    if image:
+        environment["ALLBIDS_IMAGE"] = image
+    checked(
+        ["docker", "compose", "config", "--quiet"],
+        label="Compose validation",
+        cwd=directory,
+        env=environment,
+        timeout=30,
+    )
+    return directory, containers, environment
+
+
+def backup_allbids_database(sha):
+    database = pathlib.Path(APPS["allbids"][0]) / "data/bread_machine_prod.db"
+    if not database.is_file():
+        raise RuntimeError("AllBids database is missing")
+    root_directory(ALLBIDS_BACKUP_DIR)
+    if shutil.disk_usage(ALLBIDS_BACKUP_DIR).free < database.stat().st_size + 10 * 1024**3:
+        raise RuntimeError("Not enough free space for an AllBids backup and safety margin")
+    timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    backup = ALLBIDS_BACKUP_DIR / f"pre-{sha}-{timestamp}.db"
+    pending = pathlib.Path(str(backup) + ".pending")
+    try:
+        checked(
+            [
+                "sqlite3",
+                "-readonly",
+                "-cmd",
+                ".timeout 30000",
+                str(database),
+                f".backup {pending}",
+            ],
+            label="SQLite backup",
+            timeout=1200,
+        )
+        result = checked(
+            ["sqlite3", "-readonly", str(pending), "PRAGMA quick_check;"],
+            label="SQLite backup verification",
+            timeout=1200,
+        )
+        if result.strip() != "ok":
+            raise RuntimeError("SQLite backup did not pass quick_check")
+        os.chmod(pending, 0o600)
+        os.replace(pending, backup)
+    finally:
+        pending.unlink(missing_ok=True)
+        pathlib.Path(str(pending) + "-shm").unlink(missing_ok=True)
+        pathlib.Path(str(pending) + "-wal").unlink(missing_ok=True)
+    return backup
+
+
+def prune_allbids_backups(directory=ALLBIDS_BACKUP_DIR):
+    """Retain the newest three backups made by this wrapper, never other backups."""
+    pattern = re.compile(r"pre-[0-9a-f]{40}-[0-9]{8}T[0-9]{6}Z\.db")
+    backups = sorted(
+        (
+            path
+            for path in directory.iterdir()
+            if pattern.fullmatch(path.name) and path.is_file() and not path.is_symlink()
+        ),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for old in backups[ALLBIDS_BACKUP_COUNT:]:
+        old.unlink()
+
+
+def verify_containers(containers):
+    for container in containers:
+        state = json.loads(
+            checked(
+                ["docker", "inspect", container],
+                label="Container inspection",
+                timeout=20,
+            )
+        )[0]["State"]
+        if not state["Running"] or state.get("Health", {}).get("Status", "healthy") != "healthy":
+            raise RuntimeError("Application is not healthy")
+
+
+def deploy_allbids(sha):
+    image = f"{ALLBIDS_IMAGE}:{sha}"
+    refresh_allbids_secrets()
+    directory, containers, environment = validate("allbids", image)
+    checked(
+        ["docker", "compose", "pull", "allbids_app"],
+        label="AllBids image pull",
+        cwd=directory,
+        env=environment,
+        timeout=900,
+    )
+    backup = backup_allbids_database(sha)
+    previous_image = checked(
+        ["docker", "inspect", "-f", "{{.Image}}", "allbids_app"],
+        label="Previous image lookup",
+        timeout=20,
+    ).strip()
+    checked(
+        [
+            "docker",
+            "tag",
+            previous_image,
+            f"onestack-rollback/allbids:{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}",
+        ],
+        label="Rollback image retention",
+        timeout=20,
+    )
+    checked(
+        ["docker", "compose", "up", "-d", "--wait", "--wait-timeout", "180", "allbids_app"],
+        label="AllBids startup",
+        cwd=directory,
+        env=environment,
+        timeout=240,
+    )
+    verify_containers(containers)
+    prune_allbids_backups()
+    print(f"AllBids {sha} is healthy; verified pre-deploy backup: {backup}")
+
+
+def main():
+    scope = sys.argv[1]
+    action = classify(scope, os.environ.get("SSH_ORIGINAL_COMMAND", ""))
+    if action is None:
+        print("This key is limited to its application deployment.", file=sys.stderr)
+        return 126
+    kind, value, sha = action
+    if kind == "noop":
+        print("Administrator-managed configuration and rollback images retained.")
+        return 0
+
+    os.umask(0o077)
+    with open(f"/run/lock/onestack-deploy-{scope}.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if kind == "deploy" and value == "allbids":
+            deploy_allbids(sha)
+            return 0
+
+        names = value if kind == "check" else [value]
+        for name in names:
+            directory, containers, environment = validate(name)
+            if kind == "deploy":
+                for container in containers:
+                    image = checked(
+                        ["docker", "inspect", "-f", "{{.Image}}", container],
+                        label="Previous image lookup",
+                        timeout=20,
+                    ).strip()
+                    checked(
+                        [
+                            "docker",
+                            "tag",
+                            image,
+                            f"onestack-rollback/{name}:"
+                            + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()),
+                        ],
+                        label="Rollback image retention",
+                        timeout=20,
+                    )
+                checked(
+                    ["docker", "compose", "pull"],
+                    label="Image pull",
+                    cwd=directory,
+                    env=environment,
+                    timeout=900,
+                )
+                checked(
+                    ["docker", "compose", "up", "-d", "--wait", "--wait-timeout", "180"],
+                    label="Application startup",
+                    cwd=directory,
+                    env=environment,
+                    timeout=240,
+                )
+            verify_containers(containers)
+    print("Application configuration and service health verified.")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
