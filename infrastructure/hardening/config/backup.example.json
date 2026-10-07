@@ -80,7 +80,6 @@
     "sh:root/*/db-data/pgroot/pg_log",
     "sh:root/*/logs",
     "sh:root/*/log",
-    "pp:/var/lib/onestack-maintenance/2026-09-07/twenty-stage/pgdata",
     "pp:/var/lib/docker/volumes/f738645e67a2f625f459b48b31ad64a084361018b6cc760e5d7d52e662db2c99/_data",
     "pp:/opt/cims-export-worker",
     "pp:/etc/cims-export-worker",
