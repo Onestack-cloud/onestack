@@ -12,41 +12,64 @@ logs stack on `onestack-admin` (`/root/cloudflare_logs_docker`):
   org, audits the Usual Suspects org and checks isolation before it prints
   credentials.
 
-The whole procedure, including the old single-tenant state, the upgrade, the
-configure script and the backfill, was rehearsed locally against the pinned
-images on 2026-10-07 and passed. Expect about two minutes without log ingestion
-while the containers are recreated; Logpush retries in the meantime.
+The release is commit `339afb8`. On 2026-10-07 the whole procedure was
+rehearsed locally against the pinned images, from the old single-tenant state
+through the upgrade, the configure script and the backfill, and it passed.
+Expect a few minutes without log ingestion during the backup and the container
+recreation; Logpush retries in the meantime.
 
-## Decide before you start
+## Before you start
 
-Running the configure script (step 6) rotates the Usual Suspects UI password and
-mints a new service account token. Plan when to send the client the new UI
-password. Their existing service account token keeps working, so the new one
-only needs to be sent if you want to rotate it. Skipping step 6 leaves the UI
-user in the admin org with role None (safe today, but see ADR-0003).
+Tell the Usual Suspects client two things:
+
+- Their dashboards start empty at the cutover. Earlier logs stay in a tenant
+  they cannot read (ADR-0002) until they are re-backfilled in step 7.
+- Their UI password changes in step 6. Their existing service account token
+  keeps working.
+
+Skipping step 6 leaves the UI user in the admin org with role None. That is
+safe today but is what ADR-0003 replaces.
+
+## Rollback triggers
+
+Roll back (see the end of this runbook) if any of the following happens:
+
+- Within five minutes of step 4, `/usual-suspects-logs/health` does not return
+  200 with `"tenancyEnforced":true`.
+- Ten minutes after step 4, with Logpush running, the `usual-suspects` tenant
+  has received no new logs (step 5).
+- Any other stack service fails to start.
+
+A failed step 6 is not a rollback trigger: fix the reported problem and run it
+again.
 
 ## 0. Local pre-flight
 
-From a clean checkout of `main` that includes merge `339afb8` or later:
+Test the exact release in a throwaway worktree:
 
 ```bash
-cd onestack_products/cloudflare_logs_docker
-npm test
-npm run test:integration
+cd "$(git rev-parse --show-toplevel)"
+git worktree add /tmp/cloudflare_logs_check 339afb8
+(cd /tmp/cloudflare_logs_check/onestack_products/cloudflare_logs_docker && npm test && npm run test:integration)
+git worktree remove /tmp/cloudflare_logs_check
 ```
 
-Both must pass (the integration suite needs Docker). Then export exactly what
-is committed, so unrelated local changes cannot ride along:
+Both suites must pass (the integration suite needs Docker). Then export the
+release and the baseline that was imported as "currently deployed" (`1471aed`).
+The block stops on any failure and refuses to continue with an empty export:
 
 ```bash
+cd "$(git rev-parse --show-toplevel)" && set -o pipefail
+rm -rf /tmp/cloudflare_logs_release /tmp/cloudflare_logs_baseline
 mkdir -p /tmp/cloudflare_logs_release /tmp/cloudflare_logs_baseline
-git archive main onestack_products/cloudflare_logs_docker | tar -x -C /tmp/cloudflare_logs_release --strip-components=2
-git archive 1471aed onestack_products/cloudflare_logs_docker | tar -x -C /tmp/cloudflare_logs_baseline --strip-components=2
+git archive 339afb8 onestack_products/cloudflare_logs_docker | tar -x -C /tmp/cloudflare_logs_release --strip-components=2 &&
+git archive 1471aed onestack_products/cloudflare_logs_docker | tar -x -C /tmp/cloudflare_logs_baseline --strip-components=2 &&
+test -f /tmp/cloudflare_logs_release/ingest/redaction.js &&
+test -f /tmp/cloudflare_logs_baseline/docker-compose.yml &&
+echo "export ok"
 ```
 
-Use fresh, empty directories (delete any from an earlier attempt first).
-
-`1471aed` is the copy that was imported into git as "currently deployed".
+Do not continue unless it prints `export ok`.
 
 ## 1. Server pre-flight (read-only)
 
@@ -56,56 +79,81 @@ Check that the server still runs what was imported. Any file listed here was
 changed on the server after the import and must be reconciled before deploying:
 
 ```bash
-rsync -rcn --delete --exclude .env --exclude credentials.txt --out-format='%n' \
+rsync -rcn --exclude .env --exclude credentials.txt --out-format='%n' \
   /tmp/cloudflare_logs_baseline/ onestack-admin:/root/cloudflare_logs_docker/
 ```
 
-Then check the running state, the volume names and free space (this prints
-`.env` key names only, never values):
+Then check the running state, the volumes and free space. This prints `.env`
+key names only, never values:
 
 ```bash
-ssh onestack-admin 'cd /root/cloudflare_logs_docker && cut -d= -f1 .env && docker compose ps && docker volume ls | grep -E "loki|grafana" && df -h /'
+ssh onestack-admin 'bash -s' <<'EOF'
+cd /root/cloudflare_logs_docker
+echo "== .env keys"; cut -d= -f1 .env
+echo "== containers"; docker compose ps
+for c in cloudflare-logs-grafana cloudflare-logs-loki; do
+  for v in $(docker inspect -f '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}} {{end}}{{end}}' $c); do
+    echo "== $c volume $v: $(docker run --rm -v $v:/data:ro --user 0 --entrypoint du "$(docker inspect -f '{{.Image}}' cloudflare-logs-ingest)" -sh /data | cut -f1)"
+  done
+done
+echo "== free space"; df -h /
+EOF
 ```
 
 The `.env` must define `LOGS_HOST`, `GRAFANA_ADMIN_USER`,
 `GRAFANA_ADMIN_PASSWORD`, `INGEST_BEARER_TOKEN`, `ALLOWED_SCRIPT_NAMES` and
-`USUAL_SUSPECTS_LOGS_API_TOKEN`; no new variables are needed. Note the two volume
-names (normally `cloudflare_logs_docker_grafana_data` and
-`cloudflare_logs_docker_loki_data`).
+`USUAL_SUSPECTS_LOGS_API_TOKEN`; no new variables are needed. Free space on `/`
+must be at least twice the two volumes combined (for the backup and the image
+rebuild).
 
 ## 2. Back up
 
-Back up the stack directory, including `.env`, and both volumes. The volumes
-must be read as root (`--user 0`), because the stack's images run as non-root
-users. The ingest image is already on the server and has `tar`:
+This backs up the stack directory, including `.env`, and both volumes. Grafana
+and Loki are stopped for the copy so that Grafana's SQLite database and Loki's
+WAL are consistent; ingest fails meanwhile and Logpush retries. Volumes are read
+as root because the stack's images run as non-root users. Volume names are taken
+from the running containers, so they are right whatever the compose project is
+called:
 
 ```bash
 ssh onestack-admin 'bash -s' <<'EOF'
 set -e
+cd /root/cloudflare_logs_docker
 stamp=$(date +%Y%m%d-%H%M%S)
-mkdir -p /root/backups/cloudflare_logs/$stamp
-tar czf /root/backups/cloudflare_logs/$stamp/stack.tgz -C /root cloudflare_logs_docker
-for v in grafana_data loki_data; do
-  docker run --rm --user 0 -v cloudflare_logs_docker_$v:/data:ro \
-    -v /root/backups/cloudflare_logs/$stamp:/backup \
-    cloudflare_logs_docker-ingest tar czf /backup/$v.tgz -C /data .
+dir=/root/backups/cloudflare_logs/$stamp
+mkdir -p "$dir"
+img=$(docker inspect -f '{{.Image}}' cloudflare-logs-ingest)
+grafana_volume=$(docker inspect -f '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}' cloudflare-logs-grafana)
+loki_volume=$(docker inspect -f '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}' cloudflare-logs-loki)
+test -n "$img"; test -n "$grafana_volume"; test -n "$loki_volume"
+echo "$grafana_volume $loki_volume" > "$dir/volumes.txt"
+tar czf "$dir/stack.tgz" -C /root cloudflare_logs_docker
+trap 'docker start cloudflare-logs-loki cloudflare-logs-grafana' EXIT
+docker stop cloudflare-logs-grafana cloudflare-logs-loki
+for v in "$grafana_volume" "$loki_volume"; do
+  docker run --rm --user 0 -v "$v":/data:ro -v "$dir":/backup "$img" tar czf "/backup/$v.tgz" -C /data .
 done
-ls -la /root/backups/cloudflare_logs/$stamp
+ls -la "$dir"
 EOF
 ```
 
-Use the volume names from step 1 if they differ. Note the backup directory for
-rollback.
+Write down the backup directory it prints.
 
 ## 3. Copy the release
 
-The excludes protect the server's secrets. Run with `-n` first and read the
-list of deletions:
+Do the dry run first and read the list of files. It should show only the
+release's added and changed files. There is no `--delete`: the release only adds
+and changes files, and any server-only file is left alone.
 
 ```bash
-rsync -avn --delete --exclude .env --exclude credentials.txt \
+rsync -rlptvn --no-owner --no-group --exclude .env --exclude credentials.txt \
   /tmp/cloudflare_logs_release/ onestack-admin:/root/cloudflare_logs_docker/
-rsync -av --delete --exclude .env --exclude credentials.txt \
+```
+
+Only then copy:
+
+```bash
+rsync -rlptv --no-owner --no-group --exclude .env --exclude credentials.txt \
   /tmp/cloudflare_logs_release/ onestack-admin:/root/cloudflare_logs_docker/
 ```
 
@@ -121,100 +169,127 @@ config, and the proxy answers 503 by design.
 ## 5. Verify
 
 The tokens are read from `.env` on the server, so they stay out of your local
-shell history:
+shell history.
 
 ```bash
 ssh onestack-admin 'bash -s' <<'EOF'
 cd /root/cloudflare_logs_docker && set -a && . ./.env && set +a
-echo "proxy health (expect 200 and \"tenancyEnforced\":true):"
+echo "== proxy health (expect \"tenancyEnforced\":true and 200)"
 curl -sS -w ' %{http_code}\n' -H "Authorization: Bearer $USUAL_SUSPECTS_LOGS_API_TOKEN" \
   "https://$LOGS_HOST/usual-suspects-logs/health"
-echo "tenantless Loki read (expect 401 no org id):"
+echo "== tenantless Loki read (expect 401 no org id)"
 docker exec cloudflare-logs-ingest node -e 'fetch("http://loki:3100/loki/api/v1/labels").then(async (r) => console.log(r.status, (await r.text()).trim()))'
-echo "ingest errors in the last 10 minutes (expect none):"
-docker compose logs --since 10m ingest | grep -i -E 'error|fail' || echo none
 EOF
 ```
 
-Then, after the next Logpush batch has arrived (usually within a minute or two):
+Once Logpush has delivered a batch (usually within a few minutes, and Cloudflare
+shows the job's last successful push), check that new logs reach the
+`usual-suspects` tenant (expect a non-zero count):
 
-- In the Usual Suspects Grafana org, the dashboard shows new invocations. Logs
-  from before the cutover do not appear there. That is expected (ADR-0002), so
-  re-backfill if needed (see the README).
-- In the admin org, the "Cloudflare Worker Logs" dashboard still shows logs from
-  before the cutover (they now sit in the `fake` tenant) as well as new ones.
-- Optional bypass check: a query through the proxy for every script name
-  returns only Usual Suspects scripts:
+```bash
+ssh onestack-admin 'bash -s' <<'EOF'
+docker exec cloudflare-logs-ingest node -e '
+const q = "sum(count_over_time({scriptName=~\".+\"}[10m]))";
+fetch("http://loki:3100/loki/api/v1/query?query=" + encodeURIComponent(q), { headers: { "X-Scope-OrgID": "usual-suspects" } })
+  .then(async (r) => console.log(r.status, JSON.stringify((await r.json()).data.result)))'
+EOF
+```
+
+Then check the proxy's isolation. This query asks for every script name and
+must return 200 with only Usual Suspects names. Before the cutover, a variant of
+it also returned other scripts:
 
 ```bash
 ssh onestack-admin 'bash -s' <<'EOF'
 cd /root/cloudflare_logs_docker && set -a && . ./.env && set +a
-curl -sS -G -H "Authorization: Bearer $USUAL_SUSPECTS_LOGS_API_TOKEN" \
-  --data-urlencode 'query=sum(count_over_time({__USUAL_SUSPECTS_LABELS__} |= `"` [1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"} != `"` [1h]))' \
-  "https://$LOGS_HOST/usual-suspects-logs/loki/api/v1/query" | grep -o '"scriptName":"[^"]*"' | sort -u
+curl -sS -G -w '\n%{http_code}\n' -H "Authorization: Bearer $USUAL_SUSPECTS_LOGS_API_TOKEN" \
+  --data-urlencode 'query=sum by (scriptName) (count_over_time({__USUAL_SUSPECTS_LABELS__}[1h])) or sum by (scriptName) (count_over_time({scriptName=~".+"}[1h]))' \
+  "https://$LOGS_HOST/usual-suspects-logs/loki/api/v1/query" | grep -o -E '"scriptName":"[^"]*"|^[0-9]{3}$' | sort -u
 EOF
 ```
 
-Only Usual Suspects script names may appear. Before the cutover, this same query
-also returned other scripts.
+The output must include `200` and at least one of
+`"scriptName":"usual-suspects"` or `"scriptName":"usual-suspects-production"`;
+nothing else may appear. Finally, in Grafana:
+
+- In the Usual Suspects org, the dashboard shows new invocations.
+- In the admin org, the "Cloudflare Worker Logs" dashboard still shows logs from
+  before the cutover (now in the `fake` tenant) as well as new ones.
 
 ## 6. Reconfigure Grafana access
 
-This rotates the UI password (see "Decide before you start"). It prints new
-credentials, so capture the output somewhere safe rather than in a shared
-terminal log:
+This rotates the UI password. The output contains new credentials, so it is
+written to a file only you can read:
 
 ```bash
-ssh onestack-admin 'bash -s' > ~/usual-suspects-grafana-access.json <<'EOF'
+(umask 077; ssh onestack-admin 'bash -s' > ~/usual-suspects-grafana-access.json <<'EOF'
 cd /root/cloudflare_logs_docker && set -a && . ./.env && set +a
 docker run --rm --network container:cloudflare-logs-grafana \
   -v /root/cloudflare_logs_docker/scripts:/scripts:ro \
   -e GRAFANA_URL=http://localhost:3000 \
   -e GRAFANA_ADMIN_USER -e GRAFANA_ADMIN_PASSWORD -e USUAL_SUSPECTS_LOGS_API_TOKEN \
-  cloudflare_logs_docker-ingest \
+  "$(docker inspect -f '{{.Image}}' cloudflare-logs-ingest)" \
   node /scripts/configure-usual-suspects-grafana-access.mjs
 EOF
-echo "exit $?"; chmod 600 ~/usual-suspects-grafana-access.json
+echo "exit $?")
 ```
 
-It must exit 0. The `verification` blocks should show the following:
+It must exit 0, and the `verification` blocks must show:
 
 - `ui.verification`: `queryStatus` 200 and `adminDatasourceStatus` 403.
 - `serviceAccount.verification`: `scriptLabels` contains only Usual Suspects
   scripts. `conclusive: false` is expected while ingest accepts only Usual
-  Suspects scripts, because no other script's logs exist to compare against.
+  Suspects scripts, because there are no other scripts' logs to compare against.
 
-If it exits non-zero, nothing was printed and no new token is left. Read the
-error and fix the org. The UI password has still been rotated, so the client
-stays locked out until a successful run.
+If it exits non-zero, nothing was printed and no new token is left; read the
+error on stderr and fix the org. The UI password has still been rotated, so the
+client stays locked out until a run succeeds.
 
 ## 7. Afterwards
 
-- Send the client the new UI password through the usual secure channel.
-- Optionally re-backfill the window Cloudflare still retains, with the README
-  command (it now mounts `ingest/` and `scripts/` only).
+- Send the client the new UI password through the usual secure channel, then
+  delete `~/usual-suspects-grafana-access.json`.
+- Re-backfill straight away, before Cloudflare's retention runs out, using the
+  README command (it now mounts `ingest/` and `scripts/` only). That restores
+  the client's recent history in the `usual-suspects` tenant.
 - From 14 days after the cutover, retention has emptied the `fake` tenant, and
   it can be dropped from `grafana/provisioning/datasources/loki.yml` in a later
   change.
 
 ## Rollback
 
-1. Restore the previous files:
+Set `dir` to the backup directory from step 2, then restore the previous stack
+files and, if needed, the Grafana volume:
 
-   ```bash
-   ssh onestack-admin 'cd /root && tar xzf /root/backups/cloudflare_logs/<stamp>/stack.tgz'
-   ```
+```bash
+ssh onestack-admin 'bash -s' <<'EOF'
+set -e
+dir=/root/backups/cloudflare_logs/REPLACE_WITH_STAMP
+read -r grafana_volume loki_volume < "$dir/volumes.txt"
+# Check everything before stopping or deleting anything.
+test -n "$grafana_volume"
+gzip -t "$dir/stack.tgz"
+[ "${RESTORE_GRAFANA:-no}" != yes ] || gzip -t "$dir/$grafana_volume.tgz"
+img=$(docker inspect -f '{{.Image}}' cloudflare-logs-ingest)
+test -n "$img"
+cd /root
+docker compose -f cloudflare_logs_docker/docker-compose.yml stop
+mv cloudflare_logs_docker "cloudflare_logs_docker.failed.$(date +%Y%m%d-%H%M%S)"
+tar xzf "$dir/stack.tgz"
+# Restore the Grafana database only if step 6 ran and must be undone (this
+# also undoes the password rotation).
+if [ "${RESTORE_GRAFANA:-no}" = yes ]; then
+  docker run --rm --user 0 -v "$grafana_volume":/data -v "$dir":/backup "$img" \
+    sh -c "find /data -mindepth 1 -delete && tar xzf /backup/$grafana_volume.tgz -C /data"
+fi
+cd cloudflare_logs_docker && docker compose up -d --build --force-recreate && docker compose ps
+EOF
+```
 
-   This restores `cloudflare_logs_docker/` exactly as backed up, `.env`
-   included.
-2. Recreate the stack:
-
-   ```bash
-   ssh onestack-admin 'cd /root/cloudflare_logs_docker && docker compose up -d --build --force-recreate'
-   ```
+To restore Grafana too, put `export RESTORE_GRAFANA=yes` as the first line
+inside the heredoc.
 
 Logs ingested after the cutover stay on disk in their tenants, but the old
-single-tenant Loki cannot see them; they reappear if the cutover is redone.
-Rollback reopens the LogQL bypass. Only restore the Grafana volume backup if the
-configure script left Grafana in a state you need to undo; that also undoes the
-password rotation.
+single-tenant Loki cannot see them; they reappear if the cutover is redone. Do
+not restore the Loki volume unless the cutover itself corrupted it, because that
+discards everything ingested since the backup. Rollback reopens the LogQL bypass.
