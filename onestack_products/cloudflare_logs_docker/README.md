@@ -136,6 +136,31 @@ docker run --rm --network container:cloudflare-logs-grafana \
   node /scripts/configure-usual-suspects-grafana-access.mjs
 ```
 
+## Restoring history from the legacy tenant
+
+Logs written before tenancy was enabled sit in Loki's `fake` tenant, which the
+Usual Suspects proxy cannot read. `scripts/copy-legacy-tenant-logs.mjs` copies a
+window of them into the `usual-suspects` tenant:
+
+- Only the named Worker scripts are copied (`--scripts`, by default the two
+  Usual Suspects ones), whatever the selector returns.
+- Every line is re-redacted with the current rules.
+- Entries are written under the `cloudflare-workers-backfill-full` source label.
+- Entries the target already holds are skipped, so a run can be repeated.
+- `--from` must be within the last 167 hours, because Loki rejects older entries.
+
+Run it with `--dry-run` first:
+
+```bash
+docker run --rm --network container:cloudflare-logs-ingest \
+  -v /root/cloudflare_logs_docker/ingest:/stack/ingest:ro \
+  -v /root/cloudflare_logs_docker/scripts:/stack/scripts:ro \
+  cloudflare_logs_docker-ingest \
+  node /stack/scripts/copy-legacy-tenant-logs.mjs \
+    --from "$(date -u -d '-166 hours' +%Y-%m-%dT%H:%M:%SZ)" \
+    --to 2026-10-07T05:25:00Z --dry-run
+```
+
 ## Manual backfill
 
 Historical Workers Logs can be backfilled from Cloudflare Workers Observability
