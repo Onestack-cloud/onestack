@@ -144,7 +144,11 @@ window of them into the `usual-suspects` tenant:
 
 - Only the named Worker scripts are copied (`--scripts`, by default the two
   Usual Suspects ones), whatever the selector returns.
-- Every line is re-redacted with the current rules.
+- Every line is re-redacted with the current rules, and console `message`
+  fields are rebuilt from the original arguments, because ingest before the
+  cutover joined them unredacted.
+- Pushes are about 1 MB with a pause between them and back off on 429, so live
+  ingestion keeps its share of Loki's rate. Any other rejection stops the run.
 - Entries are written under the `cloudflare-workers-backfill-full` source label.
 - Entries the target already holds are skipped, so a run can be repeated.
 - `--from` must be within the last 167 hours, because Loki rejects older entries.

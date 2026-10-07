@@ -29,9 +29,20 @@ function liveLabels(extra = {}) {
   };
 }
 
+// Honours the two matcher shapes the script uses: source="x" and scriptName=~"a|b".
+function matchesSelector(labels, query) {
+  const source = query.match(/source="([^"]*)"/);
+  if (source && labels.source !== source[1]) {
+    return false;
+  }
+  const scripts = query.match(/scriptName=~"([^"]*)"/);
+  return !scripts || new RegExp(`^(?:${scripts[1]})$`).test(labels.scriptName);
+}
+
 // A Loki stand-in that stores entries per tenant, answers query_range for a
-// time range with a result limit and records every push.
-async function startTenantLoki(seed) {
+// time range with a result limit and records every push. pushResponse may
+// answer a push itself with { status, body }.
+async function startTenantLoki(seed, { pushResponse } = {}) {
   const store = new Map(Object.entries(seed).map(([tenant, entries]) => [tenant, [...entries]]));
   const pushes = [];
   const server = http.createServer((request, response) => {
@@ -41,8 +52,15 @@ async function startTenantLoki(seed) {
     request.on("data", (chunk) => chunks.push(chunk));
     request.on("end", () => {
       if (request.method === "POST") {
-        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-        pushes.push({ tenant, streams: body.streams });
+        const raw = Buffer.concat(chunks);
+        const body = JSON.parse(raw.toString("utf8"));
+        const custom = pushResponse ? pushResponse(pushes.length) : null;
+        pushes.push({ tenant, streams: body.streams, bytes: raw.length, status: custom?.status ?? 204 });
+        if (custom) {
+          response.writeHead(custom.status, { "content-type": "text/plain" });
+          response.end(custom.body);
+          return;
+        }
         const entries = store.get(tenant) || [];
         for (const stream of body.streams) {
           for (const [ts, line] of stream.values) {
@@ -59,6 +77,7 @@ async function startTenantLoki(seed) {
       const limit = Number(url.searchParams.get("limit"));
       const matching = (store.get(tenant) || [])
         .filter((entry) => BigInt(entry.ts) >= start && BigInt(entry.ts) < end)
+        .filter((entry) => matchesSelector(entry.labels, url.searchParams.get("query")))
         .sort((a, b) => (BigInt(a.ts) < BigInt(b.ts) ? -1 : 1))
         .slice(0, limit);
       const streams = new Map();
@@ -189,6 +208,106 @@ describe("copy-legacy-tenant-logs", () => {
       assert.equal(result.code, 0, result.output);
       assert.equal(loki.pushes.length, 0);
       assert.match(result.output, /"wouldCopy":1/);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("console messages are rebuilt from the original arguments and redacted", async () => {
+    // Before the cutover, ingest joined console arguments into "message"
+    // without redacting them.
+    const line = JSON.stringify({
+      kind: "console",
+      message: "apiKey sk_live_LEGACY1 otp 123456",
+      log: { level: "log", message: ["apiKey", "sk_live_LEGACY1", "otp", 123456] },
+    });
+    const loki = await startTenantLoki({ fake: [{ labels: liveLabels(), ts: ns(base + 1), line }] });
+    try {
+      assert.equal((await run(window, { LOKI_URL: loki.url })).code, 0);
+      const [entry] = copied(loki);
+      assert.ok(!entry.line.includes("sk_live_LEGACY1") && !entry.line.includes("123456"), entry.line);
+      assert.match(JSON.parse(entry.line).message, /^apiKey \[redacted\] otp \[redacted\]$/);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("any rejected push stops the run", async () => {
+    const tooFarBehind = "entry with timestamp x ignored, reason: 'entry too far behind',\nuser 'usual-suspects', total ignored: 1 out of 1 for stream: {a=\"b\"}\n";
+    const loki = await startTenantLoki(
+      { fake: [{ labels: liveLabels(), ts: ns(base + 1), line: "{}" }] },
+      { pushResponse: () => ({ status: 400, body: tooFarBehind }) },
+    );
+    try {
+      const result = await run(window, { LOKI_URL: loki.url });
+      assert.notEqual(result.code, 0, result.output);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("rate-limited pushes are retried rather than aborting", async () => {
+    const loki = await startTenantLoki(
+      { fake: [{ labels: liveLabels(), ts: ns(base + 1), line: "{}" }] },
+      { pushResponse: (index) => (index === 0 ? { status: 429, body: "Ingestion rate limit exceeded" } : null) },
+    );
+    try {
+      const result = await run(window, { LOKI_URL: loki.url, COPY_RETRY_DELAY_MS: "10" });
+      assert.equal(result.code, 0, result.output);
+      assert.equal(copied(loki).length, 1);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("pushes stay around a megabyte so live ingestion keeps its rate", async () => {
+    const big = "x".repeat(200 * 1024);
+    const loki = await startTenantLoki({
+      fake: Array.from({ length: 12 }, (_, n) => ({ labels: liveLabels(), ts: ns(base + n), line: JSON.stringify({ n, big }) })),
+    });
+    try {
+      assert.equal((await run(window, { LOKI_URL: loki.url, COPY_PAUSE_MS: "0" })).code, 0);
+      assert.equal(copied(loki).length, 12);
+      assert.ok(loki.pushes.length >= 3, `only ${loki.pushes.length} pushes`);
+      for (const push of loki.pushes) {
+        assert.ok(push.bytes < 1.5 * 1024 * 1024, `push of ${push.bytes} bytes`);
+      }
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("dedupe prefers the exact line and ignores Loki's internal labels", async () => {
+    const at = ns(base + 7);
+    const loki = await startTenantLoki({
+      fake: [
+        { labels: liveLabels(), ts: at, line: '{"message":"first"}' },
+        { labels: liveLabels(), ts: at, line: '{"message":"second"}' },
+      ],
+      // An earlier partial run copied only "second", and Loki sharded the stream.
+      "usual-suspects": [
+        { labels: { ...liveLabels(), source: "cloudflare-workers-backfill-full", __stream_shard__: "1" }, ts: at, line: '{"message":"second"}' },
+      ],
+    });
+    try {
+      assert.equal((await run(window, { LOKI_URL: loki.url })).code, 0);
+      const lines = copied(loki).map((entry) => entry.line).sort();
+      assert.deepEqual(lines, ['{"message":"first"}', '{"message":"second"}']);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("only live-sourced legacy entries are read", async () => {
+    const loki = await startTenantLoki({
+      fake: [
+        { labels: liveLabels(), ts: ns(base + 1), line: '{"message":"live"}' },
+        { labels: liveLabels({ source: "cloudflare-workers-backfill-full" }), ts: ns(base + 2), line: '{"message":"old backfill"}' },
+      ],
+    });
+    try {
+      assert.equal((await run(window, { LOKI_URL: loki.url })).code, 0);
+      assert.deepEqual(copied(loki).map((entry) => entry.line), ['{"message":"live"}']);
     } finally {
       await loki.close();
     }

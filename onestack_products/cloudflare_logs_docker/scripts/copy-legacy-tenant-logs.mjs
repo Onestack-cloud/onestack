@@ -9,7 +9,7 @@
 
 import { createRequire } from "node:module";
 
-const { redact } = createRequire(import.meta.url)("../ingest/redaction.js");
+const { redact, normalizeMessage } = createRequire(import.meta.url)("../ingest/redaction.js");
 
 const HOUR = 3600 * 1000;
 // Loki rejects entries older than reject_old_samples_max_age (168h by default).
@@ -17,9 +17,12 @@ const MAX_AGE = 167 * HOUR;
 const TENANT_ID = /^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,150}$/;
 // Labels Loki derives on ingest; it adds them again on the copy.
 const DERIVED_LABELS = new Set(["service_name", "detected_level"]);
-const PUSH_BATCH = 1000;
-const permanentRejection = /entry too far behind|entry out of order|timestamp too (old|new)|Max entry size '\d+' bytes exceeded/;
-const rejectionSummary = /^user '[^']*', total ignored: \d+ out of \d+ for stream/;
+// Keeps the copy well under Loki's default 4 MB/s ingestion rate (6 MB burst),
+// which live Logpush shares.
+const PUSH_BYTES = 1024 * 1024;
+const PAUSE_MS = Number(process.env.COPY_PAUSE_MS ?? 400);
+const RETRY_DELAY_MS = Number(process.env.COPY_RETRY_DELAY_MS ?? 5000);
+const MAX_ATTEMPTS = 6;
 
 function refuse(message) {
   console.error(`Refusing: ${message}`);
@@ -31,7 +34,10 @@ function parseArgs(argv) {
     lokiUrl: (process.env.LOKI_URL || "http://loki:3100").replace(/\/+$/, ""),
     fromTenant: "fake",
     toTenant: "usual-suspects",
-    selector: '{scriptName=~"usual-suspects|usual-suspects-production"}',
+    // Reads only what live ingest wrote, never earlier backfills.
+    selector: '{source="cloudflare-workers", scriptName=~"usual-suspects|usual-suspects-production"}',
+    // Everything already in the target, whatever its source, for dedupe.
+    targetSelector: '{scriptName=~"usual-suspects|usual-suspects-production"}',
     scripts: ["usual-suspects", "usual-suspects-production"],
     sourceLabel: "cloudflare-workers-backfill-full",
     windowMinutes: 60,
@@ -47,6 +53,7 @@ function parseArgs(argv) {
     else if (arg === "--from-tenant") options.fromTenant = value();
     else if (arg === "--to-tenant") options.toTenant = value();
     else if (arg === "--selector") options.selector = value();
+    else if (arg === "--target-selector") options.targetSelector = value();
     else if (arg === "--scripts") options.scripts = value().split(",").map((name) => name.trim()).filter(Boolean);
     else if (arg === "--source-label") options.sourceLabel = value();
     else if (arg === "--window-minutes") options.windowMinutes = Number(value());
@@ -79,10 +86,12 @@ function parseArgs(argv) {
 
 const ns = (ms) => BigInt(Math.trunc(ms)) * 1000000n;
 
+// Without source, Loki's derived labels and its internal __ labels (such as
+// __stream_shard__), so live, legacy and copied entries compare equal.
 function identityLabels(labels) {
   return Object.fromEntries(
     Object.entries(labels)
-      .filter(([name]) => name !== "source" && !DERIVED_LABELS.has(name))
+      .filter(([name]) => name !== "source" && !DERIVED_LABELS.has(name) && !name.startsWith("__"))
       .sort(([a], [b]) => (a < b ? -1 : 1)),
   );
 }
@@ -95,7 +104,7 @@ function entryKey(labels, ts) {
 
 async function queryRange(options, tenant, startNs, endNs) {
   const params = new URLSearchParams({
-    query: options.selector,
+    query: tenant === options.toTenant ? options.targetSelector : options.selector,
     start: String(startNs),
     end: String(endNs),
     limit: String(options.limit),
@@ -130,22 +139,29 @@ async function readAll(options, tenant, startNs, endNs) {
   return [...(await readAll(options, tenant, startNs, middle)), ...(await readAll(options, tenant, middle, endNs))];
 }
 
-function onlyPermanentRejections(body) {
-  const lines = body
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  let listed = 0;
-  for (const line of lines) {
-    if (permanentRejection.test(line)) {
-      listed += 1;
-    } else if (!rejectionSummary.test(line)) {
-      return false;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Before the cutover, ingest joined console arguments into "message" without
+// redacting them, so rebuild it from the original arguments with today's rules
+// before redacting the rest of the line.
+function redactLine(line) {
+  let parsed;
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return redact(line);
+  }
+  if (parsed && typeof parsed === "object" && parsed.kind === "console" && parsed.log && typeof parsed.log === "object") {
+    const original = parsed.log.message ?? parsed.log.Message;
+    if (original !== undefined) {
+      parsed.message = normalizeMessage(original);
     }
   }
-  return listed > 0;
+  return JSON.stringify(redact(parsed));
 }
 
+// Any rejection stops the run: the target streams are new, so Loki refusing an
+// entry means something is wrong. Rate limits and server errors are retried.
 async function push(options, entries) {
   const streams = new Map();
   for (const entry of entries) {
@@ -155,20 +171,45 @@ async function push(options, entries) {
     }
     streams.get(key).values.push([entry.ts, entry.line]);
   }
-  const response = await fetch(`${options.lokiUrl}/loki/api/v1/push`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "X-Scope-OrgID": options.toTenant },
-    body: JSON.stringify({ streams: [...streams.values()] }),
-  });
-  if (response.ok) {
-    return;
+  const body = JSON.stringify({ streams: [...streams.values()] });
+  for (let attempt = 1; ; attempt += 1) {
+    const response = await fetch(`${options.lokiUrl}/loki/api/v1/push`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Scope-OrgID": options.toTenant },
+      body,
+    });
+    if (response.ok) {
+      return;
+    }
+    const text = await response.text();
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt >= MAX_ATTEMPTS) {
+      throw new Error(`push to tenant ${options.toTenant} failed: ${response.status} ${text.slice(0, 500)}`);
+    }
+    console.warn(`push got ${response.status}, retrying (attempt ${attempt} of ${MAX_ATTEMPTS})`);
+    await sleep(RETRY_DELAY_MS * attempt);
   }
-  const body = await response.text();
-  if (response.status === 400 && onlyPermanentRejections(body)) {
-    console.warn(`Loki dropped entries it will never accept: ${body.slice(0, 500)}`);
-    return;
+}
+
+// Splits entries into pushes of roughly PUSH_BYTES.
+function batches(entries) {
+  const result = [];
+  let current = [];
+  let size = 0;
+  for (const entry of entries) {
+    const entrySize = entry.line.length + 64;
+    if (current.length > 0 && size + entrySize > PUSH_BYTES) {
+      result.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(entry);
+    size += entrySize;
   }
-  throw new Error(`push to tenant ${options.toTenant} failed: ${response.status} ${body.slice(0, 500)}`);
+  if (current.length > 0) {
+    result.push(current);
+  }
+  return result;
 }
 
 async function copyWindow(options, startMs, endMs) {
@@ -178,14 +219,19 @@ async function copyWindow(options, startMs, endMs) {
   ]);
 
   // Counts, so two identical legacy entries against one existing copy still
-  // copy one.
-  const present = new Map();
+  // copy one. Exact (redacted) lines are matched first, so a partial earlier
+  // run is completed with the entries it actually missed.
+  const presentExact = new Map();
+  const presentKey = new Map();
+  const increment = (map, key) => map.set(key, (map.get(key) || 0) + 1);
   for (const entry of existing) {
     const key = entryKey(entry.labels, entry.ts);
-    present.set(key, (present.get(key) || 0) + 1);
+    increment(presentKey, key);
+    increment(presentExact, `${key}|${entry.line}`);
   }
 
   const toCopy = [];
+  const pending = [];
   let foreign = 0;
   for (const entry of source) {
     // The selector should already exclude other scripts; this guarantees no
@@ -195,22 +241,30 @@ async function copyWindow(options, startMs, endMs) {
       continue;
     }
     const key = entryKey(entry.labels, entry.ts);
-    const remaining = present.get(key) || 0;
-    if (remaining > 0) {
-      present.set(key, remaining - 1);
+    const line = redactLine(entry.line);
+    const exactKey = `${key}|${line}`;
+    if ((presentExact.get(exactKey) || 0) > 0) {
+      presentExact.set(exactKey, presentExact.get(exactKey) - 1);
+      presentKey.set(key, presentKey.get(key) - 1);
       continue;
     }
-    toCopy.push({
-      labels: { ...identityLabels(entry.labels), source: options.sourceLabel },
-      ts: entry.ts,
-      line: redact(entry.line),
-    });
+    pending.push({ key, entry: { labels: { ...identityLabels(entry.labels), source: options.sourceLabel }, ts: entry.ts, line } });
+  }
+  // Then fall back to timestamp and labels for copies whose line differs,
+  // such as live entries written by today's ingest.
+  for (const { key, entry } of pending) {
+    if ((presentKey.get(key) || 0) > 0) {
+      presentKey.set(key, presentKey.get(key) - 1);
+      continue;
+    }
+    toCopy.push(entry);
   }
   toCopy.sort((a, b) => (BigInt(a.ts) < BigInt(b.ts) ? -1 : BigInt(a.ts) > BigInt(b.ts) ? 1 : 0));
 
   if (!options.dryRun) {
-    for (let index = 0; index < toCopy.length; index += PUSH_BATCH) {
-      await push(options, toCopy.slice(index, index + PUSH_BATCH));
+    for (const batch of batches(toCopy)) {
+      await push(options, batch);
+      await sleep(PAUSE_MS);
     }
   }
   return { read: source.length, skipped: source.length - toCopy.length - foreign, foreign, copied: toCopy.length };
