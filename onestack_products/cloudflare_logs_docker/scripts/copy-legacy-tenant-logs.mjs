@@ -23,6 +23,7 @@ const PUSH_BYTES = 1024 * 1024;
 const PAUSE_MS = Number(process.env.COPY_PAUSE_MS ?? 400);
 const RETRY_DELAY_MS = Number(process.env.COPY_RETRY_DELAY_MS ?? 5000);
 const MAX_ATTEMPTS = 6;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function refuse(message) {
   console.error(`Refusing: ${message}`);
@@ -41,7 +42,8 @@ function parseArgs(argv) {
     scripts: ["usual-suspects", "usual-suspects-production"],
     sourceLabel: "cloudflare-workers-backfill-full",
     windowMinutes: 60,
-    limit: 5000,
+    // Keeps each response well under Loki's 4 MB internal gRPC message cap.
+    limit: 1000,
     dryRun: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -112,6 +114,7 @@ async function queryRange(options, tenant, startNs, endNs) {
   });
   const response = await fetch(`${options.lokiUrl}/loki/api/v1/query_range?${params}`, {
     headers: { "X-Scope-OrgID": tenant },
+    signal: AbortSignal.timeout(120000),
   });
   if (!response.ok) {
     throw new Error(`query for tenant ${tenant} failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
@@ -126,10 +129,21 @@ async function queryRange(options, tenant, startNs, endNs) {
 }
 
 // Reads [startNs, endNs) completely, halving the range whenever a query
-// returns as many entries as the limit allows.
+// returns as many entries as the limit allows or fails (for example when the
+// response would exceed Loki's internal message size).
 async function readAll(options, tenant, startNs, endNs) {
-  const entries = await queryRange(options, tenant, startNs, endNs);
-  if (entries.length < options.limit) {
+  let entries;
+  try {
+    entries = await queryRange(options, tenant, startNs, endNs);
+  } catch (error) {
+    if (endNs - startNs <= 1n) {
+      throw error;
+    }
+    console.warn(`query for tenant ${tenant} failed (${error.cause?.message || error.message}); splitting the range`);
+    await sleep(RETRY_DELAY_MS / 5);
+    entries = null;
+  }
+  if (entries && entries.length < options.limit) {
     return entries;
   }
   if (endNs - startNs <= 1n) {
@@ -138,8 +152,6 @@ async function readAll(options, tenant, startNs, endNs) {
   const middle = startNs + (endNs - startNs) / 2n;
   return [...(await readAll(options, tenant, startNs, middle)), ...(await readAll(options, tenant, middle, endNs))];
 }
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Before the cutover, ingest joined console arguments into "message" without
 // redacting them, so rebuild it from the original arguments with today's rules
@@ -292,6 +304,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  console.error(error instanceof Error ? `${error.message}${error.cause ? ` (${error.cause.message || error.cause})` : ""}` : error);
   process.exit(1);
 });
