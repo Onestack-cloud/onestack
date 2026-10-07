@@ -50,6 +50,14 @@ CIMS_FILES = [
     # Default curation folders from tempfile.mkdtemp(prefix="wcs-curate-") and R2 download helpers.
     'root/tmp/wcs-curate-k2j3h4/source/demographics.csv',
     'root/tmp/wcs-cims-csv-zip/run/demographics.csv',
+    # Near-miss names beside a checkout's data and exports.
+    'root/cims-export-worker/data.bak/cims-export-worker.sqlite',
+    'root/cims-export-worker/exports-old/run.csv',
+    # Copies the backup itself stages: guest files and SQLite snapshots.
+    RUN + '/guests/onestack-ci-runner/rootfs/etc/cims-export-worker/cims-export-worker.env',
+    RUN + '/guests/onestack-codex/rootfs/opt/cims-export-worker/run-metadata.json',
+    RUN + '/sqlite/opt/cims-export-worker/other.sqlite',
+    RUN + '/sqlite/var/lib/onestack-cims/cache.db',
     # Checkout copies elsewhere, including inside staged guest files.
     'root/cims-export-worker/data/cims-export-worker.sqlite',
     RUN + '/guests/onestack-codex/rootfs/home/codex/workspace/cims-export-worker/data/cims-export-worker.sqlite',
@@ -86,6 +94,12 @@ def manifest():
     return {'sqlite_exports': [{'source': '/root/allbids_app/data/bread_machine_prod.db'}],
             'filesystem_exports': [{'source': '/var/lib/docker/volumes/loki/_data'}],
             'raw_database_exclusions': ['/var/lib/docker/volumes/postgres_data/_data']}
+
+
+def purge_plan_patterns():
+    """The exclusion file the purge plan writes, read from its heredoc."""
+    match = re.search(r"cat > \"\$WORK/cims-excludes.txt\" <<'EOF'\n(.*?)\nEOF\n", PURGE_PLAN.read_text(), re.S)
+    return match.group(1).splitlines() if match else []
 
 
 def excludes(cmd):
@@ -140,10 +154,11 @@ class CreateCommandTests(unittest.TestCase):
             self.assertEqual(result['sqlite_exports'], [])
 
     def test_purge_plan_uses_exactly_the_enforced_patterns(self):
+        self.assertEqual(purge_plan_patterns(), list(backup.CIMS_EXCLUDE_PATTERNS))
         text = PURGE_PLAN.read_text()
-        for pattern in backup.CIMS_EXCLUDE_PATTERNS:
-            self.assertIn("--exclude '" + pattern + "'", text)
         self.assertIn('--threshold 0', text)
+        self.assertIn('--exclude-from "$WORK/cims-excludes.txt"', text)
+        self.assertIn('--patterns-from "$WORK/cims-only.patterns"', text)
 
 
 @unittest.skipUnless(os.path.exists(BORG), 'borg is not installed')
@@ -184,10 +199,13 @@ class RealBorgTests(unittest.TestCase):
         link = self.tree / 'var/lib/docker/volumes/planted/_data/cims'
         link.parent.mkdir(parents=True)
         link.symlink_to(self.tree / 'opt/cims-export-worker/data')
-        cmd = backup.borg_create_command(EXAMPLE, {'sqlite_exports': []}, 'unused', [])
-        self.borg('create', '--compression', 'none',
-                  *[arg for pattern in excludes(cmd) for arg in ('--exclude', pattern)],
-                  self.repo + '::onestack-2026-10-08t000000z', *sorted(os.listdir(self.tree)))
+        # Run the exact command line the backup builds, with only the binary,
+        # repository and source list pointed at the disposable tree.
+        cmd = backup.borg_create_command(EXAMPLE, {'sqlite_exports': []},
+                                         self.repo + '::onestack-2026-10-08t000000z', sorted(os.listdir(self.tree)))
+        self.assertEqual(cmd[:2], ['borg', 'create'])
+        cmd[cmd.index('lz4')] = 'none'  # uncompressed so the marker search below is meaningful
+        sp.run([BORG, *cmd[1:]], env=self.env, cwd=self.tree, capture_output=True, check=True, timeout=120)
         archived = self.paths('onestack-2026-10-08t000000z')
         self.assertEqual(sorted(set(CIMS_FILES) & archived), [])
         self.assertEqual(sorted(set(KEPT_FILES) - archived), [])
@@ -201,7 +219,15 @@ class RealBorgTests(unittest.TestCase):
         for name, stamp in [('2026-08-01_12:00', '2026-08-01T12:00:00'),
                             ('onestack-2026-10-06t120000z', '2026-10-06T12:00:00')]:
             self.borg('create', '--compression', 'none', '--timestamp', stamp, self.repo + '::' + name, *sources)
-        pattern_args = [arg for pattern in backup.CIMS_EXCLUDE_PATTERNS for arg in ('--exclude', pattern)]
+        work = self.root / 'work'
+        work.mkdir()
+        (work / 'cims-excludes.txt').write_text('\n'.join(purge_plan_patterns()) + '\n')
+        (work / 'cims-only.patterns').write_text(
+            ''.join('+ ' + p + '\n' for p in purge_plan_patterns()) + '- sh:**\n')
+        pattern_args = ['--exclude-from', str(work / 'cims-excludes.txt')]
+        listed = self.borg('list', '--format', '{type} {path}{NL}', '--patterns-from', str(work / 'cims-only.patterns'),
+                           self.repo + '::2026-08-01_12:00').stdout.decode().splitlines()
+        self.assertEqual({line[2:] for line in listed if line.startswith('-')}, set(CIMS_FILES))
         before = json.loads(self.borg('list', '--json', self.repo).stdout)['archives']
         self.assertGreater(self.physical_markers(), 0)
 
@@ -218,6 +244,9 @@ class RealBorgTests(unittest.TestCase):
         self.assertEqual([(a['name'], a['time']) for a in after], [(a['name'], a['time']) for a in before])
         self.assertNotEqual([a['id'] for a in after], [a['id'] for a in before])
         for archive in after:
+            remaining = self.borg('list', '--format', '{path}{NL}', '--patterns-from', str(work / 'cims-only.patterns'),
+                                  self.repo + '::' + archive['name']).stdout.decode()
+            self.assertEqual(remaining, '')
             archived = self.paths(archive['name'])
             self.assertEqual(sorted(set(CIMS_FILES) & archived), [])
             self.assertEqual(sorted(set(KEPT_FILES) - archived), [])

@@ -27,37 +27,53 @@ SECRETS = set()
 HULY_RETIRED_SCOPE = "huly-retired-v1"
 
 # WCS CIMS client data and credentials must never reach the Hetzner Storage Box
-# ("exclude and purge", approved 7 October 2026). These are enforced even when the
-# live configuration omits them. reports/wcs-cims-backup-purge-2026-10-07.md
-# removes exactly these patterns from existing archives; keep the two in step.
-# Borg 1.x matches archive paths, which have no leading slash.
+# ("exclude and purge", approved 7 October 2026). These Borg patterns are the
+# authoritative control: they are passed to every borg create, even when the live
+# configuration omits them, and Borg applies them to the literal paths it walks
+# (no leading slash, symlinks never followed). Script-side skips are defence in
+# depth only. reports/wcs-cims-backup-purge-2026-10-07.md removes exactly these
+# patterns from existing archives; a test keeps the two in step.
 CIMS_EXCLUDE_PATTERNS = (
-    # Runner tree: SQLite session store, emergency code file, any CURATION_WORK_DIR,
-    # files the deploy rsync leaves untouched, and renamed copies of the tree.
-    "sh:opt/cims-export-worker*",
-    # Environment file with the CIMS username, password and export API token.
-    "sh:etc/cims-export-worker*",
-    # Runner HOME, the only other path its systemd sandbox can write.
-    "sh:var/lib/onestack-cims*",
-    # Runner log and logrotate copies.
-    "sh:var/log/cims-export-worker.log*",
-    # Data, exports and credentials in checkouts elsewhere, including staged guest files.
-    "sh:**/cims-export-worker/data",
-    "sh:**/cims-export-worker/exports",
+    # The literal runner paths, as Borg path prefixes.
+    "pp:/opt/cims-export-worker",        # SQLite session store, emergency code file, CURATION_WORK_DIR
+    "pp:/etc/cims-export-worker",        # environment file: CIMS username, password, export API token
+    "pp:/var/lib/onestack-cims",         # runner HOME, its only other writable path
+    "pp:/var/log/cims-export-worker.log",
+    # The same trees at any depth (staged guest files and SQLite snapshots under
+    # /var/backups/onestack/runs) and renamed copies or rotated logs beside them.
+    "sh:**/opt/cims-export-worker*",
+    "sh:**/etc/cims-export-worker*",
+    "sh:**/var/lib/onestack-cims*",
+    "sh:**/var/log/cims-export-worker.log*",
+    # Data, exports and Worker secrets in any checkout, including near-miss names.
+    "sh:**/cims-export-worker/data*",
+    "sh:**/cims-export-worker/exports*",
     "sh:**/cims-export-worker/.dev.vars*",
     # Curation and R2 download working folders created by the runner's helpers.
     "sh:**/wcs-curate-*",
     "sh:**/wcs-cims-*",
 )
-# Directories never read by the SQLite snapshot, compared on real paths.
+# Directories the SQLite snapshot never descends into (defence in depth).
 CIMS_EXCLUDED_DIRECTORIES = ("/opt/cims-export-worker", "/etc/cims-export-worker", "/var/lib/onestack-cims")
 SQLITE_HEADER = b"SQLite format 3\x00"
 SQLITE_SUFFIXES = (".db", ".sqlite", ".sqlite3")
+SQLITE_SIDECARS = ("-wal", "-shm", "-journal")
 CONFIGURATION_SUFFIXES = (".conf", ".cnf", ".acl", ".toml", ".pem")
+NOFOLLOW_READ = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+NOFOLLOW_DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+
+# Docker volumes and bind mounts are writable by containers. Everything below a
+# mount root is handled through descriptors: os.fwalk holds a descriptor for each
+# directory and never follows symlinks, and files are opened relative to that
+# descriptor with O_NOFOLLOW. There is no path check followed by a later use, so a
+# container swapping a path for a symlink mid-run cannot redirect a read or write.
 
 
 def resolve_within(path, root):
-    """Return the real path of path when it stays inside root's real path, else None."""
+    """Return the real path of path when it stays inside root's real path, else None.
+
+    Used only for the guest filesystem, which is a read-only mount of a completed
+    point-in-time copy and so cannot change between the check and the copy."""
     real_root = os.path.realpath(root)
     real = os.path.realpath(path)
     if os.path.commonpath([real_root, real]) != real_root:
@@ -69,42 +85,28 @@ def within_any(path, roots):
     return any(os.path.commonpath([root, str(path)]) == root for root in roots)
 
 
-def walk_files(root):
-    """Yield every non-directory entry below root without descending symlinked directories."""
-    for directory, _, names in os.walk(root, followlinks=False):
-        for name in names:
-            yield Path(directory) / name
+def open_regular(name, dir_fd=None):
+    """Open a regular file read-only without following a symlink. Returns (fd, stat) or None.
 
-
-def open_contained_regular(path, root):
-    """Open a regular file read-only without following symlinks or leaving root.
-
-    Returns (fd, stat) or None. The fd's inode must match the inode at the
-    contained real path, so swapping a parent directory for a symlink between
-    the checks and the open cannot redirect the read outside root.
-    """
+    The entry is checked with lstat first so devices and FIFOs are never opened, and
+    the opened descriptor must be the same inode."""
     try:
-        if not stat.S_ISREG(os.lstat(path).st_mode):
-            return None  # never open devices, FIFOs or sockets
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        before = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        if not stat.S_ISREG(before.st_mode):
+            return None
+        fd = os.open(name, NOFOLLOW_READ, dir_fd=dir_fd)
     except OSError:
         return None
-    try:
-        info = os.fstat(fd)
-        real = resolve_within(path, root)
-        if real is not None and stat.S_ISREG(info.st_mode):
-            current = os.lstat(real)
-            if (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino):
-                return fd, info
-    except OSError:
-        pass
+    info = os.fstat(fd)
+    if stat.S_ISREG(info.st_mode) and (info.st_dev, info.st_ino) == (before.st_dev, before.st_ino):
+        return fd, info
     os.close(fd)
     return None
 
 
-def read_contained_header(path, root, size):
-    """Read the first bytes of a contained regular file; None if unsafe or missing."""
-    opened = open_contained_regular(path, root)
+def read_header(name, size, dir_fd=None):
+    """Read the first bytes of a regular file without following symlinks; None if unsafe."""
+    opened = open_regular(name, dir_fd)
     if opened is None:
         return None
     fd, info = opened
@@ -114,9 +116,25 @@ def read_contained_header(path, root, size):
         os.close(fd)
 
 
-def copy_contained_file(source, target, root, *, preserve_owner=False):
-    """Copy a contained regular file into the stage; symlinks and escapes are skipped."""
-    opened = open_contained_regular(source, root)
+def open_subdirectory(dir_fd, relative):
+    """Open a directory below dir_fd one component at a time, never following a symlink."""
+    fd = os.dup(dir_fd)
+    try:
+        for part in PurePosixPath(relative).parts:
+            if part in ("", ".", "..", "/"):
+                raise OSError("unsafe path component: " + part)
+            child = os.open(part, NOFOLLOW_DIRECTORY, dir_fd=fd)
+            os.close(fd)
+            fd = child
+    except OSError:
+        os.close(fd)
+        return None
+    return fd
+
+
+def copy_regular(name, dir_fd, target, *, preserve_owner=False):
+    """Copy one regular file from a directory descriptor into the root-only stage."""
+    opened = open_regular(name, dir_fd)
     if opened is None:
         return False
     fd, info = opened
@@ -131,6 +149,28 @@ def copy_contained_file(source, target, root, *, preserve_owner=False):
             os.fchmod(dst.fileno(), stat.S_IMODE(info.st_mode))
             os.utime(dst.fileno(), ns=(info.st_atime_ns, info.st_mtime_ns))
     return True
+
+
+def copy_tree_regular(dir_fd, target, suffixes=None, *, preserve_owner=False):
+    """Copy regular files below a directory descriptor, skipping symlinks and special files."""
+    for directory, _, names, sub_fd in os.fwalk(".", dir_fd=dir_fd, follow_symlinks=False):
+        for name in sorted(names):
+            if suffixes is None or name.endswith(suffixes):
+                copy_regular(name, sub_fd, target / directory / name, preserve_owner=preserve_owner)
+
+
+def open_regular_files():
+    """Map this process's open regular-file descriptors to (device, inode)."""
+    fd_dir = "/proc/self/fd" if os.path.isdir("/proc/self/fd") else "/dev/fd"
+    found = {}
+    for entry in os.listdir(fd_dir):
+        try:
+            info = os.fstat(int(entry))
+        except (OSError, ValueError):
+            continue
+        if stat.S_ISREG(info.st_mode):
+            found[int(entry)] = (info.st_dev, info.st_ino)
+    return found
 
 
 def apply_backup_scope(manifest, config):
@@ -300,7 +340,7 @@ def export_databases(containers, stage, manifest):
             command(["docker", "cp", name + ":" + remote, str(dest.with_suffix(".rdb"))])
             command(["docker", "exec", name, "rm", "-f", remote])
             # docker cp can deliver a container-planted symlink; never read through it.
-            header = read_contained_header(dest.with_suffix(".rdb"), stage, 5)
+            header = read_header(dest.with_suffix(".rdb"), 5)
             if header is None or header[0] != b"REDIS":
                 raise RuntimeError("Invalid Redis snapshot: " + name)
             manifest["database_exports"].append({"container": name, "type": "redis", "file": str(dest.with_suffix(".rdb"))})
@@ -543,8 +583,15 @@ def snapshot_guest_data(stage, manifest, guest_specs):
                                           "consistent_point_in_time": quiesced or not running,
                                           "guest_filesystems_quiesced": quiesced})
 
-def backup_sqlite(source, destination, *, timeout_seconds=900, pages=1024):
+def backup_sqlite(source, destination, *, timeout_seconds=900, pages=1024, allowed_files=None):
+    """Copy a live SQLite database consistently.
+
+    SQLite opens the database and its sidecars by name. When allowed_files is
+    given, every regular file the connections opened must be one of the inodes it
+    returns, so a symlink swapped in while SQLite opened the file is detected and
+    the copy is refused rather than kept."""
     deadline = time.monotonic() + timeout_seconds
+    before = open_regular_files() if allowed_files else {}
     def progress(status, remaining, total):
         if time.monotonic() > deadline:
             raise TimeoutError("SQLite backup exceeded its time limit: " + str(source))
@@ -558,6 +605,10 @@ def backup_sqlite(source, destination, *, timeout_seconds=900, pages=1024):
             src.execute("SELECT rootpage FROM sqlite_master LIMIT 1").fetchone()
         with closing(sqlite3.connect(destination)) as dst:
             src.backup(dst, pages=pages, sleep=0.05, progress=progress)
+            if allowed_files:
+                opened = {key for fd, key in open_regular_files().items() if before.get(fd) != key}
+                if opened - allowed_files():
+                    raise RuntimeError("SQLite opened a file other than the checked database: " + str(source))
             src.rollback()
             dst.set_progress_handler(lambda: int(time.monotonic() > deadline), 10000)
             if dst.execute("PRAGMA quick_check").fetchone()[0] != "ok":
@@ -568,61 +619,80 @@ def sqlite_exclude_paths(config):
     return tuple(config.get("sqlite_exclude_paths", ())) + CIMS_EXCLUDED_DIRECTORIES
 
 
-def sqlite_sidecars_safe(source):
-    """SQLite opens -wal, -shm and -journal by name, and may write -shm even when
-    reading. Refuse a database whose sidecar is anything but a regular file."""
-    for suffix in ("-wal", "-shm", "-journal"):
-        sidecar = Path(str(source) + suffix)
+def sqlite_sidecars_safe(name, dir_fd):
+    """Defence in depth: refuse a database whose sidecar is not a regular file.
+    SQLite also refuses symlinked -wal and -shm files itself."""
+    for suffix in SQLITE_SIDECARS:
         try:
-            if not stat.S_ISREG(os.lstat(sidecar).st_mode):
+            if not stat.S_ISREG(os.stat(name + suffix, dir_fd=dir_fd, follow_symlinks=False).st_mode):
                 return False
         except FileNotFoundError:
             continue
     return True
 
 
+def inode_set(names, dir_fd=None):
+    found = set()
+    for name in names:
+        try:
+            info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if stat.S_ISREG(info.st_mode):
+            found.add((info.st_dev, info.st_ino))
+    return found
+
+
 def snapshot_sqlite(containers, stage, manifest, exclude_paths=()):
-    # Mount sources and their contents are writable by containers: walk without
-    # following symlinks, and compare exclusions and containment on real paths.
+    # Mount roots are host paths a container cannot replace; everything below them
+    # is container-writable and is walked through descriptors (see open_regular).
     roots = {Path(m["Source"]) for c in containers for m in c.get("Mounts", [])
              if m.get("RW") and m.get("Type") in ("bind", "volume") and Path(m["Source"]).is_dir()}
     roots.update([Path("/root/.codex"), Path("/root/places_app")])
     excluded = tuple(os.path.realpath(value) for value in exclude_paths)
     seen = set()
     for root in sorted(roots):
-        real_root = Path(os.path.realpath(root))
-        if not real_root.is_dir() or within_any(real_root, excluded):
+        real_root = os.path.realpath(root)
+        if not os.path.isdir(real_root) or within_any(real_root, excluded):
             continue
-        for candidate in walk_files(real_root):
-            if not candidate.name.endswith(SQLITE_SUFFIXES):
-                continue
-            source = resolve_within(candidate, real_root)
-            if source is None or source in seen or within_any(source, excluded):
-                continue
-            header = read_contained_header(source, real_root, 16)
-            if header is None or header[0] != SQLITE_HEADER:
-                continue
-            seen.add(source)
-            metadata = header[1]
-            if not sqlite_sidecars_safe(source):
-                log("Skipping SQLite with a non-regular sidecar file: " + str(source))
-                continue
-            destination = stage / str(source).lstrip("/")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            started = time.monotonic()
-            log("Snapshotting SQLite " + str(source))
-            backup_sqlite(source, destination)
-            current = read_contained_header(source, real_root, 0)
-            if (current is None or (current[1].st_dev, current[1].st_ino) != (metadata.st_dev, metadata.st_ino)
-                    or not sqlite_sidecars_safe(source)):
-                destination.unlink(missing_ok=True)
-                raise RuntimeError("SQLite source changed type or location during its snapshot: " + str(source))
-            log("SQLite snapshot checked in " + str(round(time.monotonic() - started, 1)) + "s: " + str(source))
-            os.chown(destination, metadata.st_uid, metadata.st_gid, follow_symlinks=False)
-            os.chmod(destination, metadata.st_mode & 0o777)
-            manifest["sqlite_exports"].append({"source": str(source), "snapshot": str(destination),
-                                              "uid": metadata.st_uid, "gid": metadata.st_gid,
-                                              "mode": oct(metadata.st_mode & 0o777)})
+        for directory, dirnames, filenames, dir_fd in os.fwalk(real_root, follow_symlinks=False):
+            dirnames[:] = [d for d in dirnames if not within_any(os.path.join(directory, d), excluded)]
+            for name in sorted(filenames):
+                if not name.endswith(SQLITE_SUFFIXES):
+                    continue
+                header = read_header(name, 16, dir_fd)
+                if header is None or header[0] != SQLITE_HEADER:
+                    continue
+                metadata = header[1]
+                if (metadata.st_dev, metadata.st_ino) in seen:
+                    continue
+                seen.add((metadata.st_dev, metadata.st_ino))
+                source = Path(directory) / name
+                if not sqlite_sidecars_safe(name, dir_fd):
+                    log("Skipping SQLite with a non-regular sidecar file: " + str(source))
+                    continue
+                destination = stage / str(source).lstrip("/")
+                destination.parent.mkdir(parents=True, exist_ok=True)
+
+                def allowed(name=name, dir_fd=dir_fd, metadata=metadata, destination=destination):
+                    return ({(metadata.st_dev, metadata.st_ino)}
+                            | inode_set([name + suffix for suffix in SQLITE_SIDECARS], dir_fd)
+                            | inode_set([str(destination) + suffix for suffix in ("", *SQLITE_SIDECARS)]))
+
+                started = time.monotonic()
+                log("Snapshotting SQLite " + str(source))
+                try:
+                    backup_sqlite(source, destination, allowed_files=allowed)
+                except BaseException:
+                    for suffix in ("", *SQLITE_SIDECARS):
+                        Path(str(destination) + suffix).unlink(missing_ok=True)
+                    raise
+                log("SQLite snapshot checked in " + str(round(time.monotonic() - started, 1)) + "s: " + str(source))
+                os.chown(destination, metadata.st_uid, metadata.st_gid, follow_symlinks=False)
+                os.chmod(destination, metadata.st_mode & 0o777)
+                manifest["sqlite_exports"].append({"source": str(source), "snapshot": str(destination),
+                                                  "uid": metadata.st_uid, "gid": metadata.st_gid,
+                                                  "mode": oct(metadata.st_mode & 0o777)})
 
 def snapshot_broker_files(containers, stage, manifest):
     """Flush Loki and briefly freeze mutable file stores for complete disk copies."""
@@ -670,25 +740,38 @@ def preserve_postgres_configuration(containers, stage, manifest):
             if "postgres" not in mount["Destination"]:
                 continue
             root = Path(mount["Source"])
-            real_root = os.path.realpath(root)
-            candidates = [root, root / "pgroot/data"]
-            for data in candidates:
-                # Container-writable: copy only regular files whose real path stays in the mount.
-                real_data = resolve_within(data, real_root)
-                if (real_data is None or not real_data.is_dir()
-                        or read_contained_header(real_data / "PG_VERSION", real_root, 0) is None):
-                    continue
-                target = stage / c["_name"]
-                target.mkdir(parents=True, exist_ok=True)
-                copy_contained_file(real_data / "PG_VERSION", target / "PG_VERSION", real_root)
-                for entry in sorted(os.scandir(real_data), key=lambda e: e.name):
-                    if entry.name.endswith(".conf"):
-                        copy_contained_file(Path(entry.path), target / entry.name, real_root)
-                conf_d = real_data / "conf.d"
-                if conf_d.is_dir() and not conf_d.is_symlink():
-                    for source in walk_files(conf_d):
-                        copy_contained_file(source, target / "conf.d" / source.relative_to(conf_d), real_root)
-                manifest["raw_database_exclusions"].append(str(data))
+            try:
+                root_fd = os.open(os.path.realpath(root), NOFOLLOW_DIRECTORY)
+            except OSError:
+                continue
+            try:
+                for relative in (".", "pgroot/data"):
+                    data = root if relative == "." else root / relative
+                    # Container-writable: reach the data directory and its files only
+                    # through descriptors, never through a symlink.
+                    data_fd = os.dup(root_fd) if relative == "." else open_subdirectory(root_fd, relative)
+                    if data_fd is None:
+                        continue
+                    try:
+                        if read_header("PG_VERSION", 0, data_fd) is None:
+                            continue
+                        target = stage / c["_name"]
+                        target.mkdir(parents=True, exist_ok=True)
+                        copy_regular("PG_VERSION", data_fd, target / "PG_VERSION")
+                        for name in sorted(os.listdir(data_fd)):
+                            if name.endswith(".conf"):
+                                copy_regular(name, data_fd, target / name)
+                        conf_fd = open_subdirectory(data_fd, "conf.d")
+                        if conf_fd is not None:
+                            try:
+                                copy_tree_regular(conf_fd, target / "conf.d")
+                            finally:
+                                os.close(conf_fd)
+                    finally:
+                        os.close(data_fd)
+                    manifest["raw_database_exclusions"].append(str(data))
+            finally:
+                os.close(root_fd)
     # Live database files are not independent backups. Use the completed native
     # exports and keep configuration files, rather than racing database writers.
     destinations = {"mariadb": {"/var/lib/mysql"}, "mongodb": {"/data/db", "/data/configdb"},
@@ -702,13 +785,17 @@ def preserve_postgres_configuration(containers, stage, manifest):
             if mount["Destination"] not in expected:
                 continue
             source_root = Path(mount["Source"])
-            real_root = Path(os.path.realpath(source_root))
-            if real_root.is_dir():
-                # Container-writable: never descend symlinks, read through them or chown through them.
-                for source in walk_files(real_root):
-                    if source.suffix in CONFIGURATION_SUFFIXES:
-                        target = stage / exported["container"] / source.relative_to(real_root)
-                        copy_contained_file(source, target, real_root, preserve_owner=True)
+            try:
+                root_fd = os.open(os.path.realpath(source_root), NOFOLLOW_DIRECTORY)
+            except OSError:
+                root_fd = None
+            if root_fd is not None:
+                # Container-writable: walk by descriptor; never follow, read or chown through a symlink.
+                try:
+                    copy_tree_regular(root_fd, stage / exported["container"], CONFIGURATION_SUFFIXES,
+                                      preserve_owner=True)
+                finally:
+                    os.close(root_fd)
             manifest["raw_database_exclusions"].append(str(source_root))
 
 def borg_create_command(config, manifest, archive, sources):

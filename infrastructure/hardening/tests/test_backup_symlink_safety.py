@@ -9,7 +9,10 @@ import importlib.util
 import os
 from pathlib import Path
 import sqlite3
+import subprocess as sp
+import sys
 import tempfile
+import time
 import unittest
 from contextlib import closing
 
@@ -109,6 +112,47 @@ class SqliteSnapshotTests(Fixture):
         self.assertEqual(manifest['sqlite_exports'], [])
         self.assertEqual(self.staged_files(), [])
 
+    def test_symlink_swapped_in_while_sqlite_opens_is_detected_and_discarded(self):
+        make_sqlite(self.volume / 'app.db')
+        original = backup.backup_sqlite
+
+        def racing(source, destination, **kwargs):
+            # The container replaces the checked file with a link to a host database
+            # after the walk validated it and before SQLite opens it by name.
+            os.rename(source, str(source) + '.moved')
+            os.symlink(self.host / 'etc/host.db', source)
+            return original(source, destination, **kwargs)
+
+        backup.backup_sqlite = racing
+        try:
+            with self.assertRaisesRegex(RuntimeError, 'other than the checked database'):
+                self.snapshot()
+        finally:
+            backup.backup_sqlite = original
+        self.assertEqual(self.staged_files(), [])
+
+    def test_live_wal_database_with_an_independent_writer_is_snapshotted(self):
+        db = self.volume / 'live.db'
+        ready = self.base / 'ready'
+        writer = sp.Popen([sys.executable, '-c', (
+            'import sqlite3, sys, time, pathlib\n'
+            'w = sqlite3.connect(sys.argv[1]); w.execute("PRAGMA journal_mode=WAL")\n'
+            'w.execute("PRAGMA wal_autocheckpoint=0"); w.execute("CREATE TABLE t (x)")\n'
+            'w.execute("INSERT INTO t VALUES (1)"); w.commit()\n'
+            'pathlib.Path(sys.argv[2]).touch(); time.sleep(5)\n'), str(db), str(ready)])
+        try:
+            deadline = time.monotonic() + 10
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertTrue((self.volume / 'live.db-wal').exists())
+            self.assertEqual(self.snapshot(), [str(db)])
+            snapshot = self.stage / str(db).lstrip('/')
+            with closing(sqlite3.connect(snapshot)) as con:
+                self.assertEqual(con.execute('SELECT x FROM t').fetchall(), [(1,)])
+        finally:
+            writer.kill()
+            writer.wait()
+
     def test_symlinked_wal_sidecar_is_refused(self):
         make_sqlite(self.volume / 'app.db')
         (self.volume / 'app.db-shm').symlink_to(self.host / 'etc/shadow.conf')
@@ -190,11 +234,26 @@ class GuestPathTests(Fixture):
 
 
 class HeaderReadTests(Fixture):
-    def test_header_read_refuses_symlinks_and_escapes(self):
+    def test_header_read_refuses_symlinks_and_special_files(self):
         (self.stage / 'dump.rdb').symlink_to(self.host / 'etc/shadow.conf')
-        self.assertIsNone(backup.read_contained_header(self.stage / 'dump.rdb', self.stage, 5))
+        self.assertIsNone(backup.read_header(self.stage / 'dump.rdb', 5))
+        os.mkfifo(self.stage / 'fifo.rdb')
+        self.assertIsNone(backup.read_header(self.stage / 'fifo.rdb', 5))
         (self.stage / 'real.rdb').write_bytes(b'REDIS0011')
-        self.assertEqual(backup.read_contained_header(self.stage / 'real.rdb', self.stage, 5)[0], b'REDIS')
+        self.assertEqual(backup.read_header(self.stage / 'real.rdb', 5)[0], b'REDIS')
+
+    def test_subdirectory_open_refuses_symlinked_and_dotdot_components(self):
+        (self.volume / 'pgroot').symlink_to(self.host)
+        (self.volume / 'real/data').mkdir(parents=True)
+        fd = os.open(self.volume, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            self.assertIsNone(backup.open_subdirectory(fd, 'pgroot/etc'))
+            self.assertIsNone(backup.open_subdirectory(fd, '../host'))
+            child = backup.open_subdirectory(fd, 'real/data')
+            self.assertIsNotNone(child)
+            os.close(child)
+        finally:
+            os.close(fd)
 
 
 if __name__ == '__main__':
