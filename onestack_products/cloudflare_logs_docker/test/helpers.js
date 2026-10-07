@@ -78,6 +78,7 @@ async function startService(relativeScript, env) {
 
   return {
     url: `http://127.0.0.1:${port}`,
+    output: () => output,
     stop: () =>
       new Promise((resolve) => {
         child.removeAllListeners("exit");

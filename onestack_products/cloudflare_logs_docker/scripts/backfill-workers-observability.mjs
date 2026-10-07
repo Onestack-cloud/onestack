@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 import { realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+
+// Same redaction as the ingest adapter. Resolved relative to this file, so
+// ingest/ must sit next to scripts/ (the README command mounts both).
+const { redact, normalizeMessage } = createRequire(import.meta.url)("../ingest/redaction.js");
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 const DEFAULT_ACCOUNT_ID = "663b85e4f509df63c1735f6e77db4370";
@@ -143,49 +148,6 @@ function authHeaders() {
   throw new Error("Missing Cloudflare auth. Set CLOUDFLARE_API_TOKEN or CF_API_EMAIL + CF_API_KEY.");
 }
 
-function redactUrl(value) {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  return value.replace(/https?:\/\/[^\s"'<>]+/g, (candidate) => {
-    try {
-      const url = new URL(candidate);
-      for (const key of [...url.searchParams.keys()]) {
-        if (/authorization|cookie|password|secret|token|api[-_]?key|code/i.test(key)) {
-          url.searchParams.set(key, "[redacted]");
-        }
-      }
-      return url.toString();
-    } catch {
-      return candidate;
-    }
-  });
-}
-
-function redact(value, parentKey = "") {
-  if (Array.isArray(value)) {
-    return value.map((nested) => redact(nested));
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => {
-        if (/authorization|cookie|password|secret|token|api[-_]?key/i.test(key)) {
-          return [key, "[redacted]"];
-        }
-        return [key, redact(nested, key)];
-      }),
-    );
-  }
-
-  if (typeof value === "string" && /url|uri|href|source|message|trigger/i.test(parentKey)) {
-    return redactUrl(value);
-  }
-
-  return value;
-}
-
 function labelValue(value, fallback = "unknown") {
   const stringValue = String(value ?? fallback)
     .replace(/[^A-Za-z0-9_.:-]/g, "_")
@@ -197,16 +159,6 @@ function timestampNs(timestampMs) {
   const numeric = Number(timestampMs);
   const millis = Number.isFinite(numeric) && numeric > 0 ? Math.trunc(numeric) : Date.now();
   return String(BigInt(millis) * 1000000n);
-}
-
-function normalizeMessage(source) {
-  if (typeof source === "string") {
-    return redactUrl(source);
-  }
-  if (source === null || source === undefined) {
-    return "";
-  }
-  return JSON.stringify(redact(source));
 }
 
 function inferKind(event) {
@@ -233,12 +185,12 @@ function inferRequestSummary(event) {
 
   return {
     requestMethod: request.method || request.Method || triggerMatch?.[1] || null,
-    requestUrl: redactUrl(request.url || request.URL || metadata.url || triggerMatch?.[2] || null),
+    requestUrl: redact(request.url || request.URL || metadata.url || triggerMatch?.[2] || null),
     responseStatus: response.status || response.Status || metadata.statusCode || null,
   };
 }
 
-function eventToLokiEntry(event, options) {
+export function eventToLokiEntry(event, options) {
   const metadata = event.$metadata || {};
   const workers = event.$workers || {};
   const scriptName = workers.scriptName || metadata.service || "unknown";
@@ -254,14 +206,14 @@ function eventToLokiEntry(event, options) {
     cloudflareEventId: metadata.id,
     scriptName,
     level,
-    message: metadata.message || normalizeMessage(event.source),
+    message: normalizeMessage(metadata.message || event.source),
     outcome: workers.outcome,
     eventType,
     cpuTimeMs: workers.cpuTimeMs,
     wallTimeMs: workers.wallTimeMs,
     requestId: workers.requestId || metadata.requestId,
     ...requestSummary,
-    source: redact(event.source, "source"),
+    source: redact(event.source),
     metadata: redact(metadata),
     workers: redact(workers),
   });

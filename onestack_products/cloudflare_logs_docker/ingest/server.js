@@ -3,6 +3,7 @@
 const http = require("node:http");
 const zlib = require("node:zlib");
 const { timingSafeEqual } = require("node:crypto");
+const { redact, normalizeMessage } = require("./redaction");
 
 const port = Number.parseInt(process.env.PORT || "8080", 10);
 const authToken = process.env.AUTH_TOKEN || "";
@@ -122,25 +123,6 @@ function parsePayload(text) {
     .map((line) => JSON.parse(line));
 }
 
-function redact(value) {
-  if (Array.isArray(value)) {
-    return value.map(redact);
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => {
-        if (/authorization|cookie|password|secret|token|api[-_]?key/i.test(key)) {
-          return [key, "[redacted]"];
-        }
-        return [key, redact(nested)];
-      }),
-    );
-  }
-
-  return value;
-}
-
 function labelValue(value, fallback = "unknown") {
   const stringValue = String(value ?? fallback)
     .replace(/[^A-Za-z0-9_.:-]/g, "_")
@@ -152,16 +134,6 @@ function timestampNs(timestampMs) {
   const numeric = Number(timestampMs);
   const millis = Number.isFinite(numeric) && numeric > 0 ? Math.trunc(numeric) : Date.now();
   return String(BigInt(millis) * 1000000n);
-}
-
-function normalizeMessage(message) {
-  if (Array.isArray(message)) {
-    return message.map((part) => (typeof part === "string" ? part : JSON.stringify(part))).join(" ");
-  }
-  if (typeof message === "string") {
-    return message;
-  }
-  return JSON.stringify(message);
 }
 
 function extractRequestSummary(event) {
@@ -208,8 +180,7 @@ function convertRecordToStreams(record, streamsByTenant) {
     entrypoint: labelValue(record.Entrypoint || record.entrypoint),
   };
   const baseTimestamp = timestampNs(record.EventTimestampMs || record.eventTimestamp);
-  const safeRecord = redact(record);
-  const safeEvent = safeRecord.Event || safeRecord.event;
+  const safeEvent = redact(record.Event || record.event);
   const requestSummary = extractRequestSummary(safeEvent);
   const logs = Array.isArray(record.Logs) ? record.Logs : [];
   const exceptions = Array.isArray(record.Exceptions) ? record.Exceptions : [];
@@ -224,7 +195,7 @@ function convertRecordToStreams(record, streamsByTenant) {
     wallTimeMs: record.WallTimeMs,
     ...requestSummary,
     event: safeEvent,
-    scriptVersion: safeRecord.ScriptVersion,
+    scriptVersion: redact(record.ScriptVersion),
   });
   addValue(
     streamsByTenant,
@@ -292,7 +263,7 @@ async function pushToLoki(streamsByTenant) {
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`loki push failed for tenant ${tenant}: ${response.status} ${body}`);
+      throw new Error(`loki push failed for tenant ${tenant}: ${response.status} ${body.slice(0, 1000)}`);
     }
   }
 }
@@ -306,7 +277,13 @@ async function handleLogpush(request, response) {
 
   const body = await collectRequestBody(request);
   const text = decodePayload(body, request);
-  const records = parsePayload(text);
+  let records;
+  try {
+    records = parsePayload(text);
+  } catch {
+    // JSON.parse errors quote part of the payload, which may hold secrets.
+    throw new Error("invalid JSON payload");
+  }
   const streamsByTenant = new Map();
   let accepted = 0;
   let filtered = 0;

@@ -11,8 +11,24 @@ https://logs.onestack.cloud/cloudflare-logpush
 ```
 
 Traefik routes that path to the ingest adapter. The adapter validates the
-`Authorization: Bearer ...` header, redacts sensitive keys, filters allowed
-Worker script names and writes to Loki. Grafana is exposed on the same host.
+`Authorization: Bearer ...` header, filters allowed Worker script names, redacts
+secrets and writes to Loki. Grafana is exposed on the same host.
+
+Redaction lives in `ingest/redaction.js`, which the backfill script shares. It
+replaces the values of sensitive keys (authorisation, cookies, passwords,
+secrets, tokens, API keys, JWTs, sessions, private keys, credentials and
+signatures) anywhere in a record, including inside `console.log` arguments,
+header lists and strings that are entirely JSON. Counters and flags with such
+names (`tokenCount`) stay visible. In any `scheme://` URL inside a string it
+redacts userinfo and sensitive query or fragment parameters (the same names
+plus OAuth and one-time `code`s and API `key`s), leaving the rest of the URL as
+logged. Secrets in URL paths (such as webhook URLs), in free text (such as a
+Bearer token in a sentence) or in JSON with a prefix are stored as logged, so
+Workers must not log them. Malformed payloads are rejected without quoting them
+back.
+
+The backfill command mounts only `ingest/` and `scripts/`, so the stack's
+`.env` stays out of the container.
 
 ## Tenant isolation
 
@@ -117,10 +133,11 @@ that shares the ingest service network:
 
 ```bash
 docker run --rm --network container:cloudflare-logs-ingest \
-  -v /root/cloudflare_logs_docker/scripts:/scripts:ro \
+  -v /root/cloudflare_logs_docker/ingest:/stack/ingest:ro \
+  -v /root/cloudflare_logs_docker/scripts:/stack/scripts:ro \
   -e CF_API_EMAIL -e CF_API_KEY -e CF_ACCOUNT_ID \
   cloudflare_logs_docker-ingest \
-  node /scripts/backfill-workers-observability.mjs \
+  node /stack/scripts/backfill-workers-observability.mjs \
     --source-label cloudflare-workers-backfill-full \
     --from "2026-06-02T00:00:00.000Z" \
     --to "2026-06-09T04:18:00.000Z" \
