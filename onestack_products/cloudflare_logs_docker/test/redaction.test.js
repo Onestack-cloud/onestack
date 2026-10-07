@@ -211,3 +211,22 @@ describe("redaction gaps from the second review", () => {
     assert.match(redact('body: {"password":"x","user":"sam"} truncated'), /"user":"sam"/);
   });
 });
+
+describe("redaction parser differentials from the push security scan", () => {
+  test("a URL percent-encoded inside a parameter value", () => {
+    const output = redact(
+      "https://x.example/login?redirect=https%3A%2F%2Fy.example%2Fcb%3Ftoken%3DENC1%26state%3Dok&lang=en",
+    );
+    assertHidden(output, "ENC1");
+    assert.match(output, /state%3Dok/);
+    assert.match(output, /&lang=en$/);
+  });
+
+  test("JSON-escaped URLs inside a larger string", () => {
+    assertHidden(redact('payload {"url":"https:\\/\\/api.example\\/v1?token=ESC1&x=1"} truncated'), "ESC1");
+  });
+
+  test("HTML-escaped ampersands", () => {
+    assertHidden(redact("<a href=\"https://x.example/p?a=1&amp;token=AMP1\">"), "AMP1");
+  });
+});
