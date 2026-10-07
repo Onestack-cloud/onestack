@@ -82,3 +82,60 @@ describe("redaction of structured values", () => {
     assert.match(message, /^login \{"user":"sam","password":"\[redacted\]"\}/);
   });
 });
+
+describe("redaction edge cases from review", () => {
+  function timed(fn) {
+    const started = process.hrtime.bigint();
+    fn();
+    return Number(process.hrtime.bigint() - started) / 1e6;
+  }
+
+  test("dotted and punctuation-heavy strings redact in linear time", () => {
+    assert.ok(timed(() => redact("a.".repeat(80000))) < 500, "dotted string was slow");
+    assert.ok(timed(() => redact(`https://x.example/?token=T ${")".repeat(160000)}a`)) < 500, "punctuation was slow");
+  });
+
+  test("deeply nested JSON in a string never leaks", () => {
+    const deep = `${'{"a":'.repeat(5000)}{"password":"DEEP1"}${"}".repeat(5000)}`;
+    assertHidden(redact(deep), "DEEP1");
+  });
+
+  test("deeply nested objects do not crash redaction", () => {
+    let value = { password: "DEEP2" };
+    for (let index = 0; index < 20000; index += 1) {
+      value = { a: value };
+    }
+    assertHidden(redact(value), "DEEP2");
+  });
+
+  test("two-item console arguments are not mistaken for a header", () => {
+    assert.equal(normalizeMessage(["Session expired for user", "u-123"]), "Session expired for user u-123");
+  });
+
+  test("header lists as pairs or name/value objects", () => {
+    assertHidden(redact([["accept", "text/html"], ["cookie", "HDR1"]]), "HDR1");
+    assertHidden(redact([{ name: "Authorization", value: "Bearer HDR2" }]), "HDR2");
+  });
+
+  test("URLs nested in a parameter, API key params and token-only userinfo", () => {
+    assertHidden(redact("https://x.example/login?redirect=https://y.example/?token=NEST1"), "NEST1");
+    assertHidden(redact("https://maps.example/api?key=KEY1&q=x"), "KEY1");
+    assertHidden(redact("git clone https://TOKENONLY1@github.com/org/repo.git"), "TOKENONLY1");
+  });
+
+  test("JSON strings with nothing sensitive are left exactly as logged", () => {
+    const input = '{ "id": 12345678901234567890, "ok": true }';
+    assert.equal(redact(input), input);
+  });
+
+  test("counters and flags named after secrets stay visible", () => {
+    assert.deepEqual(redact({ tokenCount: 3, passwordResetSent: true }), { tokenCount: 3, passwordResetSent: true });
+  });
+
+  test("one-time and auth code keys", () => {
+    const output = redact({ otp: "OTP1", authCode: "AC1", code: "ERR_TIMEOUT" });
+    assertHidden(output, "OTP1");
+    assertHidden(output, "AC1");
+    assert.equal(output.code, "ERR_TIMEOUT");
+  });
+});

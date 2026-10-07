@@ -4,8 +4,8 @@ import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
-// Same redaction as the ingest adapter. Run this script from the stack
-// directory (see README) so ../ingest is next to it.
+// Same redaction as the ingest adapter. Resolved relative to this file, so
+// ingest/ must sit next to scripts/ (the README command mounts both).
 const { redact, normalizeMessage } = createRequire(import.meta.url)("../ingest/redaction.js");
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
