@@ -18,7 +18,7 @@ Restore `traefik_default`, internal `onestack-docker-api` and three internal `on
 
 The origin firewall is installed before Docker, uses a validated Cloudflare IP cache, refreshes daily and blocks public web traffic if no valid allowlist exists. It hooks both host and forwarded traffic for IPv4/IPv6. Current public interface is `eno1`; review this on new hardware. Keep Tailscale and scoped CI SSH recovery available while changing firewalls.
 
-Restore Traefik's protected certificate store, dynamic routes and scoped DNS token. Infisical inputs include `TRAEFIK_CF_DNS_API_TOKEN`, `MONGO_ROOT_PASSWORD`, `REDIS_PASSWORD`, deployment keys and scoped registry tokens. Product Compose expects the existing `TRAEFIK_DASHBOARD_USERS` hash. Never put the retired Cloudflare global key back into a consumer. Cloudflared uses a protected token file and systemd credentials.
+Restore Traefik's protected certificate store, dynamic routes and scoped DNS token. Infisical inputs include `TRAEFIK_CF_DNS_API_TOKEN`, `REDIS_PASSWORD`, deployment keys and scoped registry tokens. Product Compose expects the existing `TRAEFIK_DASHBOARD_USERS` hash. Never put the retired Cloudflare global key back into a consumer. Cloudflared uses a protected token file and systemd credentials.
 
 Huly was retired on 27 September 2026. Removal of all 14 Huly containers and their dedicated live storage, configuration, networks and unused images was completed and verified. Shared application infrastructure remains in place, and historical encrypted backups retain Huly's prior state. Do not recreate Huly during routine deployment or host recovery. Its historical image, network and compatibility settings remain in `config/huly-baseline.json` for an explicitly requested recovery.
 

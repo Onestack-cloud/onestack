@@ -24,4 +24,10 @@ defmodule Onestack.MemberManagerTest do
                {:ok, {:skipped, :retired}}
     end
   end
+
+  test "a password change does not fail for a team that lists Matrix" do
+    # Matrix passwords are not managed here; the clause must still return a
+    # shape Accounts.update_user_password/3 accepts.
+    assert {:ok, _} = MemberManager.update_password_for_product("member@example.com", "matrix")
+  end
 end

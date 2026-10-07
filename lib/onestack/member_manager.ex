@@ -1015,8 +1015,9 @@ defmodule Onestack.MemberManager do
     {:ok, {:skipped, :retired}}
   end
 
-  def update_password_for_product(_email, "matrix") do
-  end
+  # Matrix passwords are not managed by Onestack. Report success so a password
+  # change is not rolled back for members whose team lists Matrix.
+  def update_password_for_product(_email, "matrix"), do: {:ok, :not_managed}
 
   def update_password_for_product(email, "cal") do
     {:ok, pid} = Postgrex.start_link(get_db_config("cal"))
