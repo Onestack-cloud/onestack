@@ -1,0 +1,51 @@
+# VPS recovery and security baseline
+
+This directory records the tested September 2026 production changes without credentials or application data. Live changes have been applied and individually checked. The local source is for review/recovery; no commit or push is implied. OpenClaw is retired.
+
+## Access and agent isolation
+
+**`onestack-admin` is production; `onestack-monolith` now connects to the Codex VM.** Production administration uses Tailscale 100.76.6.102 and the new laptop-only SSH key. The old shared key is revoked. Tailscale device key expiry is disabled.
+
+The original Codex connection name and nine tasks are retained in `onestack-codex` (192.168.141.10), as UID 1000 without sudo or Docker privileges. Its guest-only guard source and units are in `codex-vm/`. Keep its `/home/codex/.codex` state, workspace and compatibility symlinks. The production root guard/daemon must remain disabled. Plain bootstrap, guest reboot and final production-host reboot recovery passed.
+
+GitLab Runner operates in `onestack-ci-runner` (192.168.140.10), with its own Docker engine; the host runner is disabled. Both VMs autostart. Their isolation uses a separate nftables hook at priority -10, so later Docker/libvirt accept rules cannot bypass the VM restrictions. Restore their libvirt definitions/networks and apply `onestack-ci-network-firewall.service` before bringing guests online. CI may reach restricted deployment SSH; Codex cannot reach production management/private services. The CI validation pipeline is 2827882082 in digitalnachos-prototypes/allbids_app.
+
+Public port 22 remains for hosted, restricted CI deployment keys. Administrator login requires Tailscale. Do not close it until those deployment paths have an alternative. CIMS uses `onestack-cims` and `cims-deploy-ssh`; its service drop-ins are preserved here. GitLab per-project keys invoke `onestack-app-deploy-ssh`; Compose/source remain administrator-owned. Pulls use scoped `/etc/onestack-registry` credentials, never a personal registry login or global image pruning.
+
+## Private networks and origin protection
+
+Restore `traefik_default`, internal `onestack-docker-api`, four internal `onestack-db-*` networks (postgres, mariadb, redis, mongo), and internal `onestack-twenty-backend`. Place only declared consumers on each. Traefik/Watchtower use the read-only API proxy; neither mounts the raw production Docker socket. Start that proxy before consumers. API read access can still inspect configuration, so the proxy remains trusted infrastructure.
+
+The origin firewall is installed before Docker, uses a validated Cloudflare IP cache, refreshes daily and blocks public web traffic if no valid allowlist exists. It hooks both host and forwarded traffic for IPv4/IPv6. Current public interface is `eno1`; review this on new hardware. Keep Tailscale and scoped CI SSH recovery available while changing firewalls.
+
+Restore Traefik's protected certificate store, dynamic routes and scoped DNS token. Infisical inputs include `TRAEFIK_CF_DNS_API_TOKEN`, `MONGO_ROOT_PASSWORD`, `REDIS_PASSWORD`, deployment keys and scoped registry tokens. Product Compose expects the existing `TRAEFIK_DASHBOARD_USERS` hash. Never put the retired Cloudflare global key back into a consumer. Cloudflared uses a protected token file and systemd credentials.
+
+Huly was retired on 27 September 2026. Removal of all 14 Huly containers and their dedicated live storage, configuration, networks and unused images was completed and verified. Shared application infrastructure remains in place, and historical encrypted backups retain Huly's prior state. Do not recreate Huly during routine deployment or host recovery. Its historical image, network and compatibility settings remain in `config/huly-baseline.json` for an explicitly requested recovery.
+
+Plane was retired on 27 September 2026. Removal of its 12 containers, eight dedicated volumes, nine unused images, live configuration and exact `plane` database was completed and verified. Its historical Compose recipes use `.retired` filenames. Shared PostgreSQL, Redis and Traefik services and networks remain in place; the 11 native database export identities remain required. Do not recreate Plane during routine deployment or host recovery.
+
+Twenty is live on 2.38.1 with PostgreSQL 15.19. Its database uses internal `onestack-twenty-backend`. Restore the exact maintained PostgreSQL image from its encrypted backup before starting the stack; see `twenty-postgres/README.md`. The copied fifth workspace's replacement API key is in Infisical as `TWENTY_RECOVERED_WORKSPACE_API_KEY`. Preserve the production URL, SMTP and signing settings when restoring.
+
+The `dev-domains/` Worker and Traefik route preserve the two development aliases with valid HTTPS; an anonymous LiveView WebSocket upgrade was verified.
+
+## Backups and monitoring
+
+Full backups run twice daily with retries and persistent scheduling. They cover native database/search exports, SQLite snapshots, file stores, operational configuration, protected Tailscale device identity and all three guests: Codex, CI runner and sandbox. The `huly-retired-v1` scope requires all 11 remaining native database identities and types; historical backups keep their original coverage contract. VM filesystems are quiesced at the snapshot point and immediately thawed. A recovered CI VM booted in network isolation.
+
+The 8 September baseline full archive is `onestack-2026-09-08t032440z`; its operational checkpoint `onestackcfg-2026-09-08t035101z` contains the later firewall and Tailscale identity/configuration additions. Both passed independent extraction and metadata checks from the laptop. Subsequent full backups include those additions. Restore the Tailscale identity only when replacing the original device, never on a concurrently connected test clone.
+
+The 27 September full archive `onestack-2026-09-27t131629z` completed at 13:29:44 UTC before Huly and Plane were retired. Independent verification confirmed the inventory of 27 archives and six restored sample file hashes. Historical backups retain the retired applications' prior state.
+
+The VPS Borg key is append-only. The independent unrestricted recovery bundle is in laptop Keychain, service `Onestack VPS backup recovery (94.130.19.103)`, account `onestack-monolith` (unchanged). Independent extraction/checksum verification passed. Do not enable server-side Borg pruning. Provider snapshots were disabled and all three existing snapshots removed with approval on 10 September. Trusted laptop-only retention keeps three daily full archives plus one weekly and preserves 22 historical/configuration archives. It verifies independent IDs and retained archive metadata before pruning, then verifies the planned IDs before and after compaction. The login-start controller retries every six hours and skips 23 hours after success. See [off-host retention](offhost-retention/README.md) for policy, recovery and laptop availability limits. Native export cleanup runs only after a successful off-site archive, keeps seven days/newest two, and uses a Meilisearch creation ledger.
+
+The off-host Worker checks heartbeat, backup age/failure, disk, expected containers, host units, both guest roles and Tailscale. Private Telegram alerts report meaningful changes. Restore `/etc/onestack-monitor/config.json` and `expected-services.json`; update the inventory after intentional additions/retirements. Maintenance leases expire rather than suppressing failures indefinitely.
+
+## Applying source and rebuilding
+
+Ansible source now preserves private databases, scoped DNS, socket proxy, protected SSH host-key checks, monitored updates and retained rollback images. Syntax and template rendering were validated. **It has not been run as a complete blank-host rebuild.** Restore protected configs, VM disks/networks, CIMS account/state and application directories before enabling their consumers. The baseline role enables backup/monitor/tunnel services only when their protected configuration exists. Install guest Codex units in the guest only.
+
+Ubuntu security updates remain enabled. Application updates are checked without automatically replacing running containers. Take a verified backup, check compatibility, preserve the current image/data, then update one stack at a time. Do not prune deliberately retained rollback tags. Preserve paused Penpot, Chatwoot and Linkstack services.
+
+The 8 September baseline host reboot recovered the then-intended 49 containers and two VMs; the then-paused 22 containers stayed stopped. Guest restrictions, public routes, direct-origin blocking, authenticated Twenty reads, CI registration and independent monitoring passed. After the 27 September retirements, all 36 currently expected containers are running and healthy. Maintenance suppression is off. Protected baseline receipts are under `/var/lib/onestack-maintenance/2026-09-07`.
+
+The security assessment is a bounded operational audit, not forensic clearance. No clear compromise evidence was identified in the checks recorded. Cloudflare global-key rotation still requires the outstanding browser verification step. Provider snapshots were retired through the signed-in Brave profile on 10 September; Borg remains the off-site backup. Phone UI confirmation after the VM cutover remains pending.
