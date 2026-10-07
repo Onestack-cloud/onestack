@@ -6,7 +6,7 @@ defmodule Onestack.MemberManagerTest do
   # Products whose services have been retired (see docs/adr). Teams created
   # before a retirement can still list them, so provisioning, removal and
   # password changes must skip them without trying to reach a database.
-  @retired ~w(chatwoot kimai librechat penpot plane twenty)
+  @retired ~w(chatwoot kimai librechat nocodb penpot plane twenty)
 
   for product <- @retired do
     test "adding a member to retired #{product} is skipped" do

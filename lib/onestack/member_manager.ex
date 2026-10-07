@@ -1,8 +1,8 @@
 defmodule Onestack.MemberManager do
   use GenServer
   # Services retired from the host (docs/adr/0006 and 0007). Plane was retired on
-  # 27 September 2026.
-  @retired_products ~w(chatwoot kimai librechat penpot plane twenty)
+  # 27 September 2026; NocoDB's unused database was removed on 7 October 2026.
+  @retired_products ~w(chatwoot kimai librechat nocodb penpot plane twenty)
 
   require Logger
 
@@ -381,129 +381,6 @@ defmodule Onestack.MemberManager do
     end
   end
 
-  def add_member_to_product(email, "nocodb" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-    # Check if the email exists with @onestack.cloud suffix
-    check_query = """
-    SELECT email FROM "nc_users_v2"
-    WHERE email LIKE $1
-    """
-
-    email_pattern =
-      if String.ends_with?(email, "@onestack.cloud") do
-        # For emails already ending in @onestack.cloud
-        "#{email}%"
-      else
-        # For regular emails
-        "#{email}@onestack.cloud%"
-      end
-
-    case Postgrex.query!(pid, check_query, [email_pattern]) do
-      %Postgrex.Result{num_rows: 1, rows: [[disabled_email]]} ->
-        # Email found, reactivate by removing @onestack.cloud and random string
-        reactivate_query = """
-        UPDATE "nc_users_v2"
-        SET email = $1
-        WHERE email = $2
-        """
-
-        Postgrex.query!(pid, reactivate_query, [email, disabled_email])
-
-      {:ok, %Postgrex.Result{rows: []}} ->
-        # Email not found, proceed with new user creation
-        nocodb_id = generate_random_string()
-        base_id = generate_random_string()
-        notification_id = generate_random_string()
-
-        user_query = """
-        INSERT INTO "nc_users_v2" (id, email, password, salt)
-        VALUES ($1, $2, $3, $4)
-        """
-
-        user_params = [
-          nocodb_id,
-          email,
-          hashed_password
-        ]
-
-        base_query = """
-        INSERT INTO "nc_bases_v2" (id, title, meta, deleted, is_meta, "order")
-        VALUES ($1, $2, $3, $4, $5, $6)
-        """
-
-        meta_json = Jason.encode!(%{"iconColor" => "#36BFFF"})
-
-        base_params = [
-          base_id,
-          "Getting Started",
-          meta_json,
-          false,
-          true,
-          1
-        ]
-
-        relationship_query = """
-        INSERT INTO "nc_base_users_v2" (base_id, fk_user_id, roles)
-        VALUES ($1, $2, $3)
-        """
-
-        relationship_params = [
-          base_id,
-          nocodb_id,
-          "owner"
-        ]
-
-        notification_query = """
-        INSERT INTO "notification" (id, type, body, is_read, is_deleted, fk_user_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        """
-
-        notification_params = [
-          notification_id,
-          "app.welcome",
-          "{}",
-          false,
-          false,
-          nocodb_id
-        ]
-
-        case Postgrex.query(pid, user_query, user_params) do
-          {:ok, _result} ->
-            Logger.info("User inserted successfully in nocodb")
-
-            case Postgrex.query(pid, base_query, base_params) do
-              {:ok, _result} ->
-                Logger.info("Base created successfully in nocodb")
-
-                case Postgrex.query(pid, relationship_query, relationship_params) do
-                  {:ok, _result} ->
-                    Logger.info("Relationship created successfully in nocodb")
-
-                    case Postgrex.query(pid, notification_query, notification_params) do
-                      {:ok, _result} ->
-                        Logger.info("Notification created successfully in nocodb")
-
-                      {:error, %Postgrex.Error{} = error} ->
-                        Logger.error("Failed to create notification in nocodb: #{inspect(error)}")
-                    end
-
-                  {:error, %Postgrex.Error{} = error} ->
-                    Logger.error("Failed to create relationship in nocodb: #{inspect(error)}")
-                end
-
-              {:error, %Postgrex.Error{} = error} ->
-                Logger.error("Failed to create base in nocodb: #{inspect(error)}")
-            end
-
-          {:error, %Postgrex.Error{} = error} ->
-            Logger.error("Failed to insert user in nocodb: #{inspect(error)}")
-        end
-    end
-
-    GenServer.stop(pid)
-  end
-
   def add_member_to_product(email, "n8n" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config("n8n"))
     hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
@@ -855,34 +732,6 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
-  def remove_member_from_product(email, "nocodb" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
-    random_string = generate_random_string(12)
-    new_email = "#{email}@onestack.cloud#{random_string}"
-
-    query = """
-    UPDATE "nc_users_v2"
-    SET email = $1
-    WHERE email = $2
-    """
-
-    params = [new_email, email]
-
-    case Postgrex.query(pid, query, params) do
-      {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
-
-      {:ok, %Postgrex.Result{num_rows: 0}} ->
-        Logger.info("No user found with email #{email} in #{product_name}")
-
-      {:error, %Postgrex.Error{} = error} ->
-        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
-    end
-
-    GenServer.stop(pid)
-  end
-
   def remove_member_from_product(email, "castopod" = product_name) do
     {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
 
@@ -1060,31 +909,6 @@ defmodule Onestack.MemberManager do
       {:error, error} ->
         Logger.error(
           "Failed to update password for formbricks user: #{email}. Error: #{inspect(error)}"
-        )
-
-        GenServer.stop(pid)
-        {:error, error}
-    end
-  end
-
-  def update_password_for_product(email, "nocodb") do
-    {:ok, pid} = Postgrex.start_link(get_db_config("nocodb"))
-    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-
-    update_query = """
-    UPDATE "nc_users_v2" SET password = $1
-    WHERE email = $2
-    """
-
-    case Postgrex.query(pid, update_query, [hashed_password, email]) do
-      {:ok, result} ->
-        Logger.info("Successfully updated password for nocodb user: #{email}")
-        GenServer.stop(pid)
-        {:ok, result}
-
-      {:error, error} ->
-        Logger.error(
-          "Failed to update password for nocodb user: #{email}. Error: #{inspect(error)}"
         )
 
         GenServer.stop(pid)

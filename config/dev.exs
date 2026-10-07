@@ -174,15 +174,5 @@ config :onestack,
         password: System.get_env("POSTGRES_PASSWORD"),
         database: "documenso"
       ]
-    },
-    %{
-      name: "nocodb",
-      db_config: [
-        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
-        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
-        username: System.get_env("POSTGRES_USER"),
-        password: System.get_env("POSTGRES_PASSWORD"),
-        database: "nocodb"
-      ]
     }
   ]
