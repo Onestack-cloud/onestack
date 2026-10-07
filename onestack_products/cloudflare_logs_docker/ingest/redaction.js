@@ -28,8 +28,10 @@ const sensitiveParamPattern = /^(key|code|.*(auth|otp|verification|reset|access|
 // including the JSON-escaped form scheme:\/\/... found in serialised payloads.
 // The scheme length is bounded to keep matching linear.
 const urlPattern = /\b[a-z][a-z0-9+.-]{0,31}:(?:\/\/|\\\/\\\/)[^\s"'<>]+/gi;
-// A parameter value that is itself a percent-encoded URL (redirect_uri=https%3A%2F%2F...).
-const encodedUrlPattern = /%3A(?:%2F|\/){2}/i;
+// A value that is itself a percent-encoded URL (redirect_uri=https%3A%2F%2F...),
+// including double encoding (%253A%252F%252F) and a partly encoded https:%2F%2F.
+const encodedUrlPattern = /(?:%(?:25)*3A|:)(?:%(?:25)*2F){2}/i;
+const MAX_ENCODING_LEVELS = 4;
 const trailingPunctuation = new Set([")", ".", ",", ";", ":", "!", "?", "]"]);
 // Free text: "Bearer <token>" and "password=..." or "token: ...". The
 // lookbehind makes a name start only at a word boundary, keeping this linear.
@@ -87,20 +89,33 @@ function redactUrlText(candidate) {
   return core + candidate.slice(end);
 }
 
-// Decodes a percent-encoded URL value, redacts it with the same rules and
-// re-encodes it only if something changed. Each nested level is shorter than
-// the last, so this terminates.
-function redactEncodedUrl(value) {
-  if (!encodedUrlPattern.test(value)) {
+// Decodes each valid %XX run on its own, so one malformed escape (%ZZ, or a
+// line cut mid-character) cannot stop the rest from being decoded.
+function decodePercentRuns(value) {
+  return value.replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) => {
+    try {
+      return decodeURIComponent(run);
+    } catch {
+      return run;
+    }
+  });
+}
+
+// Decodes a percent-encoded URL value, redacts it with the same rules (one
+// more decoding level at a time, up to MAX_ENCODING_LEVELS) and re-encodes it
+// only if something changed.
+function redactEncodedUrl(value, level = 0) {
+  if (level >= MAX_ENCODING_LEVELS || !encodedUrlPattern.test(value)) {
     return value;
   }
-  let decoded;
-  try {
-    decoded = decodeURIComponent(value);
-  } catch {
+  const decoded = decodePercentRuns(value);
+  if (decoded === value) {
     return value;
   }
-  const redacted = decoded.replace(urlPattern, redactUrlText);
+  let redacted = decoded.replace(urlPattern, redactUrlText);
+  if (redacted === decoded) {
+    redacted = redactEncodedUrl(decoded, level + 1);
+  }
   return redacted === decoded ? value : encodeURIComponent(redacted);
 }
 
@@ -130,8 +145,13 @@ function redactString(value, depth) {
     .replace(textPairPattern, (match, quote, name, separator, secret) => {
       const quoted = secret[0] === '"' || secret[0] === "'";
       const inner = quoted ? secret.slice(1, -1) : secret;
-      if (!isSensitiveKey(name) || inner.startsWith(REDACTED)) {
+      if (inner.startsWith(REDACTED)) {
         return match;
+      }
+      if (!isSensitiveKey(name)) {
+        // redirect_uri=https%3A%2F%2F... outside a URL.
+        const nested = redactEncodedUrl(inner);
+        return nested === inner ? match : match.replace(inner, nested);
       }
       const wrap = quoted ? secret[0] : "";
       return `${quote}${name}${quote}${separator}${wrap}${REDACTED}${wrap}`;

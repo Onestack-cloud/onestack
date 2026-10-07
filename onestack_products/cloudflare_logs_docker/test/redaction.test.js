@@ -230,3 +230,17 @@ describe("redaction parser differentials from the push security scan", () => {
     assertHidden(redact("<a href=\"https://x.example/p?a=1&amp;token=AMP1\">"), "AMP1");
   });
 });
+
+describe("encoded URL edge cases from review", () => {
+  test("a stray malformed escape does not switch redaction off", () => {
+    assertHidden(redact("https://x.example/?redirect=https%3A%2F%2Fy%2Fcb%3Ftoken%3DSTRAY1%26x%3D%ZZ"), "STRAY1");
+  });
+
+  test("double-encoded nested URLs", () => {
+    assertHidden(redact("https://x.example/?r=https%253A%252F%252Fy%252Fcb%253Ftoken%253DDOUBLE1"), "DOUBLE1");
+  });
+
+  test("a partly encoded scheme separator", () => {
+    assertHidden(redact("https://x.example/?r=https:%2F%2Fy%2Fcb%3Ftoken%3DPARTIAL1"), "PARTIAL1");
+  });
+});

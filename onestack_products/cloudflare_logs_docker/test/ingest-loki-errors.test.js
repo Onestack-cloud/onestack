@@ -3,7 +3,7 @@
 const { test, describe, after } = require("node:test");
 const assert = require("node:assert/strict");
 const zlib = require("node:zlib");
-const { startFakeLoki, startService } = require("./helpers");
+const { startFakeLoki, startService, runToExit } = require("./helpers");
 
 const authToken = "ingest-token";
 const tenantRoutes = "usual-suspects=usual-suspects";
@@ -63,6 +63,22 @@ describe("ingest handling of Loki rejections", () => {
     }
   });
 
+  test("entries over Loki's size limit are dropped rather than retried", async () => {
+    const body = "Max entry size '262144' bytes exceeded for stream '{a=\"b\"}' while adding an entry with length '300000' bytes\nuser 'usual-suspects', total ignored: 1 out of 1 for stream: {a=\"b\"}\n";
+    await withIngest(() => ({ status: 400, body }), {}, async ({ ingest }) => {
+      assert.equal((await logpush(ingest, record("usual-suspects"))).status, 202);
+    });
+  });
+
+  test("a rejection that lists fewer entries than Loki ignored still fails", async () => {
+    // Loki lists at most ten rejected entries per stream; the rest may have
+    // been rejected for a reason that a retry would fix.
+    const body = tooFarBehind.replace("total ignored: 1 out of 1", "total ignored: 12 out of 40");
+    await withIngest(() => ({ status: 400, body }), {}, async ({ ingest }) => {
+      assert.equal((await logpush(ingest, record("usual-suspects"))).status, 502);
+    });
+  });
+
   test("other Loki errors still fail the batch so Logpush retries", async () => {
     for (const [status, body] of [
       [400, "error parsing labels {a=: parse error"],
@@ -99,6 +115,21 @@ describe("ingest decompression limit", () => {
       // Still serving afterwards.
       assert.equal((await logpush(ingest, record("usual-suspects"))).status, 202);
     });
+  });
+
+  test("a corrupt gzip body is a client error, not a retry", async () => {
+    const corrupt = Buffer.concat([zlib.gzipSync(record("usual-suspects")).subarray(0, 12), Buffer.from("not gzip")]);
+    await withIngest(null, {}, async ({ ingest }) => {
+      assert.equal((await logpush(ingest, corrupt, { "content-encoding": "gzip" })).status, 400);
+    });
+  });
+
+  test("refuses to start with a MAX_DECODED_BYTES that would disable or break the limit", async () => {
+    for (const value of ["lots", "0", "-1", "1.5"]) {
+      const result = await runToExit("ingest/server.js", { AUTH_TOKEN: authToken, MAX_DECODED_BYTES: value });
+      assert.notEqual(result.code, 0, value);
+      assert.match(result.output, /MAX_DECODED_BYTES/);
+    }
   });
 
   test("normal gzip batches still decode", async () => {

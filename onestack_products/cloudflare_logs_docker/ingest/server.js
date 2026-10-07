@@ -11,7 +11,12 @@ const lokiUrl = process.env.LOKI_URL || "http://loki:3100/loki/api/v1/push";
 const maxBodyBytes = Number.parseInt(process.env.MAX_BODY_BYTES || "25000000", 10);
 // Caps a gzip body once decompressed, so a small compressed request cannot
 // exhaust memory.
-const maxDecodedBytes = Number.parseInt(process.env.MAX_DECODED_BYTES || "100000000", 10);
+const maxDecodedBytesSetting = process.env.MAX_DECODED_BYTES ?? "100000000";
+if (!/^[1-9]\d*$/.test(maxDecodedBytesSetting)) {
+  console.error("MAX_DECODED_BYTES must be a whole number of bytes, at least 1");
+  process.exit(1);
+}
+const maxDecodedBytes = Number(maxDecodedBytesSetting);
 const allowedScriptNames = new Set(
   (process.env.ALLOWED_SCRIPT_NAMES || "")
     .split(",")
@@ -102,8 +107,12 @@ function decodePayload(buffer, request) {
     try {
       return zlib.gunzipSync(buffer, { maxOutputLength: maxDecodedBytes }).toString("utf8");
     } catch (error) {
-      if (error.code === "ERR_BUFFER_TOO_LARGE" || error instanceof RangeError) {
+      if (error.code === "ERR_BUFFER_TOO_LARGE") {
         throw Object.assign(new Error("decompressed payload too large"), { statusCode: 413 });
+      }
+      if (typeof error.code === "string" && error.code.startsWith("Z_")) {
+        // A corrupt body will never decode, so retrying cannot help.
+        throw Object.assign(new Error("invalid gzip payload"), { statusCode: 400 });
       }
       throw error;
     }
@@ -267,15 +276,30 @@ function convertRecordToStreams(record, streamsByTenant) {
 // Logpush entry behind the stream's acceptance window, and keeps the rest of
 // the push. Retrying cannot help, so a 400 made only of those lines is logged
 // and treated as delivered; any other 400 still fails the batch.
-const permanentRejection = /entry too far behind|entry out of order|timestamp too (old|new)/;
-const rejectionSummary = /^user '[^']*', total ignored: \d+ out of \d+ for stream/;
+const permanentRejection = /entry too far behind|entry out of order|timestamp too (old|new)|Max entry size '\d+' bytes exceeded/;
+const rejectionSummary = /^user '[^']*', total ignored: (\d+) out of \d+ for stream/;
 
+// Loki lists at most ten rejected entries per stream, so the listed entries
+// must account for every entry it reports as ignored; otherwise some may have
+// been rejected for a reason that a retry would fix.
 function onlyPermanentRejections(body) {
   const lines = body
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  return lines.length > 0 && lines.every((line) => permanentRejection.test(line) || rejectionSummary.test(line));
+  let listed = 0;
+  let ignored = 0;
+  for (const line of lines) {
+    const summary = line.match(rejectionSummary);
+    if (summary) {
+      ignored += Number(summary[1]);
+    } else if (permanentRejection.test(line)) {
+      listed += 1;
+    } else {
+      return false;
+    }
+  }
+  return listed > 0 && listed === ignored;
 }
 
 async function pushToLoki(streamsByTenant) {

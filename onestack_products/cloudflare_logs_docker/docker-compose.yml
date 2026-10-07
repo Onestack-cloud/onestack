@@ -73,6 +73,7 @@ services:
       LOKI_TENANT_BY_SCRIPT: "usual-suspects=usual-suspects,usual-suspects-production=usual-suspects"
       LOKI_DEFAULT_TENANT: "cloudflare-workers"
       MAX_BODY_BYTES: "25000000"
+      MAX_DECODED_BYTES: "100000000"
     networks:
       - cloudflare_logs_internal
       - traefik_default
