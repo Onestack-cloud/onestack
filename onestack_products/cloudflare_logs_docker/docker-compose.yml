@@ -1,0 +1,147 @@
+services:
+  grafana:
+    image: grafana/grafana@sha256:c132a683b2430fff9115a29b2a79c8ab97540cdcc90846e3c81878c778ca3596
+    container_name: cloudflare-logs-grafana
+    restart: unless-stopped
+    environment:
+      GF_SERVER_ROOT_URL: "https://${LOGS_HOST}/"
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "strict"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_LOG_LEVEL: "warn"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - cloudflare_logs_internal
+      - traefik_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.cloudflare-logs-grafana.rule=Host(`${LOGS_HOST}`)"
+      - "traefik.http.routers.cloudflare-logs-grafana.priority=10"
+      - "traefik.http.routers.cloudflare-logs-grafana.entrypoints=websecure"
+      - "traefik.http.routers.cloudflare-logs-grafana.tls=true"
+      - "traefik.http.routers.cloudflare-logs-grafana.tls.certresolver=letsencr\
+        ypt"
+      - "traefik.http.routers.cloudflare-logs-grafana.middlewares=cloudflare-lo\
+        gs-security@docker"
+      - "traefik.http.services.cloudflare-logs-grafana.loadbalancer.server.port\
+        =3000"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.stsSeconds=3\
+        1536000"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.stsIncludeSu\
+        bdomains=true"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.stsPreload=t\
+        rue"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.contentTypeN\
+        osniff=true"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.browserXssFi\
+        lter=true"
+      - "traefik.http.middlewares.cloudflare-logs-security.headers.referrerPoli\
+        cy=no-referrer"
+
+  loki:
+    image: grafana/loki@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500
+    container_name: cloudflare-logs-loki
+    restart: unless-stopped
+    command: [ "-config.file=/etc/loki/config.yml" ]
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    networks:
+      - cloudflare_logs_internal
+    stop_grace_period: 60s
+
+  ingest:
+    build:
+      context: ./ingest
+    container_name: cloudflare-logs-ingest
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      AUTH_TOKEN: "${INGEST_BEARER_TOKEN}"
+      LOKI_URL: "http://loki:3100/loki/api/v1/push"
+      ALLOWED_SCRIPT_NAMES: "${ALLOWED_SCRIPT_NAMES}"
+      LOKI_TENANT_BY_SCRIPT: "usual-suspects=usual-suspects,usual-suspects-production=usual-suspects"
+      LOKI_DEFAULT_TENANT: "cloudflare-workers"
+      MAX_BODY_BYTES: "25000000"
+    networks:
+      - cloudflare_logs_internal
+      - traefik_default
+    depends_on:
+      - loki
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.cloudflare-logs-ingest.rule=Host(`${LOGS_HOST}`)
+        && PathPrefix(`/cloudflare-logpush`)"
+      - "traefik.http.routers.cloudflare-logs-ingest.priority=100"
+      - "traefik.http.routers.cloudflare-logs-ingest.entrypoints=websecure"
+      - "traefik.http.routers.cloudflare-logs-ingest.tls=true"
+      - "traefik.http.routers.cloudflare-logs-ingest.tls.certresolver=letsencry\
+        pt"
+      - "traefik.http.routers.cloudflare-logs-ingest.middlewares=cloudflare-log\
+        s-security@docker,cloudflare-logs-ingest-ratelimit@docker"
+      - "traefik.http.services.cloudflare-logs-ingest.loadbalancer.server.port=\
+        8080"
+      - "traefik.http.middlewares.cloudflare-logs-ingest-ratelimit.ratelimit.av\
+        erage=20"
+      - "traefik.http.middlewares.cloudflare-logs-ingest-ratelimit.ratelimit.bu\
+        rst=40"
+
+  usual-suspects-api:
+    build:
+      context: ./usual-suspects-api
+    container_name: cloudflare-logs-usual-suspects-api
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      API_TOKEN: "${USUAL_SUSPECTS_LOGS_API_TOKEN}"
+      LOKI_URL: "http://loki:3100"
+      LOKI_TENANT: "usual-suspects"
+      MAX_LIMIT: "5000"
+      LOGQL_SELECTOR: "{source=~\"cloudflare-workers|cloudflare-workers-backfill-full\
+        \",scriptName=~\"usual-suspects|usual-suspects-production\"}"
+    networks:
+      - cloudflare_logs_internal
+      - traefik_default
+    depends_on:
+      - loki
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.rule=Host(`${L\
+        OGS_HOST}`) && PathPrefix(`/usual-suspects-logs`)"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.priority=95"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.entrypoints=we\
+        bsecure"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.tls=true"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.tls.certresolv\
+        er=letsencrypt"
+      - "traefik.http.routers.cloudflare-logs-usual-suspects-api.middlewares=cl\
+        oudflare-logs-security@docker,cloudflare-logs-usual-suspects-api-rateli\
+        mit@docker"
+      - "traefik.http.services.cloudflare-logs-usual-suspects-api.loadbalancer.\
+        server.port=8081"
+      - "traefik.http.middlewares.cloudflare-logs-usual-suspects-api-ratelimit.\
+        ratelimit.average=30"
+      - "traefik.http.middlewares.cloudflare-logs-usual-suspects-api-ratelimit.\
+        ratelimit.burst=60"
+
+volumes:
+  grafana_data:
+  loki_data:
+
+networks:
+  cloudflare_logs_internal:
+    internal: true
+  traefik_default:
+    external: true
