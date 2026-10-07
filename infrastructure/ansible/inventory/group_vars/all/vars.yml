@@ -25,7 +25,6 @@ netdata_retention_days: 90
 # Database versions
 postgres_version: "16-alpine"
 mariadb_version: "11"
-mongodb_version: "7.0"
 valkey_version: "8.0-alpine"
 
 # Apps configuration
@@ -43,37 +42,17 @@ apps:
     image: docker.n8n.io/n8nio/n8n
     port: 5678
 
-  kimai:
-    enabled: true
-    domain: "kimai.{{ base_domain }}"
-    image: kimai/kimai2:apache
-    port: 8001
-
   calcom:
     enabled: true
     domain: "cal.{{ base_domain }}"
     image: calcom/cal.com:latest
     port: 3000
 
-  librechat:
-    enabled: true
-    domain: "chat.{{ base_domain }}"
-    image: ghcr.io/danny-avila/librechat-dev:latest
-    port: 3080
-
-  penpot:
-    enabled: true
-    domain: "penpot.{{ base_domain }}"
-
   formbricks:
     enabled: true
     domain: "forms.{{ base_domain }}"
     image: formbricks/formbricks:latest
     port: 3000
-
-  chatwoot:
-    enabled: true
-    domain: "support.{{ base_domain }}"
 
   plane:
     enabled: true

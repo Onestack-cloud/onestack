@@ -50,14 +50,10 @@ Onestack replaces expensive SaaS subscriptions with self-hosted open source alte
 |------|----------|----------|
 | [Plane](https://github.com/makeplane/plane) | Linear, Jira | Project management |
 | [Cal.com](https://github.com/calcom/cal.com) | Calendly | Scheduling |
-| [Penpot](https://github.com/penpot/penpot) | Figma | Design |
-| [Chatwoot](https://github.com/chatwoot/chatwoot) | Intercom | Customer support |
 | [Matrix (Conduit)](https://gitlab.com/famedly/conduit) | Slack | Team chat |
 | [Formbricks](https://github.com/formbricks/formbricks) | Typeform | Forms and surveys |
 | [Documenso](https://github.com/documenso/documenso) | DocuSign | Document signing |
-| [Kimai](https://github.com/kimai/kimai) | Toggl | Time tracking |
 | [Castopod](https://github.com/ad-aures/castopod) | Buzzsprout | Podcast hosting |
-| [LibreChat](https://github.com/danny-avila/LibreChat) | ChatGPT | AI chat |
 | [Infisical](https://github.com/Infisical/infisical) | Doppler | Secrets management |
 | [Uptime Kuma](https://github.com/louislam/uptime-kuma) | Pingdom | Uptime monitoring |
 
@@ -220,15 +216,11 @@ Onestack is built on top of these excellent open source projects:
 
 [Cal.com](https://github.com/calcom/cal.com) &middot;
 [Castopod](https://github.com/ad-aures/castopod) &middot;
-[Chatwoot](https://github.com/chatwoot/chatwoot) &middot;
 [Conduit](https://gitlab.com/famedly/conduit) &middot;
 [Coturn](https://github.com/coturn/coturn) &middot;
 [Documenso](https://github.com/documenso/documenso) &middot;
 [Formbricks](https://github.com/formbricks/formbricks) &middot;
 [Infisical](https://github.com/Infisical/infisical) &middot;
-[Kimai](https://github.com/kimai/kimai) &middot;
-[LibreChat](https://github.com/danny-avila/LibreChat) &middot;
-[Penpot](https://github.com/penpot/penpot) &middot;
 [Plane](https://github.com/makeplane/plane) &middot;
 [Traefik](https://github.com/traefik/traefik) &middot;
 [Uptime Kuma](https://github.com/louislam/uptime-kuma) &middot;

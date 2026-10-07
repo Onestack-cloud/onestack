@@ -7,8 +7,8 @@ Infrastructure as Code (IaC) for deploying and managing Onestack services using 
 This repository contains Ansible playbooks and roles to:
 - Set up new servers with all required dependencies
 - Deploy and manage Traefik reverse proxy
-- Deploy shared databases (PostgreSQL, MariaDB, MongoDB, Valkey Redis)
-- Deploy applications (AllBids, n8n, Kimai, etc.)
+- Deploy shared databases (PostgreSQL, MariaDB, Valkey Redis)
+- Deploy applications (AllBids, n8n, Cal.com, etc.)
 - Configure monitoring with Netdata
 - Manage backups
 
@@ -103,7 +103,7 @@ infrastructure/
 │       ├── common/              # Base server packages, firewall
 │       ├── docker/              # Docker installation
 │       ├── traefik/             # Traefik reverse proxy
-│       ├── databases/           # PostgreSQL, MariaDB, MongoDB, Valkey
+│       ├── databases/           # PostgreSQL, MariaDB, Valkey
 │       ├── apps/                # Application deployments
 │       └── netdata/             # Monitoring
 └── scripts/
@@ -182,7 +182,6 @@ infrastructure/
 Backups are stored on the server at `/root/backups/YYYY-MM-DD/`:
 - `postgres_all.sql.gz` - PostgreSQL databases
 - `mariadb_all.sql.gz` - MariaDB databases
-- `mongodb_all.archive.gz` - MongoDB databases
 - `allbids_data/` - AllBids SQLite database
 - `acme.json` - Let's Encrypt certificates
 
