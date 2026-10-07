@@ -42,7 +42,7 @@ function matchesSelector(labels, query) {
 // A Loki stand-in that stores entries per tenant, answers query_range for a
 // time range with a result limit and records every push. pushResponse may
 // answer a push itself with { status, body }.
-async function startTenantLoki(seed, { pushResponse } = {}) {
+async function startTenantLoki(seed, { pushResponse, maxQueryEntries } = {}) {
   const store = new Map(Object.entries(seed).map(([tenant, entries]) => [tenant, [...entries]]));
   const pushes = [];
   const server = http.createServer((request, response) => {
@@ -75,9 +75,16 @@ async function startTenantLoki(seed, { pushResponse } = {}) {
       const start = BigInt(url.searchParams.get("start"));
       const end = BigInt(url.searchParams.get("end"));
       const limit = Number(url.searchParams.get("limit"));
-      const matching = (store.get(tenant) || [])
+      const inRange = (store.get(tenant) || [])
         .filter((entry) => BigInt(entry.ts) >= start && BigInt(entry.ts) < end)
-        .filter((entry) => matchesSelector(entry.labels, url.searchParams.get("query")))
+        .filter((entry) => matchesSelector(entry.labels, url.searchParams.get("query")));
+      // Like Loki's 4 MB gRPC message cap: a response that would be too big fails.
+      if (maxQueryEntries !== undefined && Math.min(inRange.length, limit) > maxQueryEntries) {
+        response.writeHead(500, { "content-type": "text/plain" });
+        response.end("rpc error: code = ResourceExhausted desc = grpc: received message larger than max");
+        return;
+      }
+      const matching = inRange
         .sort((a, b) => (BigInt(a.ts) < BigInt(b.ts) ? -1 : 1))
         .slice(0, limit);
       const streams = new Map();
@@ -183,6 +190,20 @@ describe("copy-legacy-tenant-logs", () => {
       const result = await run([...window, "--limit", "2"], { LOKI_URL: loki.url });
       assert.equal(result.code, 0, result.output);
       assert.equal(copied(loki).length, 9);
+    } finally {
+      await loki.close();
+    }
+  });
+
+  test("a query Loki fails on is split into smaller ranges", async () => {
+    const loki = await startTenantLoki(
+      { fake: Array.from({ length: 40 }, (_, n) => ({ labels: liveLabels(), ts: ns(base + n * 60000), line: `{"n":${n}}` })) },
+      { maxQueryEntries: 6 },
+    );
+    try {
+      const result = await run(window, { LOKI_URL: loki.url, COPY_RETRY_DELAY_MS: "1" });
+      assert.equal(result.code, 0, result.output);
+      assert.equal(copied(loki).length, 40);
     } finally {
       await loki.close();
     }
