@@ -79,9 +79,9 @@ async function pushLoki(lokiUrl, tenant, scriptName) {
   assert.ok(response.ok, `push to ${tenant} failed: ${response.status}`);
 }
 
-function runConfigure(env) {
+function runConfigure(env, args = []) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(stackRoot, "scripts/configure-usual-suspects-grafana-access.mjs")], {
+    const child = spawn(process.execPath, [path.join(stackRoot, "scripts/configure-usual-suspects-grafana-access.mjs"), ...args], {
       env: { PATH: process.env.PATH, ...env },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -152,7 +152,8 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
     api = await startService("usual-suspects-api/server.js", { API_TOKEN: apiToken, LOKI_URL: lokiUrl });
     apiPort = new URL(api.url).port;
 
-    // An existing deployment: the UI user was created in the admin org.
+    // An existing deployment gone wrong: the UI user was created in the admin
+    // org and made a server admin, and the service account is an org Admin.
     const created = await grafana(grafanaUrl, "POST", "/api/admin/users", {
       name: "Usual Suspects Logs",
       email: "usual-suspects-logs@onestack.local",
@@ -161,6 +162,20 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
       OrgId: 1,
     });
     assert.equal(created.status, 200);
+    const promoted = await grafana(grafanaUrl, "PUT", `/api/admin/users/${created.json.id}/permissions`, {
+      isGrafanaAdmin: true,
+    });
+    assert.equal(promoted.status, 200);
+    const org = await grafana(grafanaUrl, "POST", "/api/orgs", { name: "Usual Suspects Logs" });
+    assert.equal(org.status, 200);
+    const account = await grafana(
+      grafanaUrl,
+      "POST",
+      "/api/serviceaccounts",
+      { name: "usual-suspects-logs-api", role: "Admin" },
+      { orgId: org.json.orgId },
+    );
+    assert.equal(account.status, 201);
   });
 
   after(async () => {
@@ -195,26 +210,83 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
       [output.orgId],
     );
 
-    const uiAuth = `Basic ${Buffer.from(`${uiLogin}:${output.ui.password}`).toString("base64")}`;
-    const adminDatasource = await grafana(
+    const details = await grafana(grafanaUrl, "GET", `/api/users/${user.json.id}`);
+    assert.equal(details.json.isGrafanaAdmin, false);
+
+    const accounts = await grafana(
       grafanaUrl,
-      "POST",
-      "/api/ds/query",
-      { from: "now-1h", to: "now", queries: [{ refId: "A", datasource: { uid: "Loki", type: "loki" }, expr: '{scriptName=~".+"}' }] },
-      { auth: uiAuth, orgId: 1 },
+      "GET",
+      "/api/serviceaccounts/search?query=usual-suspects-logs-api",
+      undefined,
+      { orgId: output.orgId },
     );
-    assert.ok(adminDatasource.status >= 400, `UI user could query the admin Loki datasource: ${adminDatasource.status}`);
+    assert.deepEqual(
+      accounts.json.serviceAccounts.map((account) => account.role),
+      ["Viewer"],
+    );
+
+    // The admin can run this query, so a 403 for the UI user is a real denial
+    // rather than a missing datasource.
+    const adminQuery = {
+      from: "now-1h",
+      to: "now",
+      queries: [{ refId: "A", datasource: { uid: "Loki", type: "loki" }, expr: '{scriptName=~".+"}' }],
+    };
+    assert.equal((await grafana(grafanaUrl, "POST", "/api/ds/query", adminQuery, { orgId: 1 })).status, 200);
+    const uiAuth = `Basic ${Buffer.from(`${uiLogin}:${output.ui.password}`).toString("base64")}`;
+    assert.equal((await grafana(grafanaUrl, "POST", "/api/ds/query", adminQuery, { auth: uiAuth, orgId: 1 })).status, 403);
 
     assert.deepEqual(output.serviceAccount.verification.scriptLabels, ["usual-suspects"]);
+    assert.equal(output.serviceAccount.verification.conclusive, true);
+  });
+
+  test("--dashboard-only verifies the datasource through the real proxy", async () => {
+    const result = await runConfigure(configureEnv(apiPort), ["--dashboard-only"]);
+    assert.equal(result.code, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.deepEqual(output.verification.scriptLabels, ["usual-suspects"]);
+    assert.equal(output.verification.conclusive, true);
   });
 
   test("configuring fails when the Usual Suspects datasource can see other scripts", async () => {
     const leaky = await startLeakyProxy(lokiUrl);
-    // Grafana caches datasources by UID for a few seconds, so let the URL
-    // from the previous run expire before pointing the datasource elsewhere.
-    await new Promise((resolve) => setTimeout(resolve, 6000));
     try {
       const result = await runConfigure(configureEnv(leaky.port));
+      assert.notEqual(result.code, 0, result.stdout);
+      assert.match(result.stderr, /other-worker/);
+      assert.equal(result.stdout, "", "credentials were printed despite the failed check");
+    } finally {
+      await leaky.close();
+    }
+  });
+
+  test("a failed check leaves no new service account token behind", async () => {
+    const leaky = await startLeakyProxy(lokiUrl);
+    try {
+      const org = await grafana(grafanaUrl, "GET", `/api/orgs/name/${encodeURIComponent("Usual Suspects Logs")}`);
+      const accounts = await grafana(
+        grafanaUrl,
+        "GET",
+        "/api/serviceaccounts/search?query=usual-suspects-logs-api",
+        undefined,
+        { orgId: org.json.id },
+      );
+      const accountId = accounts.json.serviceAccounts[0].id;
+      const tokens = async () =>
+        (await grafana(grafanaUrl, "GET", `/api/serviceaccounts/${accountId}/tokens`, undefined, { orgId: org.json.id })).json.length;
+      const before = await tokens();
+      const result = await runConfigure(configureEnv(leaky.port));
+      assert.notEqual(result.code, 0);
+      assert.equal(await tokens(), before);
+    } finally {
+      await leaky.close();
+    }
+  });
+
+  test("--dashboard-only also fails when the datasource can see other scripts", async () => {
+    const leaky = await startLeakyProxy(lokiUrl);
+    try {
+      const result = await runConfigure(configureEnv(leaky.port), ["--dashboard-only"]);
       assert.notEqual(result.code, 0, result.stdout);
       assert.match(result.stderr, /other-worker/);
     } finally {

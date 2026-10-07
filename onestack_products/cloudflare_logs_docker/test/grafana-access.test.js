@@ -16,7 +16,7 @@ describe("Grafana access isolation checks", () => {
   });
 
   test("a UI user that only belongs to the Usual Suspects org passes", () => {
-    assert.doesNotThrow(() => configure.assertOnlyMemberOf([{ orgId: 7, name: "Usual Suspects Logs" }], 7));
+    assert.doesNotThrow(() => configure.assertOnlyMemberOf([{ orgId: 7, name: "Usual Suspects Logs", role: "Viewer" }], 7));
   });
 
   test("a UI user still in the admin org fails, even with role None", () => {
@@ -31,6 +31,10 @@ describe("Grafana access isolation checks", () => {
         ),
       /Main Org\./,
     );
+  });
+
+  test("a UI user with more than Viewer in the Usual Suspects org fails", () => {
+    assert.throws(() => configure.assertOnlyMemberOf([{ orgId: 7, name: "Usual Suspects Logs", role: "Admin" }], 7), /Viewer/);
   });
 
   test("a UI user missing from the Usual Suspects org fails", () => {

@@ -84,12 +84,30 @@ Worker script names.
 
 `scripts/configure-usual-suspects-grafana-access.mjs` creates the "Usual
 Suspects Logs" org, its datasource (pointing at the proxy), dashboard, UI user
-and service account. The UI user belongs only to that org: it is removed from
-every other org, including Grafana's admin org whose `Loki` datasource reads
-every tenant. Before printing credentials the script checks that the UI user
-has no other org and cannot query the admin datasource, and that the service
-account token only sees Usual Suspects script names even for a query that asks
-for all of them. It exits non-zero if any check fails.
+and service account. The UI user belongs only to that org as a Viewer: it is
+removed from every other org, including Grafana's admin org whose `Loki`
+datasource reads every tenant, and is never a Grafana server admin. The service
+account is kept at Viewer.
+
+Before printing credentials the script checks that the UI user has no other
+org and gets 403 from the admin datasource (which the admin can query), and
+that the service account token only sees Usual Suspects script names even for
+a query that asks for all of them. If any check fails it exits non-zero, prints
+no credentials and deletes the token it just created. `--dashboard-only` runs
+the datasource check too. `verification.conclusive` is `false` when no other
+script has logs in the last 24 hours, because the check cannot then prove
+isolation.
+
+Run it by path from a container on the stack's networks, for example:
+
+```bash
+docker run --rm --network container:cloudflare-logs-grafana \
+  -v /root/cloudflare_logs_docker/scripts:/scripts:ro \
+  -e GRAFANA_URL=http://localhost:3000 \
+  -e GRAFANA_ADMIN_USER -e GRAFANA_ADMIN_PASSWORD -e USUAL_SUSPECTS_LOGS_API_TOKEN \
+  cloudflare_logs_docker-ingest \
+  node /scripts/configure-usual-suspects-grafana-access.mjs
+```
 
 ## Manual backfill
 
