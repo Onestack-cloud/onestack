@@ -155,10 +155,12 @@ export function assertOnlyExpectedDatasources(datasources) {
   }
 }
 
-// The admin who created the org stays a member; the UI user must be a Viewer.
-export function assertOnlyExpectedMembers(members, adminLogin) {
+// The admin who created the org stays a member (matched by id, since the
+// configured admin name may be a login or an email); the UI user must be a
+// Viewer.
+export function assertOnlyExpectedMembers(members, adminUserId) {
   for (const member of members) {
-    if (member.login === adminLogin) {
+    if (member.userId === adminUserId) {
       continue;
     }
     if (member.login !== userLogin) {
@@ -182,8 +184,12 @@ export function assertServiceAccountsAreViewers(accounts) {
 
 async function auditOrg(orgId) {
   assertOnlyExpectedDatasources(await must("GET", "/api/datasources", undefined, { orgId }));
-  assertOnlyExpectedMembers(await must("GET", "/api/org/users", undefined, { orgId }), adminUser);
+  const admin = await must("GET", "/api/user");
+  assertOnlyExpectedMembers(await must("GET", "/api/org/users", undefined, { orgId }), admin.id);
   const accounts = await must("GET", "/api/serviceaccounts/search?perpage=1000", undefined, { orgId });
+  if ((accounts.serviceAccounts || []).length < (accounts.totalCount ?? 0)) {
+    throw new Error(`Usual Suspects org has more service accounts (${accounts.totalCount}) than one page; audit them by hand`);
+  }
   assertServiceAccountsAreViewers(accounts.serviceAccounts || []);
 
   const uiUser = await request("GET", `/api/users/lookup?loginOrEmail=${encodeURIComponent(userLogin)}`);
@@ -639,11 +645,12 @@ async function main() {
   await upsertFolder(orgId);
   await upsertDashboard(orgId);
   const serviceAccountId = await findOrCreateServiceAccount(orgId);
+  // Audit before minting a token, so a bad org never has a new token at all.
+  await auditOrg(orgId);
   const serviceAccountToken = await createServiceAccountToken(orgId, serviceAccountId);
   let uiVerification;
   let serviceVerification;
   try {
-    await auditOrg(orgId);
     await waitForDatasourceCache();
     uiVerification = await verifyUiUser(orgId, user.id, uiPassword);
     serviceVerification = await verifyDatasourceIsolation(orgId, `Bearer ${serviceAccountToken.key}`);

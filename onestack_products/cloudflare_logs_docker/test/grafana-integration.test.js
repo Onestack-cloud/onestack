@@ -303,6 +303,7 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
         const result = await runConfigure(configureEnv(apiPort), args);
         assert.notEqual(result.code, 0, `${args.join(" ")} ${result.stdout}`);
         assert.match(result.stderr, /Raw Loki/);
+        assert.equal(result.stdout, "");
       }
     } finally {
       await grafana(grafanaUrl, "DELETE", "/api/datasources/uid/raw-loki", undefined, { orgId });
@@ -320,11 +321,28 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
     });
     assert.equal(created.status, 200);
     try {
-      const result = await runConfigure(configureEnv(apiPort));
-      assert.notEqual(result.code, 0, result.stdout);
-      assert.match(result.stderr, /eve/);
+      for (const args of [[], ["--dashboard-only"]]) {
+        const result = await runConfigure(configureEnv(apiPort), args);
+        assert.notEqual(result.code, 0, `${args.join(" ")} ${result.stdout}`);
+        assert.match(result.stderr, /eve/);
+        assert.equal(result.stdout, "");
+      }
     } finally {
       await grafana(grafanaUrl, "DELETE", `/api/admin/users/${created.json.id}`);
+    }
+  });
+
+  test("configuring fails when a service account in the org is above Viewer", async () => {
+    const orgId = await usualSuspectsOrgId();
+    const created = await grafana(grafanaUrl, "POST", "/api/serviceaccounts", { name: "ci-editor", role: "Editor" }, { orgId });
+    assert.equal(created.status, 201);
+    try {
+      const result = await runConfigure(configureEnv(apiPort));
+      assert.notEqual(result.code, 0, result.stdout);
+      assert.match(result.stderr, /ci-editor/);
+      assert.equal(result.stdout, "");
+    } finally {
+      await grafana(grafanaUrl, "DELETE", `/api/serviceaccounts/${created.json.id}`, undefined, { orgId });
     }
   });
 

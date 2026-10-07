@@ -54,11 +54,13 @@ describe("Grafana access isolation checks", () => {
   });
 
   test("only the admin and the UI user (as Viewer) may be org members", () => {
-    const admin = { login: "admin", role: "Admin" };
-    const ui = { login: "usual-suspects-logs", role: "Viewer" };
-    assert.doesNotThrow(() => configure.assertOnlyExpectedMembers([admin, ui], "admin"));
-    assert.throws(() => configure.assertOnlyExpectedMembers([admin, ui, { login: "eve", role: "Editor" }], "admin"), /eve/);
-    assert.throws(() => configure.assertOnlyExpectedMembers([admin, { ...ui, role: "Editor" }], "admin"), /Viewer/);
+    const admin = { userId: 1, login: "admin@example.test", role: "Admin" };
+    const ui = { userId: 5, login: "usual-suspects-logs", role: "Viewer" };
+    assert.doesNotThrow(() => configure.assertOnlyExpectedMembers([admin, ui], 1));
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, ui, { userId: 9, login: "eve", role: "Editor" }], 1), /eve/);
+    assert.throws(() => configure.assertOnlyExpectedMembers([admin, { ...ui, role: "Editor" }], 1), /Viewer/);
+    // Matching is by id, so another user named like the admin does not pass.
+    assert.throws(() => configure.assertOnlyExpectedMembers([{ userId: 7, login: "admin@example.test", role: "Admin" }], 1), /admin@example\.test/);
   });
 
   test("service accounts in the org must be Viewers", () => {
