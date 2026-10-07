@@ -27,11 +27,6 @@
         docker exec mariadb mariadb-dump --all-databases -u root -p{{ vault_mariadb_root_password }} | gzip > {{ backup_dir }}/{{ backup_date }}/mariadb_all.sql.gz
       ignore_errors: yes
 
-    - name: Backup MongoDB databases
-      shell: |
-        docker exec mongodb mongodump --archive --gzip -u {{ vault_mongodb_root_user }} -p {{ vault_mongodb_root_password }} --authenticationDatabase admin > {{ backup_dir }}/{{ backup_date }}/mongodb_all.archive.gz
-      ignore_errors: yes
-
     - name: Backup AllBids SQLite database
       copy:
         src: "{{ apps_dir }}/allbids_app/data/"

@@ -1,5 +1,9 @@
 defmodule Onestack.MemberManager do
   use GenServer
+  # Services retired from the host (docs/adr/0006 and 0007). Plane was retired on
+  # 27 September 2026.
+  @retired_products ~w(chatwoot kimai librechat penpot plane twenty)
+
   require Logger
 
   alias Onestack.{
@@ -59,6 +63,13 @@ defmodule Onestack.MemberManager do
     end)
 
     {:noreply, state}
+  end
+
+  # Retired products are skipped so teams that still list them do not break
+  # provisioning, removal or password changes.
+  def add_member_to_product(_email, product_name) when product_name in @retired_products do
+    Logger.info("Skipping retired product #{product_name}")
+    {:ok, {:skipped, :retired}}
   end
 
   def add_member_to_product(email, "matrix") do
@@ -135,134 +146,6 @@ defmodule Onestack.MemberManager do
         # %{email: existing_user.matrix_id, password: password}
         Logger.info("Existing user reactivated in Matrix")
     end
-  end
-
-  def add_member_to_product(email, "chatwoot" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-    # Check if the email exists with @onestack.cloud suffix
-    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-
-    check_query = """
-    SELECT id, email FROM users
-    WHERE email LIKE $1
-    """
-
-    # Handle both cases: emails already ending with @onestack.cloud and those that don't
-    email_pattern =
-      if String.ends_with?(email, "@onestack.cloud") do
-        # For emails already ending in @onestack.cloud
-        "#{email}%"
-      else
-        # For regular emails
-        "#{email}@onestack.cloud%"
-      end
-
-    case Postgrex.query(pid, check_query, [email_pattern]) do
-      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
-        # User found, reactivate by removing @onestack.cloud and random string
-        reactivate_email_query = """
-        UPDATE users SET email = $1, encrypted_password = $2 WHERE id = $3
-        """
-
-        case Postgrex.query(pid, reactivate_email_query, [email, hashed_password, user_id]) do
-          {:ok, _} ->
-            Logger.info("User reactivated successfully in #{product_name} with ID: #{user_id}")
-
-          {:error, error} ->
-            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
-        end
-
-      {:ok, %Postgrex.Result{rows: []}} ->
-        # User not found, proceed with new user creation
-        name = extract_name_from_email(email)
-        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
-
-        # 1. Create new user
-        user_query = """
-        INSERT INTO users (provider, uid, encrypted_password, confirmed_at, created_at, updated_at, name, email)
-        VALUES ($1, $2, $3, $4, $4, $4, $5, $2)
-        RETURNING id
-        """
-
-        user_params = ["email", email, hashed_password, email_verified, name]
-
-        case Postgrex.query(pid, user_query, user_params) do
-          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            token_query = """
-            INSERT INTO access_tokens (owner_type, owner_id, token, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $4)
-            """
-
-            token_params = [
-              "User",
-              db_user_id,
-              :crypto.strong_rand_bytes(24) |> Base.url_encode64() |> binary_part(0, 24),
-              email_verified
-            ]
-
-            case Postgrex.query(pid, token_query, token_params) do
-              {:ok, _result} ->
-                Logger.info(
-                  "User inserted successfully in #{product_name} with ID: #{db_user_id}"
-                )
-
-                # 2. Create new account
-                account_creation_query = """
-                INSERT INTO accounts (name, created_at, updated_at, feature_flags)
-                VALUES ($1, $2, $2, $3)
-                RETURNING id
-                """
-
-                account_name =
-                  :crypto.strong_rand_bytes(18) |> Base.url_encode64() |> binary_part(0, 18)
-
-                account_creation_params = [account_name, email_verified, 33_029_775]
-
-                case Postgrex.query(pid, account_creation_query, account_creation_params) do
-                  {:ok, %Postgrex.Result{rows: [[account_id]]}} ->
-                    Logger.info(
-                      "Account inserted successfully in #{product_name} with ID: #{db_user_id}"
-                    )
-
-                    # Link account to user
-                    account_link_query = """
-                    INSERT INTO account_users (account_id, user_id, created_at, updated_at)
-                    VALUES ($1, $2, $3, $3)
-                    """
-
-                    case Postgrex.query(pid, account_link_query, [
-                           account_id,
-                           db_user_id,
-                           email_verified
-                         ]) do
-                      {:ok, _result} ->
-                        Logger.info("Account linked successfully in #{product_name}")
-
-                      {:error, %Postgrex.Error{} = error} ->
-                        Logger.error(
-                          "Failed to link account in #{product_name}: #{inspect(error)}"
-                        )
-                    end
-
-                  {:error, %Postgrex.Error{} = error} ->
-                    Logger.error(
-                      "Failed to insert account for #{product_name}: #{inspect(error)}"
-                    )
-                end
-
-              {:error, %Postgrex.Error{} = error} ->
-                Logger.error("Failed to insert password for #{product_name}: #{inspect(error)}")
-            end
-
-          {:error, %Postgrex.Error{} = error} ->
-            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
-        end
-
-      {:error, %Postgrex.Error{} = error} ->
-        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
-    end
-
-    GenServer.stop(pid)
   end
 
   # Product-specific add member functions
@@ -492,134 +375,6 @@ defmodule Onestack.MemberManager do
 
         {:error, %Postgrex.Error{} = error} ->
           Logger.error("Error checking for existing user in formbricks: #{inspect(error)}")
-      end
-    after
-      GenServer.stop(pid)
-    end
-  end
-
-  def add_member_to_product(email, "penpot" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-    hashed_password = Accounts.get_user_by_email(email).argon2id_hash
-
-    try do
-      # Check if the email exists
-      check_query = """
-      SELECT id, is_active FROM profile
-      WHERE email = $1
-      """
-
-      case Postgrex.query(pid, check_query, [email]) do
-        {:ok, %Postgrex.Result{rows: [[profile_id, is_active]]}} ->
-          if is_active do
-            Logger.info("User with email #{email} already exists and is active in penpot")
-          else
-            # User found but inactive, reactivate
-            reactivate_query = """
-            UPDATE profile SET is_active = true WHERE id = $1
-            """
-
-            case Postgrex.query(pid, reactivate_query, [profile_id]) do
-              {:ok, _} ->
-                Logger.info("User reactivated successfully in penpot")
-
-              {:error, error} ->
-                Logger.error("Failed to reactivate user in penpot: #{inspect(error)}")
-            end
-          end
-
-        {:ok, %Postgrex.Result{rows: []}} ->
-          # User not found, proceed with new user creation
-          result =
-            Postgrex.transaction(pid, fn conn ->
-              name = extract_name_from_email(email)
-
-              # Create a team
-              team_insert_query = """
-              INSERT INTO team (name, is_default)
-              VALUES ($1, $2)
-              RETURNING id
-              """
-
-              {:ok, %{rows: [[team_id]]}} =
-                Postgrex.query(conn, team_insert_query, ["Default", true])
-
-              # Create a project
-              project_insert_query = """
-              INSERT INTO project (team_id, is_default, name)
-              VALUES ($1, $2, $3)
-              RETURNING id
-              """
-
-              {:ok, %{rows: [[project_id]]}} =
-                Postgrex.query(conn, project_insert_query, [team_id, true, "Drafts"])
-
-              # Create a profile
-              profile_insert_query = """
-              INSERT INTO profile (fullname, email, password, is_demo, is_active, is_muted, auth_backend, is_blocked, default_project_id, default_team_id)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-              RETURNING id
-              """
-
-              {:ok, %{rows: [[profile_id]]}} =
-                Postgrex.query(
-                  conn,
-                  profile_insert_query,
-                  [
-                    name,
-                    email,
-                    hashed_password,
-                    false,
-                    true,
-                    false,
-                    "penpot",
-                    false,
-                    project_id,
-                    team_id
-                  ]
-                )
-
-              # Create team_profile_rel
-              team_profile_rel_insert_query = """
-              INSERT INTO team_profile_rel (team_id, profile_id, is_owner, is_admin, can_edit)
-              VALUES ($1, $2, $3, $4, $5)
-              """
-
-              Postgrex.query!(conn, team_profile_rel_insert_query, [
-                team_id,
-                profile_id,
-                true,
-                true,
-                true
-              ])
-
-              # Create project_profile_rel
-              project_profile_rel_insert_query = """
-              INSERT INTO project_profile_rel (profile_id, project_id, is_owner, is_admin, can_edit)
-              VALUES ($1, $2, $3, $4, $5)
-              """
-
-              Postgrex.query!(conn, project_profile_rel_insert_query, [
-                profile_id,
-                project_id,
-                true,
-                true,
-                true
-              ])
-
-              {profile_id, team_id, project_id}
-            end)
-
-          case result do
-            {:ok, {_profile_id, _team_id, _project_id}} ->
-              Logger.info("#{product_name} user registration complete!")
-
-            {:error, error} ->
-              Logger.error("Failed to complete #{product_name} operations: #{inspect(error)}")
-          end
-
-        {:error, %Postgrex.Error{} = error} ->
-          Logger.error("Error checking for existing user in penpot: #{inspect(error)}")
       end
     after
       GenServer.stop(pid)
@@ -955,181 +710,6 @@ defmodule Onestack.MemberManager do
     end
   end
 
-  def add_member_to_product(email, "kimai" = product_name) do
-    {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
-    # Check if the email exists with @onestack.cloud suffix
-    check_query =
-      "SELECT id, email FROM kimai2_users WHERE email LIKE ?"
-
-    email_pattern =
-      if String.ends_with?(email, "@onestack.cloud") do
-        # For emails already ending in @onestack.cloud
-        "#{email}%"
-      else
-        # For regular emails
-        "#{email}@onestack.cloud%"
-      end
-
-    case MyXQL.query(conn, check_query, [email_pattern]) do
-      {:ok, %MyXQL.Result{rows: [[user_id, _disabled_email]]}} ->
-        # User found, reactivate by removing @onestack.cloud and random string
-        reactivate_query = "UPDATE kimai2_users SET enabled = ? WHERE id = ?"
-
-        case MyXQL.query(conn, reactivate_query, [1, user_id]) do
-          {:ok, _} ->
-            Logger.info("User reactivated successfully in #{product_name}")
-
-          {:error, error} ->
-            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
-        end
-
-      {:ok, %MyXQL.Result{rows: []}} ->
-        # User not found, proceed with new user creation
-        email_verified = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :millisecond)
-        hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-
-        insert_user_query = """
-        INSERT INTO kimai2_users (username, email, password, enabled, roles, totp_enabled, system_account, registration_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING id
-        """
-
-        username = generate_random_string(12)
-
-        case MyXQL.query(conn, insert_user_query, [
-               username,
-               email,
-               hashed_password,
-               1,
-               "a:1:{i:0;s:10:\"ROLE_ADMIN\";}",
-               0,
-               0,
-               email_verified
-             ]) do
-          {:ok, %MyXQL.Result{rows: [[user_id]]}} ->
-            Logger.info("User inserted successfully in #{product_name} with ID: #{user_id}")
-
-          {:error, error} ->
-            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
-        end
-
-      {:error, error} ->
-        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
-    end
-  end
-
-  def add_member_to_product(email, "plane" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-    hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
-    # Check if the email exists with @onestack.cloud suffix
-    check_query = """
-    SELECT id, email FROM users
-    WHERE email LIKE $1
-    """
-
-    email_pattern =
-      if String.ends_with?(email, "@onestack.cloud") do
-        # For emails already ending in @onestack.cloud
-        "#{email}%"
-      else
-        # For regular emails
-        "#{email}@onestack.cloud%"
-      end
-
-    case Postgrex.query(pid, check_query, [email_pattern]) do
-      {:ok, %Postgrex.Result{rows: [[user_id, _disabled_email]]}} ->
-        # User found, reactivate by removing @onestack.cloud and random string
-        reactivate_query = """
-        UPDATE users SET email = $1 WHERE id = $2
-        """
-
-        case Postgrex.query(pid, reactivate_query, [email, user_id]) do
-          {:ok, _} ->
-            Logger.info("User reactivated successfully in #{product_name}")
-
-          {:error, error} ->
-            Logger.error("Failed to reactivate user in #{product_name}: #{inspect(error)}")
-        end
-
-      {:ok, %Postgrex.Result{rows: []}} ->
-        # User not found, proceed with new user creation
-        name = extract_name_from_email(email)
-        email_verified = DateTime.utc_now()
-
-        ua_agent = "Onestack Auto Registration"
-        login_ip = "1.1.1.1"
-        login_medium = "onestack_rego"
-        timezone = "UTC"
-
-        user_query = """
-        INSERT INTO "users" (
-          password,
-          id,
-          username,
-          email,
-          first_name,
-          last_name,
-          display_name,
-          date_joined,
-          created_at,
-          updated_at,
-          token,
-          user_timezone,
-          last_login_ip,
-          last_logout_ip,
-          last_login_medium,
-          last_login_uagent,
-          avatar,
-          last_location,
-          created_location,
-          is_superuser,
-          is_managed,
-          is_password_expired,
-          is_active,
-          is_email_verified,
-          is_staff,
-          is_password_autoset,
-          is_bot
-        )
-        VALUES ($1, $2, $3, $4, $5, $5, $5, $6, $6, $6, $7, $8, $9, $9, $10, $11, $12, $13, $13, $14, $14, $14, $14, $14, $14, $14, $14)
-        RETURNING id
-        """
-
-        username = :crypto.strong_rand_bytes(128) |> Base.url_encode64() |> binary_part(0, 128)
-        token = :crypto.strong_rand_bytes(64) |> Base.url_encode64() |> binary_part(0, 64)
-
-        user_params = [
-          hashed_password,
-          Ecto.UUID.dump!(UUID.uuid4()),
-          username,
-          email,
-          name,
-          email_verified,
-          token,
-          timezone,
-          login_ip,
-          login_medium,
-          ua_agent,
-          "",
-          "",
-          false
-        ]
-
-        case Postgrex.query(pid, user_query, user_params) do
-          {:ok, %Postgrex.Result{rows: [[db_user_id]]}} ->
-            Logger.info("User inserted successfully in #{product_name} with ID: #{db_user_id}")
-
-          {:error, %Postgrex.Error{} = error} ->
-            Logger.error("Failed to insert user for #{product_name}: #{inspect(error)}")
-        end
-
-      {:error, %Postgrex.Error{} = error} ->
-        Logger.error("Error checking for existing user in #{product_name}: #{inspect(error)}")
-    end
-
-    GenServer.stop(pid)
-  end
-
   def add_member_to_product(email, "documenso" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
     hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
@@ -1189,6 +769,13 @@ defmodule Onestack.MemberManager do
     end
 
     GenServer.stop(pid)
+  end
+
+  # Retired products are skipped so teams that still list them do not break
+  # provisioning, removal or password changes.
+  def remove_member_from_product(_email, product_name) when product_name in @retired_products do
+    Logger.info("Skipping retired product #{product_name}")
+    {:ok, {:skipped, :retired}}
   end
 
   def remove_member_from_product(email, "cal" = product_name) do
@@ -1268,33 +855,6 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
-  def remove_member_from_product(email, "penpot" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
-    query = """
-    UPDATE profile
-    SET is_active = false
-    WHERE email = $1
-    """
-
-    params = [email]
-
-    try do
-      case Postgrex.query(pid, query, params) do
-        {:ok, %Postgrex.Result{num_rows: 1}} ->
-          Logger.info("User deactivated successfully in #{product_name} for email: #{email}")
-
-        {:ok, %Postgrex.Result{num_rows: 0}} ->
-          Logger.info("No user found with email #{email} in #{product_name}")
-
-        {:error, %Postgrex.Error{} = error} ->
-          Logger.error("Failed to deactivate user in #{product_name}: #{inspect(error)}")
-      end
-    after
-      GenServer.stop(pid)
-    end
-  end
-
   def remove_member_from_product(email, "nocodb" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 
@@ -1342,48 +902,6 @@ defmodule Onestack.MemberManager do
       {:error, error} ->
         Logger.error("Error updating user in castopod: #{inspect(error)}")
     end
-  end
-
-  def remove_member_from_product(email, "kimai" = product_name) do
-    {:ok, conn} = MyXQL.start_link(get_db_config(product_name))
-
-    # Update the user's email
-    deactivate_query = "UPDATE kimai2_users SET enabled = 0 WHERE username = ?"
-
-    case MyXQL.query(conn, deactivate_query, [email]) do
-      {:ok, %MyXQL.Result{num_rows: 1}} ->
-        Logger.info("User deactivated successfully in #{product_name}")
-
-      {:ok, %MyXQL.Result{num_rows: 0}} ->
-        Logger.info("No user found with email #{email} in #{product_name}")
-
-      {:error, error} ->
-        Logger.error("Error updating user in #{product_name}: #{inspect(error)}")
-    end
-  end
-
-  def remove_member_from_product(email, "chatwoot" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
-    random_string = generate_random_string(12)
-    new_email = "#{email}@onestack.cloud#{random_string}"
-
-    # Update the user's email
-    update_query = "UPDATE users SET email = $1, encrypted_password = $2 WHERE email = $3"
-    update_params = [new_email, "", email]
-
-    case Postgrex.query(pid, update_query, update_params) do
-      {:ok, %Postgrex.Result{num_rows: 1}} ->
-        Logger.info("User deactivated successfully in #{product_name}")
-
-      {:ok, %Postgrex.Result{num_rows: 0}} ->
-        Logger.info("User not found in #{product_name}")
-
-      {:error, %Postgrex.Error{} = error} ->
-        Logger.error("Error updating user in #{product_name}: #{inspect(error)}")
-    end
-
-    GenServer.stop(pid)
   end
 
   def remove_member_from_product(email, "formbricks" = product_name) do
@@ -1438,58 +956,6 @@ defmodule Onestack.MemberManager do
     end
   end
 
-  def remove_member_from_product(email, "plane" = product_name) do
-    {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
-
-    # First, get the user ID
-    # user_query = "SELECT id FROM users WHERE email = $1"
-    # user_params = [email]
-
-    # case Postgrex.query(pid, user_query, user_params) do
-    #   {:ok, %Postgrex.Result{rows: [[user_id]]}} ->
-    #     # Update UserPassword table to set hash to null
-    #     password_query = "UPDATE \"UserPassword\" SET hash = '' WHERE \"userId\" = $1"
-
-    #     case Postgrex.query(pid, password_query, [user_id]) do
-    #       {:ok, _result} ->
-    #         Logger.info("Password removed for #{product_name} user")
-
-    #       {:error, %Postgrex.Error{} = error} ->
-    #         Logger.error("Failed to remove password for #{product_name} user: #{inspect(error)}")
-    #     end
-
-    #   {:ok, %Postgrex.Result{rows: []}} ->
-    #     Logger.info("User not found in #{product_name}")
-
-    #   {:error, %Postgrex.Error{} = error} ->
-    #     Logger.error("Error querying user in #{product_name}: #{inspect(error)}")
-    # end
-
-    random_string = generate_random_string(12)
-    new_email = "#{email}@onestack.cloud#{random_string}"
-
-    query = """
-    UPDATE "users"
-    SET email = $1
-    WHERE email = $2
-    """
-
-    params = [new_email, email]
-
-    case Postgrex.query(pid, query, params) do
-      {:ok, %Postgrex.Result{num_rows: num_rows}} when num_rows > 0 ->
-        Logger.info("#{num_rows} user(s) removed successfully from #{product_name}")
-
-      {:ok, %Postgrex.Result{num_rows: 0}} ->
-        Logger.info("No user found with email #{email} in #{product_name}")
-
-      {:error, %Postgrex.Error{} = error} ->
-        Logger.error("Failed to remove user from #{product_name}: #{inspect(error)}")
-    end
-
-    GenServer.stop(pid)
-  end
-
   def remove_member_from_product(email, "documenso" = product_name) do
     {:ok, pid} = Postgrex.start_link(get_db_config(product_name))
 
@@ -1542,33 +1008,16 @@ defmodule Onestack.MemberManager do
     GenServer.stop(pid)
   end
 
-  def update_password_for_product(_email, "matrix") do
+  # Retired products are skipped so teams that still list them do not break
+  # provisioning, removal or password changes.
+  def update_password_for_product(_email, product_name) when product_name in @retired_products do
+    Logger.info("Skipping retired product #{product_name}")
+    {:ok, {:skipped, :retired}}
   end
 
-  def update_password_for_product(email, "chatwoot") do
-    {:ok, pid} = Postgrex.start_link(get_db_config("chatwoot"))
-    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-
-    update_query = """
-    UPDATE users SET encrypted_password = $1
-    WHERE email = $2
-    """
-
-    case Postgrex.query(pid, update_query, [hashed_password, email]) do
-      {:ok, result} ->
-        Logger.info("Successfully updated password for chatwoot user: #{email}")
-        GenServer.stop(pid)
-        {:ok, result}
-
-      {:error, error} ->
-        Logger.error(
-          "Failed to update password for chatwoot user: #{email}. Error: #{inspect(error)}"
-        )
-
-        GenServer.stop(pid)
-        {:error, error}
-    end
-  end
+  # Matrix passwords are not managed by Onestack. Report success so a password
+  # change is not rolled back for members whose team lists Matrix.
+  def update_password_for_product(_email, "matrix"), do: {:ok, :not_managed}
 
   def update_password_for_product(email, "cal") do
     {:ok, pid} = Postgrex.start_link(get_db_config("cal"))
@@ -1611,31 +1060,6 @@ defmodule Onestack.MemberManager do
       {:error, error} ->
         Logger.error(
           "Failed to update password for formbricks user: #{email}. Error: #{inspect(error)}"
-        )
-
-        GenServer.stop(pid)
-        {:error, error}
-    end
-  end
-
-  def update_password_for_product(email, "penpot") do
-    {:ok, pid} = Postgrex.start_link(get_db_config("penpot"))
-    hashed_password = Accounts.get_user_by_email(email).argon2id_hash
-
-    update_query = """
-    UPDATE profile SET password = $1
-    WHERE email = $2
-    """
-
-    case Postgrex.query(pid, update_query, [hashed_password, email]) do
-      {:ok, result} ->
-        Logger.info("Successfully updated password for penpot user: #{email}")
-        GenServer.stop(pid)
-        {:ok, result}
-
-      {:error, error} ->
-        Logger.error(
-          "Failed to update password for penpot user: #{email}. Error: #{inspect(error)}"
         )
 
         GenServer.stop(pid)
@@ -1711,55 +1135,6 @@ defmodule Onestack.MemberManager do
         )
 
         GenServer.stop(conn)
-        {:error, error}
-    end
-  end
-
-  def update_password_for_product(email, "kimai") do
-    {:ok, conn} = MyXQL.start_link(get_db_config("kimai"))
-    hashed_password = Accounts.get_user_by_email(email).bcrypt_hash
-
-    update_query = """
-    deactivate_query = "UPDATE kimai2_users SET enabled = 1, password = ? WHERE username = ?"
-    """
-
-    case MyXQL.query(conn, update_query, [hashed_password, email]) do
-      {:ok, result} ->
-        Logger.info("Successfully updated password for kimai user: #{email}")
-        GenServer.stop(conn)
-        {:ok, result}
-
-      {:error, error} ->
-        Logger.error(
-          "Failed to update password for kimai user: #{email}. Error: #{inspect(error)}"
-        )
-
-        GenServer.stop(conn)
-        {:error, error}
-    end
-  end
-
-  def update_password_for_product(email, "plane") do
-    {:ok, pid} = Postgrex.start_link(get_db_config("plane"))
-    hashed_password = Accounts.get_user_by_email(email).pkbdf2_hash
-
-    update_query = """
-    UPDATE users SET password = $1
-    WHERE email = $2
-    """
-
-    case Postgrex.query(pid, update_query, [hashed_password, email]) do
-      {:ok, result} ->
-        Logger.info("Successfully updated password for plane user: #{email}")
-        GenServer.stop(pid)
-        {:ok, result}
-
-      {:error, error} ->
-        Logger.error(
-          "Failed to update password for plane user: #{email}. Error: #{inspect(error)}"
-        )
-
-        GenServer.stop(pid)
         {:error, error}
     end
   end

@@ -16,8 +16,6 @@ entryPoints:
         address: ":3306"
     valkey:
         address: ":6379"
-    mongodb:
-        address: ":27017"
 
 
 providers:

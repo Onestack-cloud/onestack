@@ -184,45 +184,5 @@ config :onestack,
         password: System.get_env("POSTGRES_PASSWORD"),
         database: "nocodb"
       ]
-    },
-    %{
-      name: "chatwoot",
-      db_config: [
-        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
-        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
-        username: System.get_env("POSTGRES_USER"),
-        password: System.get_env("POSTGRES_PASSWORD"),
-        database: "chatwoot"
-      ]
-    },
-    %{
-      name: "penpot",
-      db_config: [
-        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
-        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
-        username: System.get_env("POSTGRES_USER"),
-        password: System.get_env("POSTGRES_PASSWORD"),
-        database: "penpot"
-      ]
-    },
-    %{
-      name: "plane",
-      db_config: [
-        hostname: System.get_env("POSTGRES_HOST", "postgres_db"),
-        port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
-        username: System.get_env("POSTGRES_USER"),
-        password: System.get_env("POSTGRES_PASSWORD"),
-        database: "plane"
-      ]
-    },
-    %{
-      name: "kimai",
-      db_config: [
-        hostname: System.get_env("MARIADB_HOST", "mariadb"),
-        port: String.to_integer(System.get_env("MARIADB_PORT", "3306")),
-        username: System.get_env("MARIADB_USER", "root"),
-        password: System.get_env("MARIADB_PASSWORD"),
-        database: "kimai"
-      ]
     }
   ]

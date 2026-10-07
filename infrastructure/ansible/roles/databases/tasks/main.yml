@@ -57,31 +57,6 @@
     state: present
     pull: always
 
-# MongoDB
-- name: Create MongoDB directory
-  file:
-    path: "{{ databases_dir }}/mongodb"
-    state: directory
-    mode: "0755"
-
-- name: Create MongoDB data directory
-  file:
-    path: "{{ databases_dir }}/mongodb/data"
-    state: directory
-    mode: "0755"
-
-- name: Deploy MongoDB docker-compose
-  template:
-    src: mongodb/docker-compose.yml.j2
-    dest: "{{ databases_dir }}/mongodb/docker-compose.yml"
-    mode: "0644"
-
-- name: Start MongoDB
-  community.docker.docker_compose_v2:
-    project_src: "{{ databases_dir }}/mongodb"
-    state: present
-    pull: always
-
 # Valkey Redis
 - name: Create Valkey Redis directory
   file:
