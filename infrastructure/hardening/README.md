@@ -14,7 +14,7 @@ Public port 22 remains for hosted, restricted CI deployment keys. Administrator 
 
 ## Private networks and origin protection
 
-Restore `traefik_default`, internal `onestack-docker-api`, four internal `onestack-db-*` networks (postgres, mariadb, redis, mongo), and internal `onestack-twenty-backend`. Place only declared consumers on each. Traefik/Watchtower use the read-only API proxy; neither mounts the raw production Docker socket. Start that proxy before consumers. API read access can still inspect configuration, so the proxy remains trusted infrastructure.
+Restore `traefik_default`, internal `onestack-docker-api` and four internal `onestack-db-*` networks (postgres, mariadb, redis, mongo). Place only declared consumers on each. Traefik/Watchtower use the read-only API proxy; neither mounts the raw production Docker socket. Start that proxy before consumers. API read access can still inspect configuration, so the proxy remains trusted infrastructure.
 
 The origin firewall is installed before Docker, uses a validated Cloudflare IP cache, refreshes daily and blocks public web traffic if no valid allowlist exists. It hooks both host and forwarded traffic for IPv4/IPv6. Current public interface is `eno1`; review this on new hardware. Keep Tailscale and scoped CI SSH recovery available while changing firewalls.
 
@@ -24,7 +24,7 @@ Huly was retired on 27 September 2026. Removal of all 14 Huly containers and the
 
 Plane was retired on 27 September 2026. Removal of its 12 containers, eight dedicated volumes, nine unused images, live configuration and exact `plane` database was completed and verified. Its historical Compose recipes use `.retired` filenames. Shared PostgreSQL, Redis and Traefik services and networks remain in place; the 11 native database export identities remain required. Do not recreate Plane during routine deployment or host recovery.
 
-Twenty is live on 2.38.1 with PostgreSQL 15.19. Its database uses internal `onestack-twenty-backend`. Restore the exact maintained PostgreSQL image from its encrypted backup before starting the stack; see `twenty-postgres/README.md`. The copied fifth workspace's replacement API key is in Infisical as `TWENTY_RECOVERED_WORKSPACE_API_KEY`. Preserve the production URL, SMTP and signing settings when restoring.
+Twenty was retired on 7 October 2026 after confirming it was unused: no sign-ins or new records since January 2025, no webhooks or n8n workflows pointing at it and no Onestack product or member using it. Removal of its nine containers (including the September migration leftovers), three volumes, two networks (`onestack-twenty-backend`, `onestack-twenty-migration`), 12 images, the Traefik `twenty_db` entrypoint (`127.0.0.1:5420`), its monitor and backup entries and the app's provisioning code was completed and verified. A full `pg_dumpall`, the volumes, the stack directory with its `.env`, the maintained PostgreSQL image, its build recipe and the September staging copy are kept in `/root/backups/twenty-retired-20261007-083814`. Do not recreate Twenty during routine deployment or host recovery.
 
 The `dev-domains/` Worker and Traefik route preserve the two development aliases with valid HTTPS; an anonymous LiveView WebSocket upgrade was verified.
 
@@ -50,6 +50,6 @@ Ansible source now preserves private databases, scoped DNS, socket proxy, protec
 
 Ubuntu security updates remain enabled. Application updates are checked without automatically replacing running containers. Take a verified backup, check compatibility, preserve the current image/data, then update one stack at a time. Do not prune deliberately retained rollback tags. Preserve paused Penpot, Chatwoot and Linkstack services.
 
-The 8 September baseline host reboot recovered the then-intended 49 containers and two VMs; the then-paused 22 containers stayed stopped. Guest restrictions, public routes, direct-origin blocking, authenticated Twenty reads, CI registration and independent monitoring passed. After the 27 September retirements, all 36 currently expected containers are running and healthy. Maintenance suppression is off. Protected baseline receipts are under `/var/lib/onestack-maintenance/2026-09-07`.
+The 8 September baseline host reboot recovered the then-intended 49 containers and two VMs; the then-paused 22 containers stayed stopped. Guest restrictions, public routes, direct-origin blocking, authenticated Twenty reads, CI registration and independent monitoring passed. After the 27 September retirements, all 36 then-expected containers were running and healthy; Twenty's retirement on 7 October reduced the expected set to 33. Maintenance suppression is off. Protected baseline receipts are under `/var/lib/onestack-maintenance/2026-09-07`.
 
 The security assessment is a bounded operational audit, not forensic clearance. No clear compromise evidence was identified in the checks recorded. Cloudflare global-key rotation still requires the outstanding browser verification step. Provider snapshots were retired through the signed-in Brave profile on 10 September; Borg remains the off-site backup. Phone UI confirmation after the VM cutover remains pending.

@@ -126,16 +126,6 @@ config :onestack,
         password: System.get_env("MARIADB_PASSWORD"),
         database: "kimai"
       ]
-    },
-    %{
-      name: "twenty",
-      db_config: [
-        hostname: System.get_env("TWENTY_DB_HOST", "twenty_db"),
-        port: String.to_integer(System.get_env("TWENTY_DB_PORT", "5432")),
-        username: System.get_env("TWENTY_DB_USER", "postgres"),
-        password: System.get_env("TWENTY_DB_PASSWORD"),
-        database: "default"
-      ]
     }
   ]
 
