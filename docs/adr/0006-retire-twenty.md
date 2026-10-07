@@ -14,7 +14,7 @@ Twenty is retired rather than kept, hardened or upgraded. On 7 October 2026 its 
 
 ## Consequences
 
-The host runs 33 expected containers instead of 36. Twenty's database is no longer reachable through Traefik, and nothing remains to patch. Offering a CRM again would mean choosing and integrating one afresh. The archive allows a restore if old Twenty data is ever needed. The `twenty.onestack.cloud` DNS records, the `TWENTY_DB_*` variables in the app's production `.env` and the historical references in the off-host retention scope and backup-scope test fixture were left in place.
+The host runs 33 expected containers instead of 36. Twenty's database is no longer reachable through Traefik, and nothing remains to patch. Offering a CRM again would mean choosing and integrating one afresh. The archive allows a restore if old Twenty data is ever needed. The `huly-retired-v1` backup coverage contract now requires 10 native database identities instead of 11: `twenty_db` was removed from the off-host retention check (in its installed copy on the recovery Mac and the repository copy) and from its test, otherwise every backup after the retirement would have been rejected. The `twenty.onestack.cloud` DNS records and the `TWENTY_DB_*` variables in the app's production `.env` were left in place.
 
 ## Alternatives considered
 

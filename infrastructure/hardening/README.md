@@ -30,7 +30,7 @@ The `dev-domains/` Worker and Traefik route preserve the two development aliases
 
 ## Backups and monitoring
 
-Full backups run twice daily with retries and persistent scheduling. They cover native database/search exports, SQLite snapshots, file stores, operational configuration, protected Tailscale device identity and all three guests: Codex, CI runner and sandbox. The `huly-retired-v1` scope requires all 11 remaining native database identities and types; historical backups keep their original coverage contract. VM filesystems are quiesced at the snapshot point and immediately thawed. A recovered CI VM booted in network isolation.
+Full backups run twice daily with retries and persistent scheduling. They cover native database/search exports, SQLite snapshots, file stores, operational configuration, protected Tailscale device identity and all three guests: Codex, CI runner and sandbox. The `huly-retired-v1` scope requires all 10 remaining native database identities and types (11 until Twenty was retired on 7 October 2026); historical backups keep their original coverage contract. VM filesystems are quiesced at the snapshot point and immediately thawed. A recovered CI VM booted in network isolation.
 
 The 8 September baseline full archive is `onestack-2026-09-08t032440z`; its operational checkpoint `onestackcfg-2026-09-08t035101z` contains the later firewall and Tailscale identity/configuration additions. Both passed independent extraction and metadata checks from the laptop. Subsequent full backups include those additions. Restore the Tailscale identity only when replacing the original device, never on a concurrently connected test clone.
 
