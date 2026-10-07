@@ -210,6 +210,9 @@ describe("Grafana access configuration (integration)", { skip: !enabled && "set 
 
   test("configuring fails when the Usual Suspects datasource can see other scripts", async () => {
     const leaky = await startLeakyProxy(lokiUrl);
+    // Grafana caches datasources by UID for a few seconds, so let the URL
+    // from the previous run expire before pointing the datasource elsewhere.
+    await new Promise((resolve) => setTimeout(resolve, 6000));
     try {
       const result = await runConfigure(configureEnv(leaky.port));
       assert.notEqual(result.code, 0, result.stdout);

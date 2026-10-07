@@ -80,6 +80,17 @@ https://logs.onestack.cloud/cloudflare-logpush?header_Authorization=Bearer%20<to
 Use the `workers_trace_events` dataset and filter `ScriptName` to the allowed
 Worker script names.
 
+## Usual Suspects Grafana access
+
+`scripts/configure-usual-suspects-grafana-access.mjs` creates the "Usual
+Suspects Logs" org, its datasource (pointing at the proxy), dashboard, UI user
+and service account. The UI user belongs only to that org: it is removed from
+every other org, including Grafana's admin org whose `Loki` datasource reads
+every tenant. Before printing credentials the script checks that the UI user
+has no other org and cannot query the admin datasource, and that the service
+account token only sees Usual Suspects script names even for a query that asks
+for all of them. It exits non-zero if any check fails.
+
 ## Manual backfill
 
 Historical Workers Logs can be backfilled from Cloudflare Workers Observability
