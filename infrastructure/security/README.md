@@ -26,8 +26,11 @@ Mac and provider checks remain unavailable while the Mac is asleep; their
 timestamps must be checked before relying on them.
 
 The existing Wrangler OAuth session currently receives HTTP 403 from Workers
-Builds for RunBuddy and Usual Suspects. Those checks remain unknown. A Builds
-read token can be supplied through existing Infisical storage: the private Mac
+Builds for RunBuddy and Usual Suspects. Fresh, exact Brave observations provide
+time-limited coverage through the hourly heartbeat described in
+[browser-builds.md](browser-builds.md). The API failure remains visible and a
+missing or stale observation is unknown coverage. An optional Builds read
+token can be supplied through existing Infisical storage: the private Mac
 `bot-policy.json` accepts `cloudflareBuildsCredentialRefs`, mapping account IDs
 to `projectId`, `environment`, `path` and `secretName`. These are references,
 never token values. The adapter fetches only that named secret in memory and
