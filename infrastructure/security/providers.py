@@ -74,7 +74,7 @@ def cloudflare_pages():
 
 def browser_build(receipt_path, account, script, owner):
     receipt=json.loads(Path(receipt_path).read_text())
-    age=time.time()-dt.datetime.fromisoformat(receipt['checkedAt']).timestamp()
+    age=time.time()-dt.datetime.fromisoformat(receipt['checkedAt'].replace('Z','+00:00')).timestamp()
     expected='https://dash.cloudflare.com/'+account+'/workers/services/view/'+script+'/production/settings'
     if (age < -300 or age > 7200 or receipt['source']!='Cloudflare dashboard via Brave' or
         receipt['account']!=account):raise ValueError('Browser verification is stale or incomplete')
