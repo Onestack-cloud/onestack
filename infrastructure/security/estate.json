@@ -99,5 +99,43 @@
     "automaticSecurityReleaseQualified": true,
     "scope": "Local maintenance tool only",
     "qualification": "Official checksum, actual version/Brotli, native RE2 and backport compatibility checks plus controlled post-activation rollback. Receipt in local private maintenance state."
-  }
+  },
+  "sourceScopeNotes": [
+    {
+      "scope": "Archived and superseded owners",
+      "repositories": [
+        "curiousgeorgios/budget-estimate-app--usual-suspects",
+        "curiousgeorgios/budget-estimate-app--studio-messa",
+        "curiousgeorgios/cims-export-worker",
+        "curiousgeorgios/wcs-pbi-reporting",
+        "digitalnachos-prototypes/allbids_app"
+      ],
+      "policy": "No automatic revival or deployment. Active Usual Suspects/WCS owners are listed above; Allbids is the existing Rust service."
+    },
+    {
+      "scope": "Third-party source clones",
+      "repositories": [
+        "calcom/cal.com",
+        "clawdbot/clawdbot",
+        "documenso/documenso",
+        "dubinc/dub",
+        "n8n-io/n8n",
+        "openclaw/openclaw",
+        "openai/symphony",
+        "twentyhq/twenty",
+        "NousResearch/hermes-agent"
+      ],
+      "policy": "These source clones are not writable canonical application owners for this rollout. Running VPS images and Mac Node executables are detected independently. Do not infer source update permission or a deployment from a clone patch."
+    },
+    {
+      "scope": "Other local development trees",
+      "paths": [
+        "~/workspace/kindavia",
+        "~/workspace/digital-nachos-design-system",
+        "~/workspace/owl/video",
+        "~/workspace/intersect/intersect-elixir"
+      ],
+      "policy": "Developer Node executables are inventoried. These trees are outside the eight deployed application owners and do not yet have the shared package-audit/update-bot contract. Enrolment is required before a future service release."
+    }
+  ]
 }
