@@ -1,0 +1,15 @@
+{
+  "runtimeGlobs": [
+    "~/.local/share/mise/installs/node/*/bin/node",
+    "/opt/homebrew/bin/node",
+    "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
+    "~/Library/Application Support/Codex/artifact-sessions/runtime-generations/*/runtime/bin/node",
+    "~/Library/Application Support/com.raycast.macos/node/runtime/node-v*-darwin-arm64/bin/node"
+  ],
+  "inspectProcesses": true,
+  "requireHostNode": true,
+  "docker": false,
+  "requiredReports": {
+    "runtime.json": 10800
+  }
+}

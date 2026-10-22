@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "name": "onestack",
+      "repository": "Onestack-cloud/onestack",
+      "platform": "github",
+      "packageRoots": [
+        ".",
+        "assets",
+        "infrastructure/security/bot"
+      ],
+      "profile": "github",
+      "releaseOwner": "onestack",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "financial-engine",
+      "repository": "curiousgeorgios/financial-engine",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "financial-engine",
+      "automaticPatchReleaseQualified": false,
+      "nodeDownloadPins": true
+    },
+    {
+      "name": "run-buddy",
+      "repository": "curiousgeorgios/run-buddy-organizer",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "run-buddy",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "usual-suspects",
+      "repository": "george-and-ben/budget-estimate-app-usual-suspects",
+      "platform": "gitlab",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "gitlab",
+      "releaseOwner": "usual-suspects",
+      "automaticPatchReleaseQualified": false,
+      "nodeDownloadPins": true
+    },
+    {
+      "name": "wcs",
+      "repository": "wcsdata/cims-export-worker",
+      "platform": "github",
+      "packageRoots": [
+        ".",
+        "apps/console"
+      ],
+      "profile": "wcs",
+      "releaseOwner": "wcs",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "wcs-report",
+      "repository": "wcsdata/wcs-pbi-reporting",
+      "platform": "github",
+      "packageRoots": [],
+      "profile": "wcs",
+      "releaseOwner": "wcs-report",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "personal-website",
+      "repository": "curiousgeorgios/personal-website",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "personal-website",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "stocktake",
+      "repository": "curiousgeorge/kotsovolos_stocktake",
+      "platform": "gitlab",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "gitlab",
+      "releaseOwner": "stocktake",
+      "automaticPatchReleaseQualified": false
+    }
+  ],
+  "releasePolicy": "Existing required checks and reviews remain mandatory. Automatic deployment qualification is recorded per repository.",
+  "maintenanceRuntime": {
+    "nodeMajor": 24,
+    "automaticSecurityReleaseQualified": true,
+    "scope": "Local maintenance tool only",
+    "qualification": "Official checksum, actual version/Brotli, native RE2 and backport compatibility checks plus controlled post-activation rollback. Receipt in local private maintenance state."
+  }
+}

@@ -225,3 +225,7 @@ Onestack is built on top of these excellent open source projects:
 [Traefik](https://github.com/traefik/traefik) &middot;
 [Uptime Kuma](https://github.com/louislam/uptime-kuma) &middot;
 [Watchtower](https://github.com/containrrr/watchtower)
+
+## Security maintenance
+
+Runtime and dependency checks, update PRs and new-service enrolment are documented in [.security/README.md](.security/README.md). Register every independently locked package root in `.security/policy.json`.

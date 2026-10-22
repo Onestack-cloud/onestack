@@ -1,0 +1,25 @@
+[Unit]
+Description=Read-only scanning of running image digests
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/onestack-security/monitor.py images --config /etc/onestack-security/policy.json --output /var/lib/onestack-security
+Environment=GRYPE_DB_CACHE_DIR=/var/lib/onestack-security/grype-db
+Environment=GRYPE_CHECK_FOR_APP_UPDATE=false
+Environment=GRYPE_DB_AUTO_UPDATE=false
+Environment=GRYPE_DB_UPDATE_DOWNLOAD_TIMEOUT=30m
+Environment=GRYPE_DB_REQUIRE_UPDATE_CHECK=true
+Environment=GOMEMLIMIT=512MiB
+Environment=GOGC=50
+Environment=SYFT_PARALLELISM=2
+TimeoutStartSec=3h
+Nice=15
+IOSchedulingClass=idle
+CPUQuota=50%
+MemoryMax=1536M
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/onestack-security
+PrivateTmp=true
+UMask=0077

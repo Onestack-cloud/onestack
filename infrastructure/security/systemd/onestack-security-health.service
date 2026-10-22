@@ -1,0 +1,12 @@
+[Unit]
+Description=Fail the existing host health monitor on stale or affected security coverage
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/onestack-security/monitor.py health --config /etc/onestack-security/policy.json --output /var/lib/onestack-security
+TimeoutStartSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/onestack-security
+PrivateTmp=true
+UMask=0077

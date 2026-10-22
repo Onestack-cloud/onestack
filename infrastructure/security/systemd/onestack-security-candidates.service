@@ -1,0 +1,13 @@
+[Unit]
+Description=Prepare isolated Node security image candidates for review
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/onestack-security/prepare-images.py --config /etc/onestack-security/policy.json --output /var/lib/onestack-security
+TimeoutStartSec=3h
+Nice=15
+CPUQuota=50%
+MemoryMax=1G
+UMask=0077
+NoNewPrivileges=true

@@ -1,0 +1,10 @@
+[Unit]
+Description=Independent check for stale or failed security scans
+
+[Timer]
+OnBootSec=30min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

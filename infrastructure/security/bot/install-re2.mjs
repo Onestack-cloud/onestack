@@ -1,0 +1,22 @@
+import {readFileSync, mkdirSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {brotliDecompressSync} from 'node:zlib';
+import {createRequire} from 'node:module';
+
+const require = createRequire(import.meta.url);
+const path = require.resolve('re2/package.json');
+const metadata = JSON.parse(readFileSync(path, 'utf8'));
+const key = `${process.platform}-${process.arch}-${process.versions.modules}`;
+const expectedArchive = 'bfd4cde15deb2f9847365eda2bf948ee0222b09edebdc6e80c0821901a9aef18';
+if (metadata.version !== '1.27.0' || key !== 'darwin-arm64-137') throw new Error('Unqualified RE2 build; review official release hashes');
+const response = await fetch(`https://github.com/uhop/node-re2/releases/download/1.27.0/${key}.br`, {signal:AbortSignal.timeout(120000)});
+if (!response.ok) throw new Error('Official RE2 download failed');
+const archive = Buffer.from(await response.arrayBuffer());
+if (createHash('sha256').update(archive).digest('hex') !== expectedArchive) throw new Error('RE2 archive checksum mismatch');
+const binary = brotliDecompressSync(archive);
+if (`sha256:${createHash('sha256').update(binary).digest('hex')}` !== metadata.artifactHashes[key]) throw new Error('RE2 binary does not match the locked npm publisher metadata');
+const directory = path.replace(/package\.json$/, 'build/Release/');
+mkdirSync(directory, {recursive:true});
+writeFileSync(directory + 're2.node', binary, {mode:0o755});
+require('re2');
+console.log('Verified official RE2 binary installed');
