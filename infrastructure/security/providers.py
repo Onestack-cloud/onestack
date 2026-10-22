@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Read-only provider drift and live runtime evidence using existing local logins."""
+import json
+import datetime as dt
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import time
+import urllib.request
+from monitor import atomic, assess, floors_for, fetch, now, NODE_FEED, SCHEDULE
+from deploy import guest_execute
+
+ACCOUNT='663b85e4f509df63c1735f6e77db4370'
+
+
+def cli(args):
+    p=subprocess.run(args,capture_output=True,text=True,timeout=90)
+    if p.returncode:raise RuntimeError('Existing provider session unavailable')
+    return json.loads(p.stdout)
+
+
+def request(url, headers, data=None):
+    req=urllib.request.Request(url,headers=headers,data=json.dumps(data).encode() if data else None)
+    with urllib.request.urlopen(req,timeout=60) as response:return json.load(response)
+
+
+def azure():
+    app=['-g','rg-finnance-app-dev','-n','financial-engine']
+    settings=cli(['az','webapp','config','show',*app,'-o','json'])
+    expected='/home/site/wwwroot/.runtime/node --no-maglev-osr /home/site/wwwroot/server.js'
+    if settings.get('appCommandLine')!=expected:raise ValueError('Azure startup executable drift')
+    # Runs inside the main app container. Returns executable metadata only.
+    started=time.time()
+    code="""const fs=require('node:fs'),cp=require('node:child_process');const env={PATH:'/usr/bin:/bin'};const processes=[];for(const pid of fs.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)&&Number(x)!==process.pid)){try{const exe='/proc/'+pid+'/exe';if(fs.readlinkSync(exe).replace(/ \\(deleted\\)$/,'').endsWith('/node')){processes.push({pid:Number(pid),node:cp.execFileSync(exe,['--version'],{env,timeout:5000}).toString().trim().slice(1)})}}catch{}}const packageInfo=JSON.parse(fs.readFileSync('/home/site/wwwroot/.runtime/security.json'));fs.writeFileSync('/home/security-runtime-metadata.json',JSON.stringify({checkedAt:new Date().toISOString(),packaged:process.versions.node,sourceCommit:packageInfo.source_commit,processes}),{mode:0o600});"""
+    command=shlex.join(['/home/site/wwwroot/.runtime/node','--no-maglev-osr','-e',code])
+    cli(['az','webapp','exec',*app,'--mode','execute','--command',command,'-o','json'])
+    auth=cli(['az','account','get-access-token','--resource','https://management.azure.com/','-o','json'])['accessToken']
+    url='https://financial-engine.scm.azurewebsites.net/api/vfs/security-runtime-metadata.json'
+    # Kudu reads the shared metadata receipt, never a database or app environment.
+    result=None
+    for attempt in range(10):
+        try:
+            result=request(url,{'Authorization':'Bearer '+auth})
+            import datetime as dt
+            if dt.datetime.fromisoformat(result['checkedAt'].replace('Z','+00:00')).timestamp()<started-5:
+                raise ValueError('Azure probe receipt is stale')
+            break
+        except Exception:
+            if attempt==9:raise
+            time.sleep(2)
+    if not result.get('processes') or not re.fullmatch('[a-f0-9]{40}',result.get('sourceCommit','')):
+        raise ValueError('Azure live runtime coverage incomplete')
+    return {'target':'Azure Financial Engine','state':'checked','providerMajor':settings['linuxFxVersion'],**result}
+
+
+def cloudflare_token():
+    # Existing Wrangler OAuth remains local. Never copy it into the source or VPS.
+    for path in [Path.home()/'.wrangler/config/default.toml',Path.home()/'Library/Preferences/.wrangler/config/default.toml']:
+        if path.exists():
+            match=re.search(r'^oauth_token\s*=\s*"([^\"]+)"',path.read_text(),re.M)
+            if match:return match[1]
+    raise RuntimeError('Existing Cloudflare login unavailable')
+
+
+def cloudflare_pages():
+    headers={'Authorization':'Bearer '+cloudflare_token()}
+    result=request('https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT+'/pages/projects/kotsovolos-stocktake',headers)
+    if not result.get('success'):raise RuntimeError('Pages inventory unavailable')
+    return [{'target':'Cloudflare Pages Stocktake '+env,'state':'checked',
+             'node':value.get('env_vars',{}).get('NODE_VERSION',{}).get('value')}
+            for env,value in result['result']['deployment_configs'].items()]
+
+
+def browser_build(receipt_path, account, script, owner):
+    receipt=json.loads(Path(receipt_path).read_text())
+    age=time.time()-dt.datetime.fromisoformat(receipt['checkedAt']).timestamp()
+    expected='https://dash.cloudflare.com/'+account+'/workers/services/view/'+script+'/production/settings'
+    if (age < -300 or age > 7200 or receipt['source']!='Cloudflare dashboard via Brave' or
+        receipt['account']!=account):raise ValueError('Browser verification is stale or incomplete')
+    rows=[row for row in receipt['targets'] if row['worker']==script and row['url']==expected]
+    if len(rows)!=1 or not re.fullmatch(r'\d+\.\d+\.\d+',rows[0]['node']):
+        raise ValueError('Browser build runtime unavailable')
+    return {'target':'Cloudflare Workers Builds '+owner,'state':'checked','node':rows[0]['node'],
+            'checkedAt':receipt['checkedAt'],'verificationSource':receipt['source']}
+
+
+def cloudflare_builds(credential_refs=None, browser_receipt=None):
+    headers={'Authorization':'Bearer '+cloudflare_token()}
+    tokens={}
+    def get(account,path):
+        auth=headers
+        reference=(credential_refs or {}).get(account)
+        if path.startswith('/builds/') and reference:
+            if account not in tokens:
+                if not re.fullmatch('[a-f0-9-]{36}',reference['projectId']) or not re.fullmatch('[A-Za-z0-9_]+',reference['secretName']) or not re.fullmatch('/[A-Za-z0-9_/-]*',reference['path']):
+                    raise ValueError('Invalid credential reference')
+                p=subprocess.run(['infisical','secrets','get',reference['secretName'],'--plain','--projectId',reference['projectId'],
+                                  '--env',reference['environment'],'--path',reference['path'],'--domain','https://infisical.onestack.cloud/api','--silent'],capture_output=True,text=True,timeout=40)
+                token=p.stdout.strip()
+                if p.returncode or len(token)<20 or '\n' in token:raise RuntimeError('Existing Builds credential unavailable')
+                tokens[account]=token
+            auth={'Authorization':'Bearer '+tokens[account]}
+        result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,auth)
+        if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
+        return result['result']
+    rows=[]
+    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),(ACCOUNT,'usual-suspects','Usual Suspects')]:
+        try:
+            scripts=get(account,'/workers/scripts')
+            worker=next(x for x in scripts if x['id']==script)
+            triggers=get(account,'/builds/workers/'+worker['tag']+'/triggers')
+            if not isinstance(triggers,list) or not triggers:raise ValueError('Build trigger inventory incomplete')
+            for trigger in triggers:
+                variables=get(account,'/builds/triggers/'+trigger['trigger_uuid']+'/environment_variables')
+                rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'checked',
+                             'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value')})
+        except Exception as error:
+            failure={'target':'Cloudflare Workers Builds '+owner,'state':'unknown','errorType':type(error).__name__,'httpStatus':getattr(error,'code',None)}
+            try:
+                if browser_receipt is None:raise ValueError('No current browser verification')
+                verified=browser_build(browser_receipt,account,script,owner)
+                verified['apiCoverage']=failure;rows.append(verified)
+            except (OSError,ValueError,KeyError,TypeError):rows.append(failure)
+    return rows
+
+
+def runner():
+    entries=cli(['gh','api','repos/curiousgeorgios/run-buddy-organizer/actions/runners/downloads'])
+    filename=next(x['filename'] for x in entries if x['os']=='linux' and x['architecture']=='x64')
+    match=re.fullmatch(r'actions-runner-linux-x64-(\d+\.\d+\.\d+)\.tar\.gz',filename)
+    if not match:raise ValueError('Runner version unavailable')
+    offered=match[1]
+    code=r'''import subprocess,json,re
+rows=[]
+containers=subprocess.run(['docker','ps','--format','{{.ID}} {{.Names}}'],capture_output=True,text=True,check=True)
+for line in containers.stdout.splitlines():
+ cid,name=line.split(' ',1)
+ if not re.fullmatch(r'runner-[a-f0-9-]{36}',name):continue
+ result=subprocess.run(['docker','exec',cid,'/runner/bin/Runner.Listener','--version'],capture_output=True,text=True,timeout=20)
+ if result.returncode or not re.fullmatch(r'\d+\.\d+\.\d+',result.stdout.strip()):raise ValueError('Runner executable unavailable')
+ rows.append(result.stdout.strip())
+print(json.dumps(rows))
+'''
+    result=subprocess.run(['ssh','-o','BatchMode=yes','onestack-admin','python3','-'],
+                          input=guest_execute('onestack-ci-runner',code),capture_output=True,text=True,timeout=210)
+    if result.returncode:raise RuntimeError('Installed runner inventory unavailable')
+    installed=json.loads(result.stdout)
+    if not installed or not all(re.fullmatch(r'\d+\.\d+\.\d+',value) for value in installed):
+        raise ValueError('Installed runner coverage incomplete')
+    return {'target':'RunBuddy self-hosted runner','checkedAt':now(),'installed':installed,'offered':offered,
+            'state':'checked' if all(value==offered for value in installed) else 'review required',
+            'owner':'Nomad CI controller; preserve self-update exclusion and check GitHub enforcement deadline'}
+
+
+def scan(output,credential_refs=None):
+    rows=[];floors=floors_for(fetch(NODE_FEED));schedule=fetch(SCHEDULE);date=now()[:10]
+    for name,operation in [('Azure Financial Engine',azure),('Cloudflare Pages settings',cloudflare_pages),
+                           ('Cloudflare Workers Builds settings',lambda:cloudflare_builds(credential_refs,output/'builds-browser.json')),('RunBuddy runner release',runner)]:
+        try:
+            result=operation();rows.extend(result if isinstance(result,list) else [result])
+        except Exception as error:
+            rows.append({'target':name,'state':'unknown','errorType':type(error).__name__,
+                         'httpStatus':getattr(error,'code',None)})
+    for row in rows:
+        values=[row['node']] if 'node' in row else ([row['packaged']]+[p['node'] for p in row['processes']] if 'packaged' in row else [])
+        for value in values:
+            try:detail=assess(value,floors,schedule,date)
+            except (TypeError,ValueError):detail='provider runtime version unavailable'
+            if detail:row.update({'state':'affected','detail':detail})
+    report={'checkedAt':now(),'state':'unknown' if any(x['state']=='unknown' for x in rows) else
+            'affected' if any(x['state']!='checked' for x in rows) else 'checked','targets':rows}
+    atomic(output/'providers.json',report)
+    return report
+
+
+if __name__=='__main__':
+    import argparse
+    parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
+    print(json.dumps(scan(args.output)))

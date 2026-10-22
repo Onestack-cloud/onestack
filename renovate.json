@@ -1,0 +1,81 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Australia/Sydney",
+  "schedule": [
+    "at any time"
+  ],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "automerge": false,
+  "rangeStrategy": "bump",
+  "minimumReleaseAge": "7 days",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": [
+      "at any time"
+    ],
+    "minimumReleaseAge": "0 days",
+    "automerge": false
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 7am on monday"
+    ]
+  },
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "*"
+      ],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "matchDatasources": [
+        "node-version"
+      ],
+      "allowedVersions": ">=24 <25",
+      "groupName": "Node 24 runtime",
+      "minimumReleaseAge": false,
+      "schedule": [
+        "at any time"
+      ]
+    },
+    {
+      "matchPackageNames": [
+        "node"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^24([.-]|$)/",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": false,
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.(?:ya?ml|toml|[cm]?[jt]s)$/"
+      ],
+      "matchStrings": [
+        "(?:NODE_VERSION|nodeVersion|node-version)[\\\"\\']?\\s*[:=]\\s*[\\\"\\']?(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "node",
+      "datasourceTemplate": "node-version",
+      "versioningTemplate": "node"
+    }
+  ],
+  "dependencyDashboard": false
+}

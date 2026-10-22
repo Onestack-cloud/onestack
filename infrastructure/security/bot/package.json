@@ -1,0 +1,11 @@
+{
+  "name": "security-maintenance-bot",
+  "private": true,
+  "dependencies": {
+    "renovate": "44.176.2",
+    "wrangler": "4.151.3"
+  },
+  "patchedDependencies": {
+    "braces@3.0.3": "patches/braces@3.0.3.patch"
+  }
+}

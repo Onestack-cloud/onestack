@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "owner": "Onestack-cloud/onestack",
+  "nodeMajor": 24,
+  "minimumNode": {
+    "22": "22.23.4",
+    "24": "24.22.1",
+    "26": "26.12.1"
+  },
+  "packageRoots": [
+    ".",
+    "assets",
+    "infrastructure/security/bot"
+  ],
+  "release": {
+    "requiresReview": true,
+    "automaticPatchReleaseQualified": false,
+    "qualification": null
+  },
+  "verifiedBackports": [
+    {
+      "advisoryKey": "infrastructure/security/bot:braces:https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "patch": "infrastructure/security/bot/patches/braces@3.0.3.patch",
+      "sha256": "37752f88a7f4772397eddd56f3a06b00e24708358ff762f0aad4ed2ce9c6cab9",
+      "verification": "infrastructure/security/bot/verify-braces.mjs",
+      "reviewBefore": "2026-11-21T00:00:00Z"
+    }
+  ],
+  "hexLockfiles": [
+    "mix.lock"
+  ]
+}

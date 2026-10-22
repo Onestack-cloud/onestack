@@ -1,0 +1,289 @@
+{
+  "runtimeGlobs": [
+    "/usr/bin/node",
+    "/usr/local/bin/node",
+    "/opt/node-security/*/bin/node",
+    "/opt/nodejs/*/bin/node"
+  ],
+  "inspectProcesses": true,
+  "requireHostNode": true,
+  "docker": true,
+  "containerNodePaths": [
+    "/opt/actions-runner-dist/externals/node24/bin/node",
+    "/runner/externals/node24/bin/node",
+    "/runner/externals/node24_alpine/bin/node"
+  ],
+  "requireNodeContainers": [
+    "formbricks_docker-formbricks-1",
+    "infisical-backend",
+    "n8n_docker-n8n-1",
+    "documenso-production-documenso-1",
+    "uptime-kuma",
+    "formbricks_docker-cube-1",
+    "calcom_docker-calcom-1",
+    "cloudflare-logs-ingest"
+  ],
+  "guests": {
+    "onestack-codex": {
+      "runtimeGlobs": [
+        "/usr/bin/node",
+        "/usr/local/bin/node",
+        "/opt/node-security/*/bin/node",
+        "/opt/nodejs/*/bin/node"
+      ],
+      "inspectProcesses": true,
+      "requireHostNode": false,
+      "docker": true,
+      "containerNodePaths": [
+        "/opt/actions-runner-dist/externals/node24/bin/node",
+        "/runner/externals/node24/bin/node",
+        "/runner/externals/node24_alpine/bin/node"
+      ],
+      "dockerCommand": [
+        "runuser",
+        "-u",
+        "codex",
+        "--",
+        "env",
+        "XDG_RUNTIME_DIR=/run/user/1000",
+        "DOCKER_HOST=unix:///run/user/1000/docker.sock",
+        "docker"
+      ],
+      "dockerSocket": "unix:///run/user/1000/docker.sock",
+      "requireScanReports": true,
+      "requireNodeContainers": [
+        "open-inspect-app-1"
+      ],
+      "knownContainers": [
+        "open-inspect-app-1",
+        "open-inspect-litestream-1",
+        "open-inspect-minio-1"
+      ]
+    },
+    "onestack-ci-runner": {
+      "runtimeGlobs": [
+        "/usr/bin/node",
+        "/usr/local/bin/node",
+        "/opt/node-security/*/bin/node",
+        "/opt/nodejs/*/bin/node"
+      ],
+      "inspectProcesses": true,
+      "requireHostNode": false,
+      "docker": true,
+      "containerNodePaths": [
+        "/opt/actions-runner-dist/externals/node24/bin/node",
+        "/runner/externals/node24/bin/node",
+        "/runner/externals/node24_alpine/bin/node"
+      ],
+      "extraImages": [
+        "local/usual-suspects-gitlab-ci:v1",
+        "local/usual-suspects-gitlab-ci:v2",
+        "local/usual-suspects-gitlab-ci:v3"
+      ],
+      "requireScanReports": true,
+      "knownContainers": [],
+      "knownContainerPrefixes": [
+        "runner-"
+      ]
+    },
+    "nomad-vps-worker": {
+      "runtimeGlobs": [
+        "/usr/bin/node",
+        "/usr/local/bin/node",
+        "/opt/node-security/*/bin/node",
+        "/opt/nodejs/*/bin/node"
+      ],
+      "inspectProcesses": true,
+      "requireHostNode": false,
+      "docker": true,
+      "containerNodePaths": [
+        "/opt/actions-runner-dist/externals/node24/bin/node",
+        "/runner/externals/node24/bin/node",
+        "/runner/externals/node24_alpine/bin/node"
+      ],
+      "requireScanReports": true,
+      "knownContainers": [],
+      "knownContainerPrefixes": [
+        "loki-connector-",
+        "api-",
+        "nomad_init_"
+      ]
+    },
+    "onestack-sandbox": {
+      "runtimeGlobs": [
+        "/usr/bin/node",
+        "/usr/local/bin/node",
+        "/opt/node-security/*/bin/node",
+        "/opt/nodejs/*/bin/node"
+      ],
+      "inspectProcesses": true,
+      "requireHostNode": false,
+      "docker": true,
+      "containerNodePaths": [
+        "/opt/actions-runner-dist/externals/node24/bin/node",
+        "/runner/externals/node24/bin/node",
+        "/runner/externals/node24_alpine/bin/node"
+      ],
+      "requireScanReports": true,
+      "requireNodeContainers": [
+        "e2b-dashboard-1"
+      ],
+      "knownContainers": [
+        "e2b-dashboard-1",
+        "e2b-ready-1",
+        "e2b-client-proxy-1",
+        "e2b-api-1",
+        "e2b-orchestrator-1",
+        "e2b-dashboard-api-1",
+        "e2b-vector-1",
+        "e2b-redis-1",
+        "e2b-postgres-1",
+        "e2b-clickhouse-1"
+      ]
+    }
+  },
+  "grype": "/opt/onestack-security/bin/grype",
+  "syft": "/opt/onestack-security/bin/syft",
+  "requiredReports": {
+    "runtime.json": 10800,
+    "images.json": 115200,
+    "availability.json": 10800,
+    "os.json": 115200,
+    "candidates.json": 115200
+  },
+  "publicChecks": [
+    {
+      "url": "https://admin.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://app.dev.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://app.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://cal.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://castopod.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://dev.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://documenso.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://feedback.dev.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://feedback.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://formbricks.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://infisical.onestack.cloud/api/status",
+      "expected": 200
+    },
+    {
+      "url": "https://kavita.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://kuma.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://logs.onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://n8n.onestack.cloud/healthz",
+      "expected": 200
+    },
+    {
+      "url": "https://onestack.cloud/",
+      "expected": 200
+    },
+    {
+      "url": "https://search.onestack.cloud/health",
+      "expected": 200
+    },
+    {
+      "url": "https://traefik.onestack.cloud/",
+      "expected": 401
+    },
+    {
+      "url": "https://wealways.bid/",
+      "expected": 200
+    },
+    {
+      "url": "https://app.joblinktech.com.au",
+      "expected": 200
+    },
+    {
+      "url": "https://joblinktech.com.au",
+      "expected": 200
+    }
+  ],
+  "nameservers": {
+    "joblinktech.com.au": [
+      "ada.ns.cloudflare.com",
+      "zahir.ns.cloudflare.com"
+    ]
+  },
+  "knownContainers": [
+    "onestack",
+    "calcom_docker-calcom-1",
+    "cloudflare-logs-ingest",
+    "uptime-kuma",
+    "documenso-production-documenso-1",
+    "n8n_docker-n8n-1",
+    "infisical-backend",
+    "formbricks_docker-formbricks-1",
+    "formbricks_docker-cube-1",
+    "formbricks_docker-hub-1",
+    "traefik",
+    "allbids_app",
+    "cloudflare-logs-usual-suspects-relay",
+    "nomad-usual-suspects-loki-gateway",
+    "meilisearch",
+    "allbids-rust-rehearsal-allbids-rust-shadow-1",
+    "watchtower",
+    "onestack-watchtower-socket-proxy",
+    "cloudflare-logs-grafana",
+    "cloudflare-logs-loki",
+    "onestack-docker-socket-proxy",
+    "valkey_redis",
+    "castopod-app",
+    "plutus-trader-redis-1",
+    "plutus-trader-timescaledb-1",
+    "postgres_db",
+    "mariadb",
+    "kavita",
+    "onestack_dev",
+    "plutus-trader-plutus-1"
+  ],
+  "expectedImageDigests": {
+    "calcom_docker-calcom-1": "sha256:5cc08d571a1cedd8d2bf2983c2df75df996ab4008f2fa4cd7a8aebacf378233a",
+    "cloudflare-logs-ingest": "sha256:94105f98da1a775e9031b386a5daebc19c975ce9d417e5e4749f4e5890e9fee3",
+    "uptime-kuma": "sha256:9bc4fadf315c889edc307d32259c98e8b9a1c198550e7c168b79f1b0cbaf603f",
+    "documenso-production-documenso-1": "sha256:b22df78d934f855a4936c74de892bcdbd7155d13474f25c6ca707451a1b2a7ff",
+    "n8n_docker-n8n-1": "sha256:3d8d359c88a487cb79f1807ab6f3d5f80e9f1d984b722c837f49e18f59ff7b4b",
+    "infisical-backend": "sha256:8d02e8217e4c0e49b75901884e3aa967555ff7368f192f30f89db2b2c72fb323",
+    "formbricks_docker-formbricks-1": "sha256:8353c9e3349b3bf7b761fd3c4dd14d539106dd7e0274dd371e9ce09d17e5a8e4",
+    "formbricks_docker-cube-1": "sha256:b08351f57b0042de93014f01ada9a24a42085a4c76d345e116b9fdf636572ca2"
+  },
+  "imageTimeoutSeconds": 2400
+}

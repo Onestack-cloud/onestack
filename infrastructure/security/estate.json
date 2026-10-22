@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "name": "onestack",
+      "repository": "Onestack-cloud/onestack",
+      "platform": "github",
+      "packageRoots": [
+        ".",
+        "assets",
+        "infrastructure/security/bot"
+      ],
+      "profile": "github",
+      "releaseOwner": "onestack",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "financial-engine",
+      "repository": "curiousgeorgios/financial-engine",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "financial-engine",
+      "automaticPatchReleaseQualified": false,
+      "nodeDownloadPins": true
+    },
+    {
+      "name": "run-buddy",
+      "repository": "curiousgeorgios/run-buddy-organizer",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "run-buddy",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "usual-suspects",
+      "repository": "george-and-ben/budget-estimate-app-usual-suspects",
+      "platform": "gitlab",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "gitlab",
+      "releaseOwner": "usual-suspects",
+      "automaticPatchReleaseQualified": false,
+      "nodeDownloadPins": true
+    },
+    {
+      "name": "wcs",
+      "repository": "wcsdata/cims-export-worker",
+      "platform": "github",
+      "packageRoots": [
+        ".",
+        "apps/console"
+      ],
+      "profile": "wcs",
+      "releaseOwner": "wcs",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "wcs-report",
+      "repository": "wcsdata/wcs-pbi-reporting",
+      "platform": "github",
+      "packageRoots": [],
+      "profile": "wcs",
+      "releaseOwner": "wcs-report",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "personal-website",
+      "repository": "curiousgeorgios/personal-website",
+      "platform": "github",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "github",
+      "releaseOwner": "personal-website",
+      "automaticPatchReleaseQualified": false
+    },
+    {
+      "name": "stocktake",
+      "repository": "curiousgeorge/kotsovolos_stocktake",
+      "platform": "gitlab",
+      "packageRoots": [
+        "."
+      ],
+      "profile": "gitlab",
+      "releaseOwner": "stocktake",
+      "automaticPatchReleaseQualified": false
+    }
+  ],
+  "releasePolicy": "Existing required checks and reviews remain mandatory. Automatic deployment qualification is recorded per repository.",
+  "maintenanceRuntime": {
+    "nodeMajor": 24,
+    "automaticSecurityReleaseQualified": true,
+    "scope": "Local maintenance tool only",
+    "qualification": "Official checksum, actual version/Brotli, native RE2 and backport compatibility checks plus controlled post-activation rollback. Receipt in local private maintenance state."
+  },
+  "sourceScopeNotes": [
+    {
+      "scope": "Archived and superseded owners",
+      "repositories": [
+        "curiousgeorgios/budget-estimate-app--usual-suspects",
+        "curiousgeorgios/budget-estimate-app--studio-messa",
+        "curiousgeorgios/cims-export-worker",
+        "curiousgeorgios/wcs-pbi-reporting",
+        "digitalnachos-prototypes/allbids_app"
+      ],
+      "policy": "No automatic revival or deployment. Active Usual Suspects/WCS owners are listed above; Allbids is the existing Rust service."
+    },
+    {
+      "scope": "Third-party source clones",
+      "repositories": [
+        "calcom/cal.com",
+        "clawdbot/clawdbot",
+        "documenso/documenso",
+        "dubinc/dub",
+        "n8n-io/n8n",
+        "openclaw/openclaw",
+        "openai/symphony",
+        "twentyhq/twenty",
+        "NousResearch/hermes-agent"
+      ],
+      "policy": "These source clones are not writable canonical application owners for this rollout. Running VPS images and Mac Node executables are detected independently. Do not infer source update permission or a deployment from a clone patch."
+    },
+    {
+      "scope": "Other local development trees",
+      "paths": [
+        "~/workspace/kindavia",
+        "~/workspace/digital-nachos-design-system",
+        "~/workspace/owl/video",
+        "~/workspace/intersect/intersect-elixir"
+      ],
+      "policy": "Developer Node executables are inventoried. These trees are outside the eight deployed application owners and do not yet have the shared package-audit/update-bot contract. Enrolment is required before a future service release."
+    }
+  ]
+}

@@ -77,3 +77,5 @@ onestack_products/plane_docker/plane.env
 .vault-password
 vault-password
 *.vault-password
+
+/security-report.json
