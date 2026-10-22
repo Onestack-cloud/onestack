@@ -86,6 +86,12 @@ backport recorded in `bot/backport.json`. Its raw advisory remains visible.
 The patch hash, regression checks and review deadline must pass on every run;
 an overdue review or another high/critical advisory blocks the bot.
 
+The source collector retries an empty GitHub workflow listing at most three
+times. Missing or incomplete reports still produce unknown coverage. A failed
+collection retains the previous report under `lastKnownReport`, with its
+original timestamp and findings, and records which collection phase failed.
+Historical findings do not count as a fresh successful scan.
+
 ## Bespoke downloads and candidates
 
 Cloudflare Workers Builds can also be checked through the signed-in Brave
