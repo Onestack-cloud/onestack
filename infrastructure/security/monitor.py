@@ -13,6 +13,7 @@ import re
 import subprocess
 import shutil
 import sys
+import tempfile
 import time
 import urllib.request
 import urllib.error
@@ -285,15 +286,18 @@ def image_scan(config, output):
                     if config.get('dockerSocket'):
                         environment['DOCKER_HOST'] = config['dockerSocket']
                     p = subprocess.run([config['grype'], 'docker:' + digest, '-o', 'json'], stdout=stream, env=environment,
-                                       stderr=subprocess.DEVNULL, timeout=config.get('imageTimeoutSeconds',1200))
+                                       stderr=subprocess.PIPE, text=True, timeout=config.get('imageTimeoutSeconds',1200))
                 if p.returncode:
-                    raise RuntimeError('Image scan failed')
+                    if 'archive/tar: invalid tar header' not in p.stderr:
+                        raise RuntimeError('Image scan failed')
+                    flattened_scan(docker,digest,config,output,target,environment)
                 raw = json.loads(target.read_text())
             severe = [{'id': x['vulnerability']['id'], 'severity': x['vulnerability']['severity'],
                        'package': x['artifact']['name'], 'version': x['artifact']['version'],
                        'fix': x['vulnerability'].get('fix', {})}
                       for x in raw['matches'] if x['vulnerability']['severity'].lower() in ['high', 'critical']]
-            report['images'].append({'image': image, 'digest': digest, 'highCritical': len(severe),'reusedExactDatabaseResult':reused})
+            report['images'].append({'image': image, 'digest': digest, 'highCritical': len(severe),'reusedExactDatabaseResult':reused,
+                                     'scanMethod':'immutable filesystem export' if raw['source']['target']['userInput']!=digest else 'image layers'})
             report['findings'] += [{**x, 'image': image} for x in severe]
             del raw
         except Exception:
@@ -306,16 +310,58 @@ def image_scan(config, output):
 
 def cached_image(path, digest, database, scanner):
     try:
-        raw=json.loads(path.read_text())
+        content=path.read_bytes();raw=json.loads(content)
         descriptor=raw['descriptor'];status=descriptor['db']['status']
+        # Docker's content-store ID can identify an OCI index or manifest;
+        # Grype's imageID identifies its config. Bind the explicit Docker input.
+        observed=raw['source']['target']['userInput']
+        if observed!=digest:
+            derivation=json.loads(path.with_suffix('.derivation.json').read_text())
+            if (derivation['originalImage']!=digest or derivation['scanImage']!=observed or
+                derivation['reportSha256']!=hashlib.sha256(content).hexdigest() or derivation['declaredVolumes']!=[]):
+                return None
         if (descriptor['name']=='grype' and descriptor['version']==scanner and
             status['valid'] is True and status['built']==database['built'] and
             status['schemaVersion']==database['schemaVersion'] and status['from']==database['from'] and
-            raw['source']['type']=='image' and raw['source']['target']['imageID']==digest and isinstance(raw['matches'],list)):
+            raw['source']['type']=='image' and isinstance(raw['matches'],list)):
             return raw
     except (OSError,ValueError,KeyError,TypeError):
         pass
     return None
+
+
+def flattened_scan(docker,digest,config,output,target,environment):
+    # Some Docker layer exports are unreadable by the cataloguer. Export a
+    # never-started image instead. No runtime container or volume is inspected.
+    metadata=json.loads(run(docker+['image','inspect',digest]))[0]
+    if metadata['Id']!=digest or metadata['Config'].get('Volumes'):
+        raise ValueError('Filesystem-export fallback requires an exact image with no declared volumes')
+    container=None;scan_image=None
+    try:
+        with tempfile.TemporaryDirectory(prefix='immutable-image-',dir=output) as directory:
+            archive=Path(directory)/'filesystem.tar'
+            container=run(docker+['create','--network','none','--entrypoint','/__security_export_never_started__',
+                                  '--label','cloud.onestack.security-export=true',digest]).strip()
+            if not re.fullmatch('[a-f0-9]{64}',container):raise ValueError('Export container identity unavailable')
+            with archive.open('wb') as stream:
+                result=subprocess.run(docker+['export',container],stdout=stream,stderr=subprocess.PIPE,timeout=300)
+            if result.returncode:raise RuntimeError('Immutable image export failed')
+            scan_image=run(docker+['import','--message','Read-only security inventory of '+digest,str(archive)],300).strip()
+            if not re.fullmatch('sha256:[a-f0-9]{64}',scan_image) or scan_image==digest:
+                scan_image=None;raise ValueError('Flattened scan image identity unavailable')
+            with target.open('w') as stream:
+                result=subprocess.run([config['grype'],'docker:'+scan_image,'-o','json'],stdout=stream,stderr=subprocess.PIPE,
+                                      env=environment,timeout=config.get('imageTimeoutSeconds',1200))
+            if result.returncode:raise RuntimeError('Immutable filesystem scan incomplete')
+            raw=json.loads(target.read_bytes())
+            if raw['source']['target']['userInput']!=scan_image:raise ValueError('Unexpected filesystem scan image')
+            atomic(target.with_suffix('.derivation.json'),{'originalImage':digest,'scanImage':scan_image,'declaredVolumes':[],
+                   'reportSha256':hashlib.sha256(target.read_bytes()).hexdigest(),'method':'never-started immutable image export'})
+    finally:
+        if container and re.fullmatch('[a-f0-9]{64}',container):
+            subprocess.run(docker+['rm','-v',container],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=60)
+        if scan_image and re.fullmatch('sha256:[a-f0-9]{64}',scan_image):
+            subprocess.run(docker+['image','rm',scan_image],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=60)
 
 
 def availability_scan(config):

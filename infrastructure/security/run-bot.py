@@ -121,7 +121,10 @@ def execute(config, state, dry_run=False):
             pin_updates = []
             if not dry_run:
                 for repository in group:
-                    pin_updates.append(pin_preparation.prepare(repository, profile, env))
+                    try:
+                        pin_updates.append(pin_preparation.prepare(repository, profile, env))
+                    except Exception as error:
+                        pin_updates.append({'repository':repository['repository'],'state':'unknown','errorType':type(error).__name__})
             env['LOG_LEVEL'] = 'info'
             env['NODE_OPTIONS'] = '--max-old-space-size=768'
             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', dir=state) as source:
@@ -135,18 +138,21 @@ def execute(config, state, dry_run=False):
                                             stdout=log, stderr=subprocess.STDOUT, timeout=1800)
             pending = log_path.read_text(errors='replace').count('"result": "disabled-no-config"')
             rows.append({'profile': profile, 'exit': result.returncode, 'repositories': len(group),
-                         'pendingRepositoryConfigs': pending, 'dryRun': dry_run, 'pinnedRuntimeUpdates': pin_updates})
+                         'pendingRepositoryConfigs': pending, 'dryRun': dry_run, 'pinnedRuntimeUpdates': pin_updates,
+                         'pinPreparationIncomplete': any(x['state'] in ['unknown','awaiting repository configuration'] for x in pin_updates)})
         except Exception as error:
             rows.append({'profile': profile, 'state': 'unknown', 'errorType': type(error).__name__, 'dryRun': dry_run})
     report = {'checkedAt': dt.datetime.now(dt.timezone.utc).isoformat(), 'runs': rows,
               'tooling': tooling,
               'providers': provider_report,
               'sources': source_report,
-              'state': 'unknown' if source_report['state']=='unknown' or provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 for x in rows) else 'awaiting repository configuration'
+              'state': 'unknown' if source_report['state']=='unknown' or provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 or x.get('pinPreparationIncomplete',False) for x in rows) else 'awaiting repository configuration'
                        if any(x.get('pendingRepositoryConfigs') for x in rows) else 'affected' if source_report['state']=='affected' or provider_report['state']=='affected' else 'ran',
               'note': 'Update PR activity is separate from a verified production patch'}
     (state / 'status.json').write_text(json.dumps(report, indent=2) + '\n')
-    print(json.dumps(report))
+    print(json.dumps({'checkedAt':report['checkedAt'],'state':report['state'],'runs':rows,
+                      'tooling':tooling['state'],'providers':provider_report['state'],'sources':source_report['state'],
+                      'report':str(state/'status.json')}))
     return 0 if report['state'] == 'ran' else 1
 
 

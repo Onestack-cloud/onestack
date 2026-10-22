@@ -8,6 +8,7 @@ import subprocess
 import time
 import urllib.request
 from monitor import atomic, assess, floors_for, fetch, now, NODE_FEED, SCHEDULE
+from deploy import guest_execute
 
 ACCOUNT='663b85e4f509df63c1735f6e77db4370'
 
@@ -90,7 +91,7 @@ def cloudflare_builds(credential_refs=None):
         if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
         return result['result']
     rows=[]
-    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),('c60c6c3daaa4fd10a7f1aa3f7301d202','usual-suspects','Usual Suspects')]:
+    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),(ACCOUNT,'usual-suspects','Usual Suspects')]:
         try:
             scripts=get(account,'/workers/scripts')
             worker=next(x for x in scripts if x['id']==script)
@@ -111,8 +112,25 @@ def runner():
     match=re.fullmatch(r'actions-runner-linux-x64-(\d+\.\d+\.\d+)\.tar\.gz',filename)
     if not match:raise ValueError('Runner version unavailable')
     offered=match[1]
-    return {'target':'RunBuddy self-hosted runner','installed':'2.337.0','offered':offered,
-            'state':'checked' if offered=='2.337.0' else 'review required',
+    code='''import subprocess,json,re
+rows=[]
+containers=subprocess.run(['docker','ps','--format','{{.ID}} {{.Names}}'],capture_output=True,text=True,check=True)
+for line in containers.stdout.splitlines():
+ cid,name=line.split(' ',1)
+ if not re.fullmatch(r'runner-[a-f0-9-]{36}',name):continue
+ result=subprocess.run(['docker','exec',cid,'/runner/bin/Runner.Listener','--version'],capture_output=True,text=True,timeout=20)
+ if result.returncode or not re.fullmatch(r'\d+\.\d+\.\d+',result.stdout.strip()):raise ValueError('Runner executable unavailable')
+ rows.append(result.stdout.strip())
+print(json.dumps(rows))
+'''
+    result=subprocess.run(['ssh','-o','BatchMode=yes','onestack-admin','python3','-'],
+                          input=guest_execute('onestack-ci-runner',code),capture_output=True,text=True,timeout=210)
+    if result.returncode:raise RuntimeError('Installed runner inventory unavailable')
+    installed=json.loads(result.stdout)
+    if not installed or not all(re.fullmatch(r'\d+\.\d+\.\d+',value) for value in installed):
+        raise ValueError('Installed runner coverage incomplete')
+    return {'target':'RunBuddy self-hosted runner','checkedAt':now(),'installed':installed,'offered':offered,
+            'state':'checked' if all(value==offered for value in installed) else 'review required',
             'owner':'Nomad CI controller; preserve self-update exclusion and check GitHub enforcement deadline'}
 
 

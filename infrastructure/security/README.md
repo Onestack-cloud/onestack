@@ -87,9 +87,13 @@ an overdue review or another high/critical advisory blocks the bot.
 
 `.security/node-downloads.json` registers the Azure and custom CI Node downloads.
 `runtime-pins.py` validates each version and SHA-256 against the official Node
-manifest in CI. The local trusted preparation job updates both together and
-opens a reviewed PR/MR. Renovate excludes those files so it cannot update just
-the version. No repository-provided post-update command runs with bot credentials.
+manifest in CI. Related CI, developer and engine pins are registered in
+`versionFiles` and included in the same proposal. The trusted preparation job
+reads source at an exact main SHA through the native platform API and creates
+one commit on a new branch, preserving the rest of the repository tree.
+Existing proposal branches are never overwritten. Renovate defers those Node
+updates to this paired updater. No checkout, repository hook or package script
+runs with bot credentials during preparation.
 
 `prepare-images.py` checks the explicitly registered VPS containers and CI image
 aliases. It derives a candidate from the actual immutable base image, verifies

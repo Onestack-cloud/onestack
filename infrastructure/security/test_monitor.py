@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -9,10 +10,26 @@ from monitor import assess, floors_for, health, atomic, availability_scan, cache
 
 
 class SecurityMonitorTests(unittest.TestCase):
+    def test_flattened_cache_requires_exact_derivation_and_untampered_report(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'image.json'
+            db={'built':'2026-10-22T06:00:00Z','schemaVersion':'v6','from':'https://publisher.example/db?checksum=known','valid':True}
+            raw={'descriptor':{'name':'grype','version':'1.0','db':{'status':db}},'source':{'type':'image','target':{'imageID':'sha256:config','userInput':'sha256:derived'}},'matches':[]}
+            path.write_text(json.dumps(raw))
+            receipt={'originalImage':'sha256:base','scanImage':'sha256:derived','declaredVolumes':[],
+                     'reportSha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+            sidecar=path.with_suffix('.derivation.json');sidecar.write_text(json.dumps(receipt))
+            self.assertIsNotNone(cached_image(path,'sha256:base',db,'1.0'))
+            self.assertIsNone(cached_image(path,'sha256:other',db,'1.0'))
+            sidecar.write_text(json.dumps({**receipt,'declaredVolumes':['/data']}))
+            self.assertIsNone(cached_image(path,'sha256:base',db,'1.0'))
+            sidecar.write_text(json.dumps(receipt));path.write_text(json.dumps({**raw,'matches':[{}]}))
+            self.assertIsNone(cached_image(path,'sha256:base',db,'1.0'))
+
     def test_cached_image_requires_same_digest_scanner_and_valid_exact_database(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'image.json';db={'built':'2026-10-22T06:00:00Z','schemaVersion':'v6','from':'https://publisher.example/db?checksum=known','valid':True}
-            raw={'descriptor':{'name':'grype','version':'1.0','db':{'status':db}},'source':{'type':'image','target':{'imageID':'sha256:approved'}},'matches':[]}
+            raw={'descriptor':{'name':'grype','version':'1.0','db':{'status':db}},'source':{'type':'image','target':{'imageID':'sha256:config','userInput':'sha256:approved'}},'matches':[]}
             path.write_text(json.dumps(raw))
             self.assertIsNotNone(cached_image(path,'sha256:approved',db,'1.0'))
             self.assertIsNone(cached_image(path,'sha256:changed',db,'1.0'))

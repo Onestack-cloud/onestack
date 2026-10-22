@@ -4,22 +4,18 @@ import argparse
 import json
 from pathlib import Path
 import re
-import http.client
+import subprocess
 
 
 def get(path):
     if not re.fullmatch(r'/dist/(?:index\.json|v\d+\.\d+\.\d+/SHASUMS256\.txt)',path):
         raise ValueError('Unregistered official Node resource')
-    connection=http.client.HTTPSConnection('nodejs.org',timeout=40)
-    try:
-        connection.request('GET',path,headers={'User-Agent':'Onestack-Security/1'})
-        response=connection.getresponse()
-        data=response.read(2*1024*1024+1)
-        if response.status!=200 or len(data)>2*1024*1024:
-            raise ValueError('Official Node resource unavailable or incomplete')
-        return data.decode()
-    finally:
-        connection.close()
+    result=subprocess.run(['/usr/bin/curl','--fail','--silent','--show-error','--proto','=https',
+                           '--tlsv1.2','--max-time','40','--max-filesize','2097152',
+                           'https://nodejs.org'+path],capture_output=True,timeout=45)
+    if result.returncode or len(result.stdout)>2*1024*1024:
+        raise ValueError('Official Node resource unavailable or incomplete')
+    return result.stdout.decode()
 
 
 def checksum(version, artifact):
@@ -51,7 +47,8 @@ def inspect(root, prepare=False):
             if major not in floors or tuple(map(int,value.split('.'))) > tuple(map(int,floors[major].split('.'))):
                 floors[major] = value
     rows, changed = [], []
-    for item in json.loads(manifest.read_text())['downloads']:
+    policy=json.loads(manifest.read_text())
+    for item in policy['downloads']:
         path = (root/item['file']).resolve()
         if not path.is_relative_to(root.resolve()):
             raise ValueError('Download pin escapes repository')
@@ -75,7 +72,19 @@ def inspect(root, prepare=False):
                 rows.append({'file':item['file'], 'state':'affected', 'version':version, 'requires':target})
         else:
             rows.append({'file':item['file'], 'state':'checked', 'version':version})
-    return {'state':'affected' if any(x['state']=='affected' for x in rows) else 'checked', 'downloads':rows, 'changed':changed}
+    for item in policy.get('versionFiles',[]):
+        path=(root/item['file']).resolve()
+        if not path.is_relative_to(root.resolve()):raise ValueError('Runtime version pin escapes repository')
+        text=path.read_text();versions=set(re.findall(item['versionPattern'],text,re.M))
+        if len(versions)!=1:raise ValueError('Related runtime pin extraction is ambiguous')
+        version=versions.pop();major=str(item['major'])
+        if version.split('.')[0]!=major:raise ValueError('Runtime major requires review')
+        target=floors[major]
+        if tuple(map(int,version.split('.')))<tuple(map(int,target.split('.'))):
+            if prepare:path.write_text(replace_group(text,item['versionPattern'],target));changed.append(item['file'])
+            else:rows.append({'file':item['file'],'state':'affected','version':version,'requires':target})
+        else:rows.append({'file':item['file'],'state':'checked','version':version})
+    return {'state':'affected' if any(x['state']=='affected' for x in rows) else 'checked', 'downloads':rows, 'changed':list(dict.fromkeys(changed))}
 
 
 if __name__ == '__main__':
