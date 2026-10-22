@@ -56,8 +56,19 @@ COPY assets assets
 WORKDIR assets
 RUN node --version
 # RUN npm i -g yarn; yarn set version stable
-RUN npm install
+RUN npm ci --no-audit --no-fund
 WORKDIR ../
+
+# Keep the configured compiler version available when npm's metadata API fails.
+RUN test "$(uname -m)" = "x86_64" \
+    && curl --fail --location --retry 3 --max-time 60 \
+      https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.17.11.tgz \
+      --output /tmp/esbuild.tgz \
+    && echo "20784512afbd6ad0c1e7c6a43b4aff71148a5452166c67f43b4983b3e7a9d3d5  /tmp/esbuild.tgz" | sha256sum --check - \
+    && tar -xzf /tmp/esbuild.tgz -C /tmp package/bin/esbuild \
+    && install -m 755 /tmp/package/bin/esbuild /app/_build/esbuild-linux-x64 \
+    && test "$(/app/_build/esbuild-linux-x64 --version)" = "0.17.11" \
+    && rm -rf /tmp/esbuild.tgz /tmp/package
 
 # compile assets
 RUN mix assets.deploy
