@@ -38,6 +38,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
         working-directory: infrastructure/security/bot
       - run: node infrastructure/security/bot/verify-braces.mjs
+      - run: node infrastructure/security/bot/node_modules/renovate/dist/config-validator.js --no-global renovate.json
       - run: python3 .security/runtime-pins.py
       - run: node --test .security/runtime-selfcheck.ts
       - run: python3 -m unittest discover -s infrastructure/security -p 'test_*.py'

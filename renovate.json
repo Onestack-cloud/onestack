@@ -39,7 +39,7 @@
       ],
       "allowedVersions": ">=24 <25",
       "groupName": "Node 24 runtime",
-      "minimumReleaseAge": false,
+      "minimumReleaseAge": "0 days",
       "schedule": [
         "at any time"
       ]

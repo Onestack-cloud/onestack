@@ -23,6 +23,21 @@ spec.loader.exec_module(source_monitor)
 from monitor import fetch, floors_for, assess, NODE_FEED, SCHEDULE
 
 
+def repository_results(log, expected):
+    records=[]
+    for line in log.splitlines():
+        try:record=json.loads(line)
+        except ValueError:continue
+        if record.get('msg')=='Repository finished':
+            records.append({key:record.get(key) for key in ['repository','result','exitCode','enabled','onboarded']})
+    names=[record['repository'] for record in records]
+    complete=len(names)==len(expected) and set(names)==set(expected)
+    valid=complete and all(record['exitCode']==0 and record['enabled'] is True and
+                           record['onboarded'] is True for record in records)
+    return {'state':'checked' if valid else 'unknown','results':records,
+            'pendingRepositoryConfigs':sum(record['result']=='disabled-no-config' for record in records)}
+
+
 def preflight(config, state):
     directory = Path(config['renovate']).parents[3]
     report = {'state': 'unknown'}
@@ -126,6 +141,7 @@ def execute(config, state, dry_run=False):
                     except Exception as error:
                         pin_updates.append({'repository':repository['repository'],'state':'unknown','errorType':type(error).__name__})
             env['LOG_LEVEL'] = 'info'
+            env['LOG_FORMAT'] = 'json'
             env['NODE_OPTIONS'] = '--max-old-space-size=768'
             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', dir=state) as source:
                 json.dump(settings, source)
@@ -136,9 +152,9 @@ def execute(config, state, dry_run=False):
                     os.chmod(log_path, 0o600)
                     result = subprocess.run([config['node'], config['renovate']], env=env,
                                             stdout=log, stderr=subprocess.STDOUT, timeout=1800)
-            pending = log_path.read_text(errors='replace').count('"result": "disabled-no-config"')
+            observed=repository_results(log_path.read_text(errors='replace'),[x['repository'] for x in group])
             rows.append({'profile': profile, 'exit': result.returncode, 'repositories': len(group),
-                         'pendingRepositoryConfigs': pending, 'dryRun': dry_run, 'pinnedRuntimeUpdates': pin_updates,
+                         **observed, 'dryRun': dry_run, 'pinnedRuntimeUpdates': pin_updates,
                          'pinPreparationIncomplete': any(x['state'] in ['unknown','awaiting repository configuration'] for x in pin_updates)})
         except Exception as error:
             rows.append({'profile': profile, 'state': 'unknown', 'errorType': type(error).__name__, 'dryRun': dry_run})
@@ -146,7 +162,7 @@ def execute(config, state, dry_run=False):
               'tooling': tooling,
               'providers': provider_report,
               'sources': source_report,
-              'state': 'unknown' if source_report['state']=='unknown' or provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 or x.get('pinPreparationIncomplete',False) for x in rows) else 'awaiting repository configuration'
+              'state': 'unknown' if source_report['state']=='unknown' or provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 or x.get('state')!='checked' or x.get('pinPreparationIncomplete',False) for x in rows) else 'awaiting repository configuration'
                        if any(x.get('pendingRepositoryConfigs') for x in rows) else 'affected' if source_report['state']=='affected' or provider_report['state']=='affected' else 'ran',
               'note': 'Update PR activity is separate from a verified production patch'}
     (state / 'status.json').write_text(json.dumps(report, indent=2) + '\n')
