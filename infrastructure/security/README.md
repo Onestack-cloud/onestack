@@ -34,8 +34,38 @@ token can be supplied through existing Infisical storage: the private Mac
 `bot-policy.json` accepts `cloudflareBuildsCredentialRefs`, mapping account IDs
 to `projectId`, `environment`, `path` and `secretName`. These are references,
 never token values. The adapter fetches only that named secret in memory and
-uses it only for Builds reads. It never creates a token or broadens a login's
+uses it for Worker-tag discovery and Builds reads. The dedicated user API token
+needs **Workers Builds Configuration: Read** and **Workers Scripts: Read**,
+restricted to the Digital Nachos account. Account API tokens are not supported
+by Builds. The dashboard's Builds read permission maps to `Workers CI Read`
+in the API reference. Both GET endpoints accept that permission; edit access
+is unnecessary for this monitor. See the [Builds API guide](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/)
+and [variable-read permissions](https://developers.cloudflare.com/api/resources/workers_builds/subresources/triggers/subresources/environment_variables/methods/list/).
+It never creates a token or broadens a login's
 permissions. The Mac installer preserves these references when refreshed.
+
+After the user creates the token and stores it in Infisical, configure only its
+reference in the private bot policy. For example:
+
+```json
+{
+  "cloudflareBuildsCredentialRefs": {
+    "663b85e4f509df63c1735f6e77db4370": {
+      "projectId": "<Infisical project UUID>",
+      "environment": "prod",
+      "path": "/security-maintenance",
+      "secretName": "CLOUDFLARE_BUILDS_READ_TOKEN"
+    }
+  }
+}
+```
+
+Verify `cloudflare_builds(references)` without a browser receipt. Both Workers
+must report `verificationSource: Cloudflare Builds API`, their actual Node
+versions and no fallback `apiCoverage` failure. The credential also covers
+Worker discovery, so that verification must succeed with Wrangler OAuth
+unavailable. The provider CLI and scheduled bot both read the private policy.
+Do not retire the browser fallback until this live acceptance succeeds.
 
 ## Install and verify
 
