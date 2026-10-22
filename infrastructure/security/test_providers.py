@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from providers import ACCOUNT, browser_build
 
 
@@ -14,8 +15,15 @@ class BrowserBuildCoverageTests(unittest.TestCase):
             record={'checkedAt':stamp.isoformat(),'source':'Cloudflare dashboard via Brave','account':ACCOUNT,
                     'targets':[{'worker':'r4r-next-js','node':'24.22.1',
                                 'url':'https://dash.cloudflare.com/'+ACCOUNT+'/workers/services/view/r4r-next-js/production/settings'}]}
-            path.write_text(json.dumps(record))
-            self.assertEqual(browser_build(path,ACCOUNT,'r4r-next-js','RunBuddy')['node'],'24.22.1')
+            parse_timestamp=dt.datetime.fromisoformat
+            def parse_with_legacy_iso_rules(value):
+                if value.endswith('Z'):raise ValueError('Explicit UTC offset required')
+                return parse_timestamp(value)
+            with patch('providers.dt.datetime') as native_datetime:
+                native_datetime.fromisoformat.side_effect=parse_with_legacy_iso_rules
+                for timestamp in [stamp.isoformat(),stamp.isoformat().replace('+00:00','Z')]:
+                    path.write_text(json.dumps({**record,'checkedAt':timestamp}))
+                    self.assertEqual(browser_build(path,ACCOUNT,'r4r-next-js','RunBuddy')['node'],'24.22.1')
             for change in [{'checkedAt':(stamp-dt.timedelta(hours=3)).isoformat()},
                            {'checkedAt':(stamp+dt.timedelta(hours=1)).isoformat()},
                            {'account':'another-account'},{'targets':[]},
