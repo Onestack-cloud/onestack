@@ -167,7 +167,15 @@ jobs:
   script:
     - python3 .security/runtime-pins.py
     - node --test .security/runtime-selfcheck.ts
-    - export SECURITY_BASE_SHA="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-$CI_COMMIT_BEFORE_SHA}"
+    - |
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        export SECURITY_BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      elif [ -n "$CI_COMMIT_BRANCH" ] && [ "$CI_COMMIT_BRANCH" != "$CI_DEFAULT_BRANCH" ]; then
+        export SECURITY_BASE_SHA="$(git merge-base HEAD "origin/$CI_DEFAULT_BRANCH")"
+        test -n "$SECURITY_BASE_SHA"
+      else
+        export SECURITY_BASE_SHA="$CI_COMMIT_BEFORE_SHA"
+      fi
     - if [ "$SECURITY_BASE_SHA" = "0000000000000000000000000000000000000000" ]; then unset SECURITY_BASE_SHA; fi
     - node .security/ci.ts
   artifacts:

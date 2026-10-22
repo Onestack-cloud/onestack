@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { securityFloors, assessRuntime, compare, auditCount } from './check-runtime.ts';
-import { advisoryKeys } from './ci.ts';
+import { advisoryKeys, comparisonPackages } from './ci.ts';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const floors = {'22': '22.23.4', '24': '24.22.1', '26': '26.12.1'};
 const schedule = {v20: {start:'2023-04-18', end:'2026-04-30'}, v22: {start:'2024-04-24', end:'2027-04-30'}, v24: {start:'2025-04-22', end:'2028-04-30'}, v26: {start:'2026-04-22', end:'2029-04-30'}};
@@ -36,4 +40,24 @@ test('uses numerical version comparison', () => {
 test('compares advisory identities across Bun and npm instead of hiding existing findings', () => {
   assert.deepEqual(advisoryKeys([{root:'.', findings:{vite:[{id:1, url:'https://example.test/advisory', severity:'high'}]}}]), ['.:vite:https://example.test/advisory']);
   assert.deepEqual(advisoryKeys([{root:'console', findings:{vulnerabilities:{vite:{severity:'high', via:[{url:'https://example.test/advisory'}, 'esbuild']}}}}]), ['console:vite:esbuild', 'console:vite:https://example.test/advisory']);
+});
+test('requires a readable baseline commit and every registered lockfile', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'security-comparison-test-'));
+  const source = join(directory, 'source'), target = join(directory, 'target');
+  mkdirSync(source); mkdirSync(target);
+  const git = (...args: string[]) => execFileSync('git', args, {cwd: source, encoding: 'utf8'}).trim();
+  try {
+    git('init', '--quiet');
+    writeFileSync(join(source, 'package.json'), '{}');
+    writeFileSync(join(source, 'package-lock.json'), '{"lockfileVersion":3}');
+    git('add', '.');
+    git('-c', 'user.name=Synthetic security test', '-c', 'user.email=security@example.invalid', 'commit', '--quiet', '-m', 'Synthetic baseline');
+    const sha = git('rev-parse', 'HEAD');
+    assert.deepEqual(comparisonPackages(sha, target, ['.'], source), ['.']);
+    assert.equal(readFileSync(join(target, 'package-lock.json'), 'utf8'), '{"lockfileVersion":3}');
+    assert.throws(() => comparisonPackages('a'.repeat(40), target, ['.'], source), /commit is unavailable/);
+    assert.throws(() => comparisonPackages(sha, target, ['.', 'missing-root'], source), /lockfile is unavailable/);
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
 });
