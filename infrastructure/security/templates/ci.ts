@@ -29,6 +29,27 @@ export function advisoryKeys(audits: Array<{root: string; findings?: unknown}>):
   return [...keys].sort();
 }
 
+export function comparisonPackages(base: string, directory: string, roots: string[], source = process.cwd()): string[] {
+  if (!/^[a-f0-9]{40}$/.test(base) || /^0+$/.test(base)) throw new Error('Invalid security comparison commit');
+  const commit = spawnSync('git', ['cat-file', '-e', `${base}^{commit}`], {cwd: source});
+  if (commit.status !== 0) throw new Error('Security comparison commit is unavailable');
+  for (const root of roots) {
+    let found = false;
+    for (const file of ['package.json', 'package-lock.json', 'bun.lock', 'bun.lockb']) {
+      const relative = root === '.' ? file : `${root}/${file}`;
+      const result = spawnSync('git', ['show', `${base}:${relative}`], {cwd: source, maxBuffer: 32 * 1024 * 1024});
+      if (result.status !== 0) continue;
+      const path = resolve(directory, relative);
+      if (!path.startsWith(directory + '/')) throw new Error('Comparison path escapes temporary directory');
+      mkdirSync(dirname(path), {recursive: true});
+      writeFileSync(path, result.stdout);
+      if (file !== 'package.json') found = true;
+    }
+    if (!found) throw new Error(`Security comparison lockfile is unavailable at ${root}`);
+  }
+  return roots;
+}
+
 async function main() {
   const current = await check();
   const currentKeys = advisoryKeys(current.audits);
@@ -40,22 +61,7 @@ async function main() {
     const directory = mkdtempSync(join(tmpdir(), 'security-base-'));
     try {
       const policy = JSON.parse(readFileSync('.security/policy.json', 'utf8'));
-      const roots: string[] = [];
-      for (const root of policy.packageRoots) {
-        let found = false;
-        for (const file of ['package.json', 'package-lock.json', 'bun.lock', 'bun.lockb']) {
-          const relative = root === '.' ? file : `${root}/${file}`;
-          const result = spawnSync('git', ['show', `${base}:${relative}`], {maxBuffer: 32 * 1024 * 1024});
-          if (result.status === 0) {
-            const path = resolve(directory, relative);
-            if (!path.startsWith(directory + '/')) throw new Error('Comparison path escapes temporary directory');
-            mkdirSync(dirname(path), {recursive: true});
-            writeFileSync(path, result.stdout);
-            if (file.endsWith('lock') || file.endsWith('lockb') || file === 'package-lock.json') found = true;
-          }
-        }
-        if (found) roots.push(root);
-      }
+      const roots = comparisonPackages(base, directory, policy.packageRoots);
       mkdirSync(join(directory, '.security'));
       writeFileSync(join(directory, '.security/policy.json'), JSON.stringify({...policy, packageRoots: roots}));
       previousKeys = advisoryKeys((await check(directory)).audits);
