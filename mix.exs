@@ -66,7 +66,7 @@ defmodule Onestack.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"},
-      {:ecto_sqlite3_extras, "~> 1.2.0"},
+      {:ecto_sqlite3_extras, "~> 1.2.2"},
       {:money, "~> 1.12"},
       {:httpoison, "~> 2.0"},
       {:stripity_stripe,
