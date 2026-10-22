@@ -97,7 +97,7 @@ def execute(config, state, dry_run=False):
         session = subprocess.run([config['node'], str(wrangler), 'whoami'], capture_output=True, timeout=90)
         if session.returncode:
             raise RuntimeError('Supported Cloudflare session refresh failed')
-        provider_report = providers.scan(state)
+        provider_report = providers.scan(state, config.get('cloudflareBuildsCredentialRefs'))
     except Exception as error:
         provider_report = {'checkedAt':now(), 'state':'unknown', 'errorType':type(error).__name__}
         atomic(state / 'providers.json', provider_report)

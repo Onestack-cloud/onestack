@@ -25,6 +25,15 @@ meaningful changes and required actions without repeating unchanged findings.
 Mac and provider checks remain unavailable while the Mac is asleep; their
 timestamps must be checked before relying on them.
 
+The existing Wrangler OAuth session currently receives HTTP 403 from Workers
+Builds for RunBuddy and Usual Suspects. Those checks remain unknown. A Builds
+read token can be supplied through existing Infisical storage: the private Mac
+`bot-policy.json` accepts `cloudflareBuildsCredentialRefs`, mapping account IDs
+to `projectId`, `environment`, `path` and `secretName`. These are references,
+never token values. The adapter fetches only that named secret in memory and
+uses it only for Builds reads. It never creates a token or broadens a login's
+permissions. The Mac installer preserves these references when refreshed.
+
 ## Install and verify
 
 Use a reviewed checkout and the existing `onestack-admin` route:

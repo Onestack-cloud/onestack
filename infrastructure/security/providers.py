@@ -70,10 +70,23 @@ def cloudflare_pages():
             for env,value in result['result']['deployment_configs'].items()]
 
 
-def cloudflare_builds():
+def cloudflare_builds(credential_refs=None):
     headers={'Authorization':'Bearer '+cloudflare_token()}
+    tokens={}
     def get(account,path):
-        result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,headers)
+        auth=headers
+        reference=(credential_refs or {}).get(account)
+        if path.startswith('/builds/') and reference:
+            if account not in tokens:
+                if not re.fullmatch('[a-f0-9-]{36}',reference['projectId']) or not re.fullmatch('[A-Za-z0-9_]+',reference['secretName']) or not re.fullmatch('/[A-Za-z0-9_/-]*',reference['path']):
+                    raise ValueError('Invalid credential reference')
+                p=subprocess.run(['infisical','secrets','get',reference['secretName'],'--plain','--projectId',reference['projectId'],
+                                  '--env',reference['environment'],'--path',reference['path'],'--domain','https://infisical.onestack.cloud/api','--silent'],capture_output=True,text=True,timeout=40)
+                token=p.stdout.strip()
+                if p.returncode or len(token)<20 or '\n' in token:raise RuntimeError('Existing Builds credential unavailable')
+                tokens[account]=token
+            auth={'Authorization':'Bearer '+tokens[account]}
+        result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,auth)
         if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
         return result['result']
     rows=[]
@@ -103,10 +116,10 @@ def runner():
             'owner':'Nomad CI controller; preserve self-update exclusion and check GitHub enforcement deadline'}
 
 
-def scan(output):
+def scan(output,credential_refs=None):
     rows=[];floors=floors_for(fetch(NODE_FEED));schedule=fetch(SCHEDULE);date=now()[:10]
     for name,operation in [('Azure Financial Engine',azure),('Cloudflare Pages settings',cloudflare_pages),
-                           ('Cloudflare Workers Builds settings',cloudflare_builds),('RunBuddy runner release',runner)]:
+                           ('Cloudflare Workers Builds settings',lambda:cloudflare_builds(credential_refs)),('RunBuddy runner release',runner)]:
         try:
             result=operation();rows.extend(result if isinstance(result,list) else [result])
         except Exception as error:

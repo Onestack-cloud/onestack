@@ -33,6 +33,8 @@ if __name__ == '__main__':
               'repositories': json.loads((HERE/'estate.json').read_text())['repositories'],
               'automaticMaintenanceRuntime': False}
     path = base/'bot-policy.json'
+    if path.exists():
+        config['cloudflareBuildsCredentialRefs']=json.loads(path.read_text()).get('cloudflareBuildsCredentialRefs',{})
     path.write_text(json.dumps(config, indent=2)+'\n');path.chmod(0o600)
     subprocess.run(['/usr/bin/python3', str(base/'run-bot.py'), '--config', str(path), '--state', str(state/'bot'), '--qualify-runtime-recovery'], env=environment, check=True)
     config['automaticMaintenanceRuntime']=True
