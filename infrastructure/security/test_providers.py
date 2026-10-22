@@ -4,7 +4,65 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from providers import ACCOUNT, browser_build, cloudflare_builds
+from providers import ACCOUNT, azure, azure_native_ssh, browser_build, cloudflare_builds
+
+
+class AzureRuntimeCoverageTests(unittest.TestCase):
+    def test_ssh_loader_follows_the_installed_cli_launcher_symlink(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            launcher=root/'libexec/bin/az';launcher.parent.mkdir(parents=True);launcher.write_text('synthetic launcher')
+            library=root/'libexec/lib/python3.14/site-packages'
+            module=library/'azure/cli/__main__.py';module.parent.mkdir(parents=True);module.write_text('')
+            link=root/'bin/az';link.parent.mkdir();link.symlink_to(launcher)
+            def which(name):return {'az':str(link),'python3.14':'/synthetic/python3.14'}.get(name)
+            with patch('providers.shutil.which',side_effect=which),patch('providers.subprocess.run') as run:
+                run.return_value.returncode=0
+                azure_native_ssh()
+            self.assertEqual(run.call_args.args[0][0],'/synthetic/python3.14')
+            self.assertEqual(run.call_args.kwargs['env']['PYTHONPATH'],str(library.resolve()))
+
+    def probe(self, *, execute_available=True, fallback_error=None, stale=False, processes=True):
+        def cli(args):
+            if args[1:4]==['webapp','config','show']:
+                return {'appCommandLine':'/home/site/wwwroot/.runtime/node --no-maglev-osr /home/site/wwwroot/server.js',
+                        'linuxFxVersion':'NODE|24-lts'}
+            if args[1:3]==['webapp','exec']:
+                if not execute_available:raise RuntimeError('Synthetic unavailable API')
+                return []
+            if args[1:3]==['account','get-access-token']:
+                return {'accessToken':'synthetic-provider-token'}
+            self.fail('Unexpected CLI operation')
+        timestamp=dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=1 if stale else 0)
+        receipt={'checkedAt':timestamp.isoformat(),'packaged':'24.22.1','sourceCommit':'a'*40,
+                 'processes':[{'pid':7,'node':'24.22.1'}] if processes else []}
+        with patch('providers.cli',side_effect=cli),patch('providers.request',return_value=receipt),\
+             patch('providers.azure_native_ssh',side_effect=fallback_error) as fallback,\
+             patch('providers.time.sleep'):
+            result=azure()
+        return result,fallback
+
+    def test_native_execute_success_does_not_require_ssh(self):
+        result,fallback=self.probe()
+        self.assertEqual(result['verificationSource'],'Azure execute API')
+        self.assertEqual(result['processes'],[{'pid':7,'node':'24.22.1'}])
+        fallback.assert_not_called()
+
+    def test_unavailable_execute_api_uses_same_fresh_app_container_receipt(self):
+        result,fallback=self.probe(execute_available=False)
+        self.assertEqual(result['verificationSource'],'Azure CLI authenticated app SSH')
+        self.assertEqual(result['state'],'checked')
+        self.assertEqual(result['executeApiState'],'unavailable')
+        self.assertNotIn('synthetic-provider-token',json.dumps(result))
+        fallback.assert_called_once_with()
+
+    def test_failed_ssh_cannot_become_checked_coverage(self):
+        with self.assertRaises(RuntimeError):
+            self.probe(execute_available=False,fallback_error=RuntimeError('Synthetic failed SSH'))
+
+    def test_stale_or_empty_process_receipts_cannot_become_checked_coverage(self):
+        for values in [{'stale':True},{'processes':False}]:
+            with self.assertRaises(ValueError):self.probe(execute_available=False,**values)
 
 
 class BuildsAPICredentialTests(unittest.TestCase):

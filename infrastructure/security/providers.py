@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Read-only provider drift and live runtime evidence using existing local logins."""
 import json
+import os
+import shutil
 import datetime as dt
 from pathlib import Path
 import re
@@ -10,6 +12,7 @@ import time
 import urllib.request
 from monitor import atomic, assess, floors_for, fetch, now, NODE_FEED, SCHEDULE
 from deploy import guest_execute
+from azure_runtime import PROBE as AZURE_RUNTIME_PROBE
 
 ACCOUNT='663b85e4f509df63c1735f6e77db4370'
 
@@ -25,6 +28,23 @@ def request(url, headers, data=None):
     with urllib.request.urlopen(req,timeout=60) as response:return json.load(response)
 
 
+def azure_native_ssh():
+    executable=shutil.which('az')
+    if not executable:raise RuntimeError('Existing Azure CLI unavailable')
+    roots=list(Path(executable).resolve().parents)[:3]
+    libraries=sorted({path.resolve() for root in roots
+                      for path in (root/'libexec/lib').glob('python*/site-packages')
+                      if (path/'azure/cli/__main__.py').exists()})
+    if len(libraries)!=1:raise RuntimeError('Azure CLI runtime is ambiguous')
+    match=re.fullmatch(r'python(\d+\.\d+)',libraries[0].parent.name)
+    interpreter=shutil.which('python'+match[1]) if match else None
+    if not interpreter:raise RuntimeError('Azure CLI Python runtime unavailable')
+    environment=dict(os.environ,PYTHONPATH=str(libraries[0]))
+    result=subprocess.run([interpreter,'-s',str(Path(__file__).with_name('azure_runtime.py'))],
+                          env=environment,capture_output=True,text=True,timeout=150)
+    if result.returncode:raise RuntimeError('Azure app SSH runtime probe unavailable')
+
+
 def azure():
     app=['-g','rg-finnance-app-dev','-n','financial-engine']
     settings=cli(['az','webapp','config','show',*app,'-o','json'])
@@ -32,9 +52,13 @@ def azure():
     if settings.get('appCommandLine')!=expected:raise ValueError('Azure startup executable drift')
     # Runs inside the main app container. Returns executable metadata only.
     started=time.time()
-    code="""const fs=require('node:fs'),cp=require('node:child_process');const env={PATH:'/usr/bin:/bin'};const processes=[];for(const pid of fs.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)&&Number(x)!==process.pid)){try{const exe='/proc/'+pid+'/exe';if(fs.readlinkSync(exe).replace(/ \\(deleted\\)$/,'').endsWith('/node')){processes.push({pid:Number(pid),node:cp.execFileSync(exe,['--version'],{env,timeout:5000}).toString().trim().slice(1)})}}catch{}}const packageInfo=JSON.parse(fs.readFileSync('/home/site/wwwroot/.runtime/security.json'));fs.writeFileSync('/home/security-runtime-metadata.json',JSON.stringify({checkedAt:new Date().toISOString(),packaged:process.versions.node,sourceCommit:packageInfo.source_commit,processes}),{mode:0o600});"""
+    code=AZURE_RUNTIME_PROBE
     command=shlex.join(['/home/site/wwwroot/.runtime/node','--no-maglev-osr','-e',code])
-    cli(['az','webapp','exec',*app,'--mode','execute','--command',command,'-o','json'])
+    verification='Azure execute API'
+    try:cli(['az','webapp','exec',*app,'--mode','execute','--command',command,'-o','json'])
+    except RuntimeError:
+        azure_native_ssh()
+        verification='Azure CLI authenticated app SSH'
     auth=cli(['az','account','get-access-token','--resource','https://management.azure.com/','-o','json'])['accessToken']
     url='https://financial-engine.scm.azurewebsites.net/api/vfs/security-runtime-metadata.json'
     # Kudu reads the shared metadata receipt, never a database or app environment.
@@ -51,7 +75,8 @@ def azure():
             time.sleep(2)
     if not result.get('processes') or not re.fullmatch('[a-f0-9]{40}',result.get('sourceCommit','')):
         raise ValueError('Azure live runtime coverage incomplete')
-    return {'target':'Azure Financial Engine','state':'checked','providerMajor':settings['linuxFxVersion'],**result}
+    return {'target':'Azure Financial Engine','state':'checked','providerMajor':settings['linuxFxVersion'],
+            'verificationSource':verification,'executeApiState':'checked' if verification=='Azure execute API' else 'unavailable',**result}
 
 
 def cloudflare_token():
