@@ -4,19 +4,29 @@ import argparse
 import json
 from pathlib import Path
 import re
-import urllib.request
+import http.client
 
 
-def get(url):
-    with urllib.request.urlopen(url, timeout=40) as response:
-        return response.read(2 * 1024 * 1024).decode()
+def get(path):
+    if not re.fullmatch(r'/dist/(?:index\.json|v\d+\.\d+\.\d+/SHASUMS256\.txt)',path):
+        raise ValueError('Unregistered official Node resource')
+    connection=http.client.HTTPSConnection('nodejs.org',timeout=40)
+    try:
+        connection.request('GET',path,headers={'User-Agent':'Onestack-Security/1'})
+        response=connection.getresponse()
+        data=response.read(2*1024*1024+1)
+        if response.status!=200 or len(data)>2*1024*1024:
+            raise ValueError('Official Node resource unavailable or incomplete')
+        return data.decode()
+    finally:
+        connection.close()
 
 
 def checksum(version, artifact):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version) or artifact != 'linux-x64.tar.xz':
         raise ValueError('Unregistered Node download format')
     name = 'node-v' + version + '-' + artifact
-    found = [line.split()[0] for line in get('https://nodejs.org/dist/v' + version + '/SHASUMS256.txt').splitlines()
+    found = [line.split()[0] for line in get('/dist/v' + version + '/SHASUMS256.txt').splitlines()
              if line.split()[-1] == name]
     if len(found) != 1 or not re.fullmatch(r'[a-f0-9]{64}', found[0]):
         raise ValueError('Official Node checksum incomplete')
@@ -31,7 +41,7 @@ def inspect(root, prepare=False):
     manifest = root / '.security/node-downloads.json'
     if not manifest.exists():
         return {'state': 'checked', 'downloads': [], 'changed': []}
-    releases = json.loads(get('https://nodejs.org/dist/index.json'))
+    releases = json.loads(get('/dist/index.json'))
     floors = {'22':'22.23.4', '24':'24.22.1', '26':'26.12.1'}
     for release in releases:
         if not isinstance(release.get('security'), bool):
