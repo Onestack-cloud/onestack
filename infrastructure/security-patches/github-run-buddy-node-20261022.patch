@@ -1,0 +1,11 @@
+--- a/infrastructure/nomad/ci-vps/github-run-buddy.nomad.hcl
++++ b/infrastructure/nomad/ci-vps/github-run-buddy.nomad.hcl
+@@ -44,7 +44,7 @@
+         read_only = false
+       }
+       config {
+-        image = "sha256:fe1b881b660f6cbb65f636ceb69a398eaf495f158a94cf3763dc9e95ba02454c"
++        image = "sha256:49e23a44a344cfe88872c182bbf662df04825409fff31667d4947808b93ca47a"
+         force_pull = false
+         entrypoint = ["/usr/bin/flock", "--no-fork", "/runner/.nomad-owner.lock", "/usr/local/bin/github-runner-entrypoint"]
+         network_mode = "github-actions-runner_default"

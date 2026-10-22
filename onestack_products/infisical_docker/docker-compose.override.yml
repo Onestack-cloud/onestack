@@ -1,0 +1,8 @@
+# Verified Node security runtime images, 22 October 2026.
+# Retain these local images on the VPS; see infrastructure/node-security-20261022.md.
+services:
+  infisical:
+    image: local/onestack-node-security:infisical-backend-full-20261022
+    pull_policy: never
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
