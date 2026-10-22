@@ -4,7 +4,46 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from providers import ACCOUNT, azure, azure_native_ssh, browser_build, cloudflare_builds
+from providers import ACCOUNT, azure, azure_native_ssh, browser_build, cloudflare_builds, cloudflare_token, refresh_cloudflare_oauth
+
+
+class PagesOAuthCoverageTests(unittest.TestCase):
+    def test_only_a_current_token_is_read_after_noninteractive_session_refresh(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home=Path(directory);path=home/'.wrangler/config/default.toml';path.parent.mkdir(parents=True)
+            path.write_text('oauth_token = "synthetic-old-token"\nexpiration_time = "2025-01-01T00:00:00Z"\n')
+            def refreshed():
+                expiry=(dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=1)).isoformat()
+                path.write_text('oauth_token = "synthetic-refreshed-token"\nexpiration_time = "'+expiry+'"\n')
+            with patch('providers.Path.home',return_value=home),patch('providers.refresh_cloudflare_oauth',side_effect=refreshed) as refresh:
+                self.assertEqual(cloudflare_token(),'synthetic-refreshed-token')
+                refresh.assert_called_once_with()
+
+    def test_failed_refresh_or_still_expired_tokens_cannot_become_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home=Path(directory);path=home/'.wrangler/config/default.toml';path.parent.mkdir(parents=True)
+            path.write_text('oauth_token = "synthetic-expired-token"\nexpiration_time = "2025-01-01T00:00:00Z"\n')
+            with patch('providers.Path.home',return_value=home):
+                for error in [None,RuntimeError('Synthetic refresh failure')]:
+                    with patch('providers.refresh_cloudflare_oauth',side_effect=error):
+                        with self.assertRaises(RuntimeError):cloudflare_token()
+
+    def test_refresh_uses_pinned_readonly_wrangler_without_interactive_or_api_token_auth(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home=Path(directory);base=home/'.local/share/security-maintenance'
+            wrangler=base/'bot/node_modules/wrangler/bin/wrangler.js';wrangler.parent.mkdir(parents=True);wrangler.write_text('')
+            node=base/'synthetic-node';node.write_text('')
+            (base/'bot-policy.json').write_text(json.dumps({'node':str(node)}))
+            with patch('providers.Path.home',return_value=home),patch('providers.subprocess.run') as run,\
+                 patch.dict('providers.os.environ',{'CLOUDFLARE_API_TOKEN':'synthetic-unrelated-token'}):
+                run.return_value.returncode=0
+                refresh_cloudflare_oauth()
+            command=run.call_args.args[0]
+            self.assertEqual(command,[str(node),str(wrangler),'whoami','--json','--account',ACCOUNT])
+            environment=run.call_args.kwargs['env']
+            self.assertEqual(environment['CI'],'true')
+            self.assertEqual(environment['BROWSER'],'none')
+            self.assertNotIn('CLOUDFLARE_API_TOKEN',environment)
 
 
 class AzureRuntimeCoverageTests(unittest.TestCase):

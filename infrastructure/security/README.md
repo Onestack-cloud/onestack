@@ -33,6 +33,12 @@ data. Both paths require a fresh receipt with actual running Node executables an
 a source commit. A failed tunnel, stale receipt or empty process inventory remains
 unknown coverage. The installed CLI and its matching Python runtime must be available.
 
+Pages settings use the existing Wrangler OAuth session. Before reading it, the
+pinned maintenance Wrangler runs a read-only, non-interactive account check that
+refreshes the existing session when needed. It never opens a login, creates a
+credential or changes scopes. Failed refreshes and expired token files remain
+unknown coverage. Workers Builds continue to use their dedicated read token.
+
 A configured Builds read token is the primary route for RunBuddy and Usual
 Suspects. Without that credential, the existing Wrangler OAuth session receives
 HTTP 403 from Builds. Only when direct API coverage fails may fresh, exact
