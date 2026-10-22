@@ -17,6 +17,9 @@ import importlib.util
 spec = importlib.util.spec_from_file_location('prepare_pins', Path(__file__).with_name('prepare-pins.py'))
 pin_preparation = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pin_preparation)
+spec = importlib.util.spec_from_file_location('source_monitor', Path(__file__).with_name('source-monitor.py'))
+source_monitor = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(source_monitor)
 from monitor import fetch, floors_for, assess, NODE_FEED, SCHEDULE
 
 
@@ -98,6 +101,7 @@ def execute(config, state, dry_run=False):
     except Exception as error:
         provider_report = {'checkedAt':now(), 'state':'unknown', 'errorType':type(error).__name__}
         atomic(state / 'providers.json', provider_report)
+    source_report = source_monitor.scan(config['repositories'], state)
     rows = []
     for profile in ['github', 'wcs', 'gitlab']:
         env = {key: value for key, value in os.environ.items() if key in ['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SSH_AUTH_SOCK']}
@@ -137,8 +141,9 @@ def execute(config, state, dry_run=False):
     report = {'checkedAt': dt.datetime.now(dt.timezone.utc).isoformat(), 'runs': rows,
               'tooling': tooling,
               'providers': provider_report,
-              'state': 'unknown' if provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 for x in rows) else 'awaiting repository configuration'
-                       if any(x.get('pendingRepositoryConfigs') for x in rows) else 'ran',
+              'sources': source_report,
+              'state': 'unknown' if source_report['state']=='unknown' or provider_report['state']=='unknown' or any(x.get('exit', 1) != 0 for x in rows) else 'awaiting repository configuration'
+                       if any(x.get('pendingRepositoryConfigs') for x in rows) else 'affected' if source_report['state']=='affected' or provider_report['state']=='affected' else 'ran',
               'note': 'Update PR activity is separate from a verified production patch'}
     (state / 'status.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report))
