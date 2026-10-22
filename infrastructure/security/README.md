@@ -85,6 +85,11 @@ an overdue review or another high/critical advisory blocks the bot.
 
 ## Bespoke downloads and candidates
 
+Cloudflare Workers Builds can also be checked through the signed-in Brave
+session by the existing hourly Codex heartbeat. See [browser-builds.md](browser-builds.md).
+The native check accepts only exact observations from the last two hours and
+retains the API failure metadata. Missing or stale browser evidence is unknown.
+
 `.security/node-downloads.json` registers the Azure and custom CI Node downloads.
 `runtime-pins.py` validates each version and SHA-256 against the official Node
 manifest in CI. Related CI, developer and engine pins are registered in

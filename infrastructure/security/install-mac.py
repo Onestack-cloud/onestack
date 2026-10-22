@@ -19,7 +19,7 @@ if __name__ == '__main__':
     state = Path.home() / '.local/state/security-maintenance'
     base.mkdir(mode=0o700, parents=True, exist_ok=True)
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
-    for name in ['monitor.py', 'runtime_updater.py', 'run-bot.py', 'mac-policy.json', 'prepare-pins.py', 'runtime-pins.py', 'providers.py', 'source-monitor.py', 'deploy.py']:
+    for name in ['monitor.py', 'runtime_updater.py', 'run-bot.py', 'mac-policy.json', 'prepare-pins.py', 'runtime-pins.py', 'providers.py', 'source-monitor.py', 'deploy.py', 'browser-builds.md']:
         shutil.copyfile(HERE / name, base / name)
     shutil.copytree(HERE / 'bot', base / 'bot', dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns('node_modules'))

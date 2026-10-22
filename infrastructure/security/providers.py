@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only provider drift and live runtime evidence using existing local logins."""
 import json
+import datetime as dt
 from pathlib import Path
 import re
 import shlex
@@ -71,7 +72,20 @@ def cloudflare_pages():
             for env,value in result['result']['deployment_configs'].items()]
 
 
-def cloudflare_builds(credential_refs=None):
+def browser_build(receipt_path, account, script, owner):
+    receipt=json.loads(Path(receipt_path).read_text())
+    age=time.time()-dt.datetime.fromisoformat(receipt['checkedAt']).timestamp()
+    expected='https://dash.cloudflare.com/'+account+'/workers/services/view/'+script+'/production/settings'
+    if (age < -300 or age > 7200 or receipt['source']!='Cloudflare dashboard via Brave' or
+        receipt['account']!=account):raise ValueError('Browser verification is stale or incomplete')
+    rows=[row for row in receipt['targets'] if row['worker']==script and row['url']==expected]
+    if len(rows)!=1 or not re.fullmatch(r'\d+\.\d+\.\d+',rows[0]['node']):
+        raise ValueError('Browser build runtime unavailable')
+    return {'target':'Cloudflare Workers Builds '+owner,'state':'checked','node':rows[0]['node'],
+            'checkedAt':receipt['checkedAt'],'verificationSource':receipt['source']}
+
+
+def cloudflare_builds(credential_refs=None, browser_receipt=None):
     headers={'Authorization':'Bearer '+cloudflare_token()}
     tokens={}
     def get(account,path):
@@ -102,7 +116,12 @@ def cloudflare_builds(credential_refs=None):
                 rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'checked',
                              'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value')})
         except Exception as error:
-            rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'unknown','errorType':type(error).__name__,'httpStatus':getattr(error,'code',None)})
+            failure={'target':'Cloudflare Workers Builds '+owner,'state':'unknown','errorType':type(error).__name__,'httpStatus':getattr(error,'code',None)}
+            try:
+                if browser_receipt is None:raise ValueError('No current browser verification')
+                verified=browser_build(browser_receipt,account,script,owner)
+                verified['apiCoverage']=failure;rows.append(verified)
+            except (OSError,ValueError,KeyError,TypeError):rows.append(failure)
     return rows
 
 
@@ -112,7 +131,7 @@ def runner():
     match=re.fullmatch(r'actions-runner-linux-x64-(\d+\.\d+\.\d+)\.tar\.gz',filename)
     if not match:raise ValueError('Runner version unavailable')
     offered=match[1]
-    code='''import subprocess,json,re
+    code=r'''import subprocess,json,re
 rows=[]
 containers=subprocess.run(['docker','ps','--format','{{.ID}} {{.Names}}'],capture_output=True,text=True,check=True)
 for line in containers.stdout.splitlines():
@@ -137,7 +156,7 @@ print(json.dumps(rows))
 def scan(output,credential_refs=None):
     rows=[];floors=floors_for(fetch(NODE_FEED));schedule=fetch(SCHEDULE);date=now()[:10]
     for name,operation in [('Azure Financial Engine',azure),('Cloudflare Pages settings',cloudflare_pages),
-                           ('Cloudflare Workers Builds settings',lambda:cloudflare_builds(credential_refs)),('RunBuddy runner release',runner)]:
+                           ('Cloudflare Workers Builds settings',lambda:cloudflare_builds(credential_refs,output/'builds-browser.json')),('RunBuddy runner release',runner)]:
         try:
             result=operation();rows.extend(result if isinstance(result,list) else [result])
         except Exception as error:

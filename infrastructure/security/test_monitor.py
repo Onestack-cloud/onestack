@@ -6,10 +6,16 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
-from monitor import assess, floors_for, health, atomic, availability_scan, cached_image
+from monitor import assess, floors_for, health, atomic, availability_scan, cached_image, unreadable_layer_export
 
 
 class SecurityMonitorTests(unittest.TestCase):
+    def test_export_fallback_is_limited_to_observed_docker_archive_defects(self):
+        self.assertTrue(unreadable_layer_export('archive/tar: invalid tar header'))
+        self.assertTrue(unreadable_layer_export('docker: unable to provide image from tarball: file blobs/sha256/'+'a'*64+' not found in tar'))
+        for error in ['permission denied','image not found','database invalid','connection refused']:
+            self.assertFalse(unreadable_layer_export(error))
+
     def test_flattened_cache_requires_exact_derivation_and_untampered_report(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'image.json'

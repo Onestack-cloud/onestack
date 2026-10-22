@@ -288,7 +288,7 @@ def image_scan(config, output):
                     p = subprocess.run([config['grype'], 'docker:' + digest, '-o', 'json'], stdout=stream, env=environment,
                                        stderr=subprocess.PIPE, text=True, timeout=config.get('imageTimeoutSeconds',1200))
                 if p.returncode:
-                    if 'archive/tar: invalid tar header' not in p.stderr:
+                    if not unreadable_layer_export(p.stderr):
                         raise RuntimeError('Image scan failed')
                     flattened_scan(docker,digest,config,output,target,environment)
                 raw = json.loads(target.read_text())
@@ -306,6 +306,11 @@ def image_scan(config, output):
         report['errors'].append('No running images were observed')
     report['state'] = 'unknown' if report['errors'] else 'affected' if report['findings'] else 'checked'
     return report
+
+
+def unreadable_layer_export(error):
+    return ('archive/tar: invalid tar header' in error or
+            re.search(r'unable to provide image from tarball: file blobs/sha256/[a-f0-9]{64} not found in tar',error) is not None)
 
 
 def cached_image(path, digest, database, scanner):
