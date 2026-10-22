@@ -24,6 +24,8 @@ def prepare(repository, profile, env):
     with tempfile.TemporaryDirectory(prefix='node-download-pins-') as temporary:
         root=Path(temporary)/'source'
         run([cli,'repo','clone',repo,str(root),'--','--single-branch','--branch','main'],env)
+        if not (root/'.security/node-downloads.json').is_file():
+            return {'state':'awaiting repository configuration','repository':repo}
         report=pins.inspect(root,prepare=True)
         if not report['changed']:return {'state':'current','repository':repo}
         versions=[]

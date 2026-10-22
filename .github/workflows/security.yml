@@ -16,10 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
+      # The legacy priv/lucide gitlink has no .gitmodules entry. Native Git
+      # avoids checkout's unrelated submodule auth cleanup without storing a token.
+      - name: Fetch the exact source revision without submodule recursion
+        env:
+          SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          header=$(printf 'x-access-token:%s' "$SOURCE_TOKEN" | base64 -w0)
+          git -c credential.helper= -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $header" fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*' "$GITHUB_SHA"
+          unset header SOURCE_TOKEN
+          git checkout --detach "$GITHUB_SHA"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24.22.1
