@@ -86,14 +86,15 @@ def browser_build(receipt_path, account, script, owner):
 
 
 def cloudflare_builds(credential_refs=None, browser_receipt=None):
-    headers={'Authorization':'Bearer '+cloudflare_token()}
     tokens={}
     def get(account,path):
-        auth=headers
         reference=(credential_refs or {}).get(account)
-        if path.startswith('/builds/') and reference:
+        if reference:
             if account not in tokens:
-                if not re.fullmatch('[a-f0-9-]{36}',reference['projectId']) or not re.fullmatch('[A-Za-z0-9_]+',reference['secretName']) or not re.fullmatch('/[A-Za-z0-9_/-]*',reference['path']):
+                if (not re.fullmatch('[a-f0-9-]{36}',reference['projectId']) or
+                    not re.fullmatch('[A-Za-z0-9_]+',reference['secretName']) or
+                    not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*',reference['environment']) or
+                    not re.fullmatch('/[A-Za-z0-9_/-]*',reference['path'])):
                     raise ValueError('Invalid credential reference')
                 p=subprocess.run(['infisical','secrets','get',reference['secretName'],'--plain','--projectId',reference['projectId'],
                                   '--env',reference['environment'],'--path',reference['path'],'--domain','https://infisical.onestack.cloud/api','--silent'],capture_output=True,text=True,timeout=40)
@@ -101,6 +102,8 @@ def cloudflare_builds(credential_refs=None, browser_receipt=None):
                 if p.returncode or len(token)<20 or '\n' in token:raise RuntimeError('Existing Builds credential unavailable')
                 tokens[account]=token
             auth={'Authorization':'Bearer '+tokens[account]}
+        else:
+            auth={'Authorization':'Bearer '+cloudflare_token()}
         result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,auth)
         if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
         return result['result']
@@ -114,7 +117,8 @@ def cloudflare_builds(credential_refs=None, browser_receipt=None):
             for trigger in triggers:
                 variables=get(account,'/builds/triggers/'+trigger['trigger_uuid']+'/environment_variables')
                 rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'checked',
-                             'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value')})
+                             'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value'),
+                             'checkedAt':now(),'verificationSource':'Cloudflare Builds API'})
         except Exception as error:
             failure={'target':'Cloudflare Workers Builds '+owner,'state':'unknown','errorType':type(error).__name__,'httpStatus':getattr(error,'code',None)}
             try:
@@ -177,4 +181,6 @@ def scan(output,credential_refs=None):
 if __name__=='__main__':
     import argparse
     parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
-    print(json.dumps(scan(args.output)))
+    config=Path.home()/'.local/share/security-maintenance/bot-policy.json'
+    references=json.loads(config.read_text()).get('cloudflareBuildsCredentialRefs') if config.exists() else None
+    print(json.dumps(scan(args.output,references)))
