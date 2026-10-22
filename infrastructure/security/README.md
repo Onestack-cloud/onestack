@@ -25,6 +25,14 @@ meaningful changes and required actions without repeating unchanged findings.
 Mac and provider checks remain unavailable while the Mac is asleep; their
 timestamps must be checked before relying on them.
 
+Azure runtime checks first use the app execute API. If that endpoint is unavailable,
+the installed Azure CLI's authenticated SSH tunnel runs the same fixed metadata-only
+probe in the app container. The fallback reuses the existing account and transport
+defaults in memory, creates no credentials and reads no app environment or business
+data. Both paths require a fresh receipt with actual running Node executables and
+a source commit. A failed tunnel, stale receipt or empty process inventory remains
+unknown coverage. The installed CLI and its matching Python runtime must be available.
+
 A configured Builds read token is the primary route for RunBuddy and Usual
 Suspects. Without that credential, the existing Wrangler OAuth session receives
 HTTP 403 from Builds. Only when direct API coverage fails may fresh, exact
