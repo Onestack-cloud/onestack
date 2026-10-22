@@ -79,12 +79,31 @@ def azure():
             'verificationSource':verification,'executeApiState':'checked' if verification=='Azure execute API' else 'unavailable',**result}
 
 
+def refresh_cloudflare_oauth():
+    base=Path.home()/'.local/share/security-maintenance'
+    config=json.loads((base/'bot-policy.json').read_text())
+    wrangler=base/'bot/node_modules/wrangler/bin/wrangler.js'
+    if not wrangler.is_file() or not Path(config['node']).is_file():
+        raise RuntimeError('Pinned Wrangler session checker unavailable')
+    environment={key:value for key,value in os.environ.items() if key not in
+                 ('CLOUDFLARE_API_TOKEN','CLOUDFLARE_API_KEY','CLOUDFLARE_EMAIL','CF_API_TOKEN','CF_API_KEY','CF_EMAIL')}
+    environment.update({'CI':'true','BROWSER':'none','WRANGLER_SEND_METRICS':'false'})
+    result=subprocess.run([config['node'],str(wrangler),'whoami','--json','--account',ACCOUNT],
+                          cwd=base,env=environment,capture_output=True,text=True,timeout=90)
+    if result.returncode:raise RuntimeError('Existing Cloudflare OAuth session unavailable')
+
+
 def cloudflare_token():
-    # Existing Wrangler OAuth remains local. Never copy it into the source or VPS.
+    # Wrangler refreshes its existing session without opening a login or creating credentials.
+    refresh_cloudflare_oauth()
     for path in [Path.home()/'.wrangler/config/default.toml',Path.home()/'Library/Preferences/.wrangler/config/default.toml']:
         if path.exists():
-            match=re.search(r'^oauth_token\s*=\s*"([^\"]+)"',path.read_text(),re.M)
-            if match:return match[1]
+            source=path.read_text()
+            match=re.search(r'^oauth_token\s*=\s*"([^\"]+)"',source,re.M)
+            expiry=re.search(r'^expiration_time\s*=\s*"([^\"]+)"',source,re.M)
+            if match and expiry:
+                stamp=dt.datetime.fromisoformat(expiry[1].replace('Z','+00:00')).timestamp()
+                if stamp>time.time()+30:return match[1]
     raise RuntimeError('Existing Cloudflare login unavailable')
 
 
