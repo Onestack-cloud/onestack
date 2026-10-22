@@ -284,5 +284,6 @@
     "infisical-backend": "sha256:8d02e8217e4c0e49b75901884e3aa967555ff7368f192f30f89db2b2c72fb323",
     "formbricks_docker-formbricks-1": "sha256:8353c9e3349b3bf7b761fd3c4dd14d539106dd7e0274dd371e9ce09d17e5a8e4",
     "formbricks_docker-cube-1": "sha256:b08351f57b0042de93014f01ada9a24a42085a4c76d345e116b9fdf636572ca2"
-  }
+  },
+  "imageTimeoutSeconds": 2400
 }

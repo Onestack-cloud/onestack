@@ -42,6 +42,8 @@ def payload(guest=None, scan=False, images=False):
              for name in ['monitor.py', 'prepare-images.py', 'install-tools.py', 'tools.json']}
     units = {p.name: p.read_text() for p in (HERE / 'systemd').glob('*')
              if any(p.name.startswith('onestack-security-' + mode + '.') for mode in modes)}
+    if not guest:
+        units['onestack-security-images.service.d/resources.conf']=(HERE/'systemd/root-images-resources.conf').read_text()
     return 'files=' + repr(files) + '\nunits=' + repr(units) + '\npolicy=' + repr(policy) + '\nscan=' + repr(scan) + '\nimages=' + repr(images) + '''
 import base64,hashlib,json,subprocess,sys
 from pathlib import Path
@@ -58,7 +60,8 @@ for tool in ['grype','syft']:
  if not binary.exists():
   subprocess.run([sys.executable,str(base/'install-tools.py'),'--manifest',str(base/'tools.json'),'--destination',str(base/'bin'),'--platform','linux_amd64'],check=True)
   break
-for name,text in units.items(): Path('/etc/systemd/system',name).write_text(text)
+for name,text in units.items():
+ target=Path('/etc/systemd/system',name);target.parent.mkdir(parents=True,exist_ok=True);target.write_text(text)
 subprocess.run(['systemctl','daemon-reload'],check=True)
 timers=[name for name in units if name.endswith('.timer')]
 subprocess.run(['systemctl','enable','--now',*timers],check=True)

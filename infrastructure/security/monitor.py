@@ -266,6 +266,7 @@ def image_scan(config, output):
     if db.get('valid') is not True or (not db.get('built') and not db.get('builtAt')):
         raise ValueError('Scanner database age unavailable')
     report['database'] = db
+    scanner = json.loads(run([config['grype'], 'version', '-o', 'json']))['version']
     seen = set()
     for image in images:
         try:
@@ -275,27 +276,46 @@ def image_scan(config, output):
             seen.add(digest)
             identifier = hashlib.sha256(digest.encode()).hexdigest()[:24]
             target = cache / (identifier + '.json')
-            with target.open('w') as stream:
-                environment = dict(os.environ)
-                if config.get('dockerSocket'):
-                    environment['DOCKER_HOST'] = config['dockerSocket']
-                p = subprocess.run([config['grype'], 'docker:' + digest, '-o', 'json'], stdout=stream, env=environment,
-                                   stderr=subprocess.DEVNULL, timeout=1200)
-            if p.returncode:
-                raise RuntimeError('Image scan failed')
-            raw = json.loads(target.read_text())
+            atomic(output/'images-progress.json', {'checkedAt':now(),'state':'running','completed':len(report['images']),'activeImage':image,'errors':report['errors']})
+            raw = cached_image(target, digest, db, scanner)
+            reused = raw is not None
+            if raw is None:
+                with target.open('w') as stream:
+                    environment = dict(os.environ)
+                    if config.get('dockerSocket'):
+                        environment['DOCKER_HOST'] = config['dockerSocket']
+                    p = subprocess.run([config['grype'], 'docker:' + digest, '-o', 'json'], stdout=stream, env=environment,
+                                       stderr=subprocess.DEVNULL, timeout=config.get('imageTimeoutSeconds',1200))
+                if p.returncode:
+                    raise RuntimeError('Image scan failed')
+                raw = json.loads(target.read_text())
             severe = [{'id': x['vulnerability']['id'], 'severity': x['vulnerability']['severity'],
                        'package': x['artifact']['name'], 'version': x['artifact']['version'],
                        'fix': x['vulnerability'].get('fix', {})}
                       for x in raw['matches'] if x['vulnerability']['severity'].lower() in ['high', 'critical']]
-            report['images'].append({'image': image, 'digest': digest, 'highCritical': len(severe)})
+            report['images'].append({'image': image, 'digest': digest, 'highCritical': len(severe),'reusedExactDatabaseResult':reused})
             report['findings'] += [{**x, 'image': image} for x in severe]
+            del raw
         except Exception:
             report['errors'].append('image scan incomplete: ' + image)
     if not images:
         report['errors'].append('No running images were observed')
     report['state'] = 'unknown' if report['errors'] else 'affected' if report['findings'] else 'checked'
     return report
+
+
+def cached_image(path, digest, database, scanner):
+    try:
+        raw=json.loads(path.read_text())
+        descriptor=raw['descriptor'];status=descriptor['db']['status']
+        if (descriptor['name']=='grype' and descriptor['version']==scanner and
+            status['valid'] is True and status['built']==database['built'] and
+            status['schemaVersion']==database['schemaVersion'] and status['from']==database['from'] and
+            raw['source']['type']=='image' and raw['source']['target']['imageID']==digest and isinstance(raw['matches'],list)):
+            return raw
+    except (OSError,ValueError,KeyError,TypeError):
+        pass
+    return None
 
 
 def availability_scan(config):

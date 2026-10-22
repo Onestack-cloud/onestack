@@ -5,10 +5,20 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
-from monitor import assess, floors_for, health, atomic, availability_scan
+from monitor import assess, floors_for, health, atomic, availability_scan, cached_image
 
 
 class SecurityMonitorTests(unittest.TestCase):
+    def test_cached_image_requires_same_digest_scanner_and_valid_exact_database(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'image.json';db={'built':'2026-10-22T06:00:00Z','schemaVersion':'v6','from':'https://publisher.example/db?checksum=known','valid':True}
+            raw={'descriptor':{'name':'grype','version':'1.0','db':{'status':db}},'source':{'type':'image','target':{'imageID':'sha256:approved'}},'matches':[]}
+            path.write_text(json.dumps(raw))
+            self.assertIsNotNone(cached_image(path,'sha256:approved',db,'1.0'))
+            self.assertIsNone(cached_image(path,'sha256:changed',db,'1.0'))
+            self.assertIsNone(cached_image(path,'sha256:approved',{**db,'built':'2026-10-23T06:00:00Z'},'1.0'))
+            self.assertIsNone(cached_image(path,'sha256:approved',db,'2.0'))
+            self.assertIsNone(cached_image(path,'sha256:approved',{**db,'from':'https://publisher.example/db?checksum=changed'},'1.0'))
     def test_expected_authentication_denial_is_a_passing_access_control(self):
         with patch('monitor.urllib.request.urlopen', side_effect=urllib.error.HTTPError('https://example.test',401,'Denied',{},None)):
             result=availability_scan({'publicChecks':[{'url':'https://example.test','expected':401}]})
