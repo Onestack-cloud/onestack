@@ -24,6 +24,11 @@ def prepare(repository, profile, env):
     with tempfile.TemporaryDirectory(prefix='node-download-pins-') as temporary:
         root=Path(temporary)/'source'
         run([cli,'repo','clone',repo,str(root),'--','--single-branch','--branch','main'],env)
+        configured=subprocess.run(['git','config','--path','--get','core.hooksPath'],cwd=root,env=env,capture_output=True,text=True)
+        hooks=Path(configured.stdout.strip()) if configured.returncode==0 else root/'.git/hooks'
+        if not hooks.is_absolute():hooks=root/hooks
+        if hooks.resolve().is_relative_to(root) and hooks.exists() and any(p.is_file() and not p.name.endswith('.sample') for p in hooks.iterdir()):
+            raise RuntimeError('Repository-controlled Git hooks require review; no hook or required check was bypassed')
         if not (root/'.security/node-downloads.json').is_file():
             return {'state':'awaiting repository configuration','repository':repo}
         report=pins.inspect(root,prepare=True)

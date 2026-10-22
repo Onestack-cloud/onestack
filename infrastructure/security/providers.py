@@ -72,20 +72,23 @@ def cloudflare_pages():
 
 def cloudflare_builds():
     headers={'Authorization':'Bearer '+cloudflare_token()}
-    def get(path):
-        result=request('https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT+path,headers)
+    def get(account,path):
+        result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,headers)
         if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
         return result['result']
     rows=[]
-    scripts=get('/workers/scripts')
-    worker=next(x for x in scripts if x['id']=='r4r-next-js')
-    triggers=get('/builds/workers/'+worker['tag']+'/triggers')
-    if not isinstance(triggers,list):raise ValueError('Build trigger inventory incomplete')
-    if not triggers:raise ValueError('RunBuddy build owner missing')
-    for trigger in triggers:
-        variables=get('/builds/triggers/'+trigger['trigger_uuid']+'/environment_variables')
-        rows.append({'target':'Cloudflare Workers Builds RunBuddy','state':'checked',
-                     'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value')})
+    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),('c60c6c3daaa4fd10a7f1aa3f7301d202','usual-suspects','Usual Suspects')]:
+        try:
+            scripts=get(account,'/workers/scripts')
+            worker=next(x for x in scripts if x['id']==script)
+            triggers=get(account,'/builds/workers/'+worker['tag']+'/triggers')
+            if not isinstance(triggers,list) or not triggers:raise ValueError('Build trigger inventory incomplete')
+            for trigger in triggers:
+                variables=get(account,'/builds/triggers/'+trigger['trigger_uuid']+'/environment_variables')
+                rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'checked',
+                             'trigger':trigger['trigger_uuid'],'node':variables.get('NODE_VERSION',{}).get('value')})
+        except Exception as error:
+            rows.append({'target':'Cloudflare Workers Builds '+owner,'state':'unknown','errorType':type(error).__name__,'httpStatus':getattr(error,'code',None)})
     return rows
 
 

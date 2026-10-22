@@ -14,6 +14,7 @@ from monitor import PROBE, atomic, fetch, floors_for, numeric, now, NODE_FEED
 UNDICI = {'6':'6.29.1', '7':'7.30.1', '8':'8.12.2'}
 ERROR_LOG = None
 SMOKE = "const z=require('node:zlib'),a=require('node:assert/strict');a.equal(z.brotliDecompressSync(z.brotliCompressSync(Buffer.from('candidate'))).toString(),'candidate');console.log(process.versions.node)"
+UNDICI_SMOKE = """const a=require('node:assert/strict'),h=require('node:http'),z=require('node:zlib'),p=require('node:path');const u=require(p.dirname(process.argv[1]));const s=h.createServer((q,r)=>{r.writeHead(200,{'content-encoding':'br'});r.end(z.brotliCompressSync(Buffer.from('isolated-undici-check')))});s.listen(0,'127.0.0.1',async()=>{try{const r=await u.fetch('http://127.0.0.1:'+s.address().port);a.equal(await r.text(),'isolated-undici-check');console.log('passed')}catch{process.exitCode=1}finally{s.close()}});"""
 
 
 def command(args, timeout=60):
@@ -62,7 +63,7 @@ def prepare(config, output):
             receipt = directory/'candidate.json'
             if receipt.exists():
                 prior = json.loads(receipt.read_text())
-                if prior.get('state') == 'candidate verified':
+                if prior.get('state') == 'candidate verified' and prior.get('verificationRevision')==2:
                     existing=subprocess.run(docker+['image','inspect','--format','{{.Id}}',prior['tag']],capture_output=True,text=True,timeout=30)
                     if existing.returncode==0 and existing.stdout.strip()==prior['candidateImage']:
                         rows.append(prior);continue
@@ -114,9 +115,13 @@ def prepare(config, output):
             for item in external:
                 if not any(x['path']==item['path'] and x['version']==UNDICI[item['version'].split('.')[0]] for x in candidate['external']):
                     raise RuntimeError('Candidate standalone Undici verification failed')
+                result=command(docker+['run','--rm','--network','none','--memory','256m','--cpus','0.5',
+                                      '--entrypoint',probe['execPath'],tag,'-e',UNDICI_SMOKE,item['path']])
+                if result!='passed':raise RuntimeError('Candidate standalone Undici HTTP/Brotli check failed')
             row = {'target':name,'state':'candidate verified','baseImage':image,'tag':tag,
                    'candidateImage':command(docker + ['image','inspect','--format','{{.Id}}',tag]),
-                   'node':actual,'external':candidate['external'],'release':'review required; live application untouched'}
+                   'node':actual,'external':candidate['external'],'verificationRevision':2,
+                   'release':'review required; live application untouched'}
             atomic(receipt,row);rows.append(row)
         except Exception as error:
             rows.append({'target':recipe.get('container',recipe.get('image')),'state':'unknown','errorType':type(error).__name__})
