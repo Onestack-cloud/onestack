@@ -1,12 +1,19 @@
 # Cloudflare Builds browser verification
 
-The existing hourly `security-maintenance` Codex heartbeat provides this fallback
-while the native Cloudflare OAuth login cannot read the Builds API. It requires
-the Mac and Codex app to be running and the signed-in Brave Work session.
-VPS scans and repository CI do not depend on this browser session.
+Direct Builds API verification is the primary route. The private Mac
+`bot-policy.json` supplies an Infisical reference for the approved read-only
+user token. API receipts identify `Cloudflare Builds API` as their verification
+source and do not depend on Brave or on a browser receipt. See README.md for
+permissions, secure storage and API-only acceptance.
 
-On each heartbeat, use the supported computer-use tools to confirm that the
-selected browser is Brave and read these exact Cloudflare settings pages:
+Use this fallback only when direct API coverage fails. The existing hourly
+`security-maintenance` Codex heartbeat can then provide time-limited evidence
+while preserving the API failure. This fallback requires the Mac, Codex app
+and existing signed-in Brave Work session. VPS scans and repository CI do not
+depend on that session.
+
+When fallback is needed, use the supported computer-use tools to confirm that
+the selected browser is Brave and read these exact Cloudflare settings pages:
 
 - https://dash.cloudflare.com/663b85e4f509df63c1735f6e77db4370/workers/services/view/r4r-next-js/production/settings
 - https://dash.cloudflare.com/663b85e4f509df63c1735f6e77db4370/workers/services/view/usual-suspects/production/settings
