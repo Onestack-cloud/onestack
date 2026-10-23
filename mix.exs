@@ -76,7 +76,7 @@ defmodule Onestack.MixProject do
       {:myxql, "~> 0.6.0"},
       {:cuid2, "~> 0.0.1"},
       {:uuid, "~> 1.1"},
-      {:hackney, "~> 1.20"},
+      {:hackney, "~> 1.25"},
       {:phoenix_swoosh, "~> 1.0"},
       {:argon2_elixir, "~> 4.0.0"},
       {:sitemap, "~> 1.1"},
