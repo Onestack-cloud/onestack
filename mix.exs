@@ -68,7 +68,7 @@ defmodule Onestack.MixProject do
       {:bandit, "~> 1.2"},
       {:ecto_sqlite3_extras, "~> 1.2.0"},
       {:money, "~> 1.12"},
-      {:httpoison, "~> 2.0"},
+      {:httpoison, "~> 3.0"},
       {:stripity_stripe,
        git: "https://github.com/beam-community/stripity_stripe",
        ref: "017d7ecdb5aeadccc03986c02396791079178ba2"},
@@ -76,7 +76,8 @@ defmodule Onestack.MixProject do
       {:myxql, "~> 0.6.0"},
       {:cuid2, "~> 0.0.1"},
       {:uuid, "~> 1.1"},
-      {:hackney, "~> 1.25"},
+      # Legacy mail adapters pin optional Hackney 1.x; production mail uses Finch.
+      {:hackney, "~> 4.9.1", override: true},
       {:phoenix_swoosh, "~> 1.0"},
       {:argon2_elixir, "~> 4.0.0"},
       {:sitemap, "~> 1.1"},
