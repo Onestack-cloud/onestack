@@ -18,9 +18,14 @@ defmodule Onestack.CatalogMonthlyTest do
     }
 
     test "list_products/0 returns all products" do
+      existing_ids = Enum.map(CatalogMonthly.list_products(), & &1.id)
       product = product_fixture()
-      [listed] = CatalogMonthly.list_products()
-      assert listed.id == product.id
+      products = CatalogMonthly.list_products()
+
+      assert MapSet.new(Enum.map(products, & &1.id)) ==
+               MapSet.new([product.id | existing_ids])
+
+      listed = Enum.find(products, &(&1.id == product.id))
       assert listed.closed_source_name == product.closed_source_name
     end
 
