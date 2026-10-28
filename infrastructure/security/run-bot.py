@@ -125,7 +125,8 @@ def execute(config, state, dry_run=False):
         settings = {'platform': 'gitlab' if profile == 'gitlab' else 'github',
                     'repositories': [x['repository'] for x in group], 'autodiscover': False,
                     'onboarding': False, 'requireConfig': 'required', 'binarySource': 'global',
-                    'allowScripts': False, 'allowPlugins': False, 'allowedCommands': [],
+                    'allowScripts': False, 'allowPlugins': False,
+                    'allowedCommands': [r'^bun install --lockfile-only --ignore-scripts$'],
                     'allowedUnsafeExecutions': [], 'exposeAllEnv': False, 'internalHostAccess': 'block',
                     'baseDir': str(state / profile), 'cacheDir': str(state / (profile + '-cache')),
                     'gitAuthor': 'Security maintenance <security-maintenance@users.noreply.github.com>'}
