@@ -37,3 +37,19 @@ deployment or client acceptance.
 
 Masked qualification evidence is in the WCS operator workspace's
 `outputs/dependency-release-2026-10-26/` directory, including original failures.
+
+## Hub admission, 1 November 2026
+
+The same four-slot queue now also serves `curiousgeorge/digital-nachos-hub`.
+Its hosted runner quota had prevented any job from starting. The existing
+Node 22 pipeline is unchanged. The operator preloaded official Node 22.23.4,
+verified Node and Corepack in a network-disabled, bounded container and
+admitted alias `node:22` at digest
+`sha256:18a6d90fd60542269850c80ca03b29b1d9b14d6b221ac7ee8e35b0d33ef904bd`.
+The alias is registered in the guest security inventory. Preserve every
+resource ceiling, the `never` pull policy and the separate Allbids executor.
+Hub's hosted instance runners are disabled. Manager processes were not restarted.
+
+Native pre-change configuration and policy are retained under
+`/root/hub-ci-repair-2026-11-01/` on the guest. Qualification of Node 26 remains
+separate from this repair of the existing pipeline.
