@@ -48,3 +48,22 @@ test('compares advisory identities across Bun and npm instead of hiding existing
   assert.deepEqual(advisoryKeys([{root:'.', findings:{vite:[{id:1, url:'https://example.test/advisory', severity:'high'}]}}]), ['.:vite:https://example.test/advisory']);
   assert.deepEqual(advisoryKeys([{root:'console', findings:{vulnerabilities:{vite:{severity:'high', via:[{url:'https://example.test/advisory'}, 'esbuild']}}}}]), ['console:vite:esbuild', 'console:vite:https://example.test/advisory']);
 });
+
+test('ignores prereleases in the official feed without weakening stable runtime checks', () => {
+  const releases = [
+    {version:'v27.0.0-alpha.0.0.0', security:false},
+    {version:'v24.23.0-rc.1', security:true},
+    {version:'v28.0.0-nightly.20261029+build.1', security:false},
+    {version:'v24.22.0', security:true},
+    {version:'v24.23.0', security:true},
+  ];
+  assert.deepEqual(securityFloors(floors, releases), {...floors, '24':'24.23.0'});
+  assert.deepEqual(securityFloors(floors, releases.slice(0, 3)), floors);
+  for (const value of ['v27.0.0-alpha.0.0.0', 'v24.23.0-rc.1', 'v27.0.0-', 'v27.0.0-alpha..1', 'not-a-version']) {
+    assert.throws(() => compare(value, '24.22.1'));
+  }
+  for (const value of ['v27.0.0-', 'v27.0.0-alpha..1', 'not-a-version']) {
+    assert.throws(() => securityFloors(floors, [{version:value, security:false}]));
+  }
+  assert.throws(() => securityFloors(floors, [{version:'v27.0.0-alpha.0.0.0', security:undefined as unknown as boolean}]));
+});
