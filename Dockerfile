@@ -21,10 +21,13 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential curl ca-certificates git \
+RUN apt-get update -y && apt-get install -y build-essential curl ca-certificates git xz-utils \
     && apt-get clean && rm -f /var/lib/apt/lists/*_*
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs=22.23.4-1nodesource1
+RUN curl --fail --location --retry 3 -o /tmp/node.tar.xz \
+      https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.xz \
+    && echo 'd28a96af6c38596f6d9d97c0ee531c13d238d757742387d1928de822d959e997  /tmp/node.tar.xz' | sha256sum --check --strict \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm /tmp/node.tar.xz
 
 
 # prepare build dir
