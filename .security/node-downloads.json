@@ -1,0 +1,23 @@
+{
+  "downloads": [
+    {
+      "file": "Dockerfile",
+      "versionPattern": "node-v(\\d+\\.\\d+\\.\\d+)-linux-x64.tar.xz",
+      "checksumPattern": "echo '([a-f0-9]{64})  /tmp/node.tar.xz'",
+      "major": 26,
+      "artifact": "linux-x64.tar.xz"
+    }
+  ],
+  "versionFiles": [
+    {
+      "file": ".github/workflows/security.yml",
+      "versionPattern": "node-version: (\\d+\\.\\d+\\.\\d+)",
+      "major": 26
+    },
+    {
+      "file": ".node-version",
+      "versionPattern": "^(\\d+\\.\\d+\\.\\d+)$",
+      "major": 26
+    }
+  ]
+}

@@ -8,13 +8,29 @@ name: Build and deploy
 on:
   push:
     branches: [main]
+  pull_request:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the complete release image without publication
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: onestack-node26-validation:local
+
   build:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
