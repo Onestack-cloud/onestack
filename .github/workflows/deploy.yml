@@ -29,6 +29,23 @@ jobs:
           push: false
           tags: onestack-node26-validation:local
 
+  node-services:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        service: [ingest, usual-suspects-api]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Node service without publication
+        uses: docker/build-push-action@v6
+        with:
+          context: onestack_products/cloudflare_logs_docker/${{ matrix.service }}
+          push: false
+          tags: node26-${{ matrix.service }}-validation:local
+
   build:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
