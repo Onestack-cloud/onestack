@@ -26,8 +26,9 @@ export function securityFloors(baseline: Record<string, string>, releases: Array
   if (!Array.isArray(releases) || releases.length < 1) throw new Error('Invalid Node release feed');
   const floors = { ...baseline };
   for (const item of releases) {
-    const major = String(version(item.version)[0]);
     if (typeof item.security !== 'boolean') throw new Error('Node release feed has no security status');
+    if (/^v?\d+\.\d+\.\d+-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(item.version)) continue;
+    const major = String(version(item.version)[0]);
     if (item.security && (!floors[major] || compare(item.version, floors[major]) > 0)) floors[major] = item.version.replace(/^v/, '');
   }
   return floors;

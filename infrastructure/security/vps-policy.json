@@ -78,7 +78,9 @@
       "extraImages": [
         "local/usual-suspects-gitlab-ci:v1",
         "local/usual-suspects-gitlab-ci:v2",
-        "local/usual-suspects-gitlab-ci:v3"
+        "local/usual-suspects-gitlab-ci:v3",
+        "node:24",
+        "node:22"
       ],
       "requireScanReports": true,
       "knownContainers": [],
