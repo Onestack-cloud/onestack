@@ -47,7 +47,116 @@
       "profile": "gitlab",
       "releaseOwner": "usual-suspects",
       "automaticPatchReleaseQualified": false,
-      "nodeDownloadPins": true
+      "nodeDownloadPins": true,
+      "temporaryServices": [
+        {
+          "name": "margi-migration-rehearsal-20261102",
+          "workers": [
+            "margi-rehearsal-20261102-app",
+            "margi-rehearsal-20261102-shadow",
+            "margi-rehearsal-20261102-driver",
+            "margi-rehearsal-20261102-admin",
+            "margi-rehearsal-20261102-shadow-admin"
+          ],
+          "accountId": "c60c6c3daaa4fd10a7f1aa3f7301d202",
+          "releaseOwner": "usual-suspects",
+          "reviewAfter": "2026-11-09",
+          "automaticReleaseQualified": false,
+          "source": "GitLab MRs 61 and 62; full rehearsal and authorised account cutover on 3 November 2026 Sydney time",
+          "runtime": {
+            "provider": "Cloudflare-managed workerd",
+            "applicationCompatibilityDate": "2025-12-01",
+            "gatewayCompatibilityDate": "2026-11-02",
+            "buildNode": "26.13.0",
+            "buildBun": "1.4.3"
+          },
+          "probes": [
+            "Verify private app ingress disabled and schedules empty",
+            "Verify authenticated gateways reject anonymous requests and expire on 9 November",
+            "Verify every DB and bucket binding uses the isolated rehearsal prefix",
+            "Run protected synthetic login/session/page/actor checks"
+          ],
+          "verificationCommands": [
+            "bun run test:migration-control",
+            "node --test scripts/migration/admin-gateway.test.mjs"
+          ],
+          "recovery": [
+            "Close only rehearsal admission and retain remote data and digest receipts",
+            "Restore previous private version and verify bindings and private ingress",
+            "The explicit cutover green flag was received; source admission remains closed after the verified production transfer"
+          ],
+          "dataLocation": "Production-derived data remains on the remote host; no credentials or client data in this registry"
+        },
+        {
+          "name": "margi-production-transfer-controls-20261102",
+          "accountId": "c60c6c3daaa4fd10a7f1aa3f7301d202",
+          "workers": [
+            "margi-admin-20261102",
+            "margi-migration-copy-20261102",
+            "margi-migration-driver-20261102"
+          ],
+          "releaseOwner": "usual-suspects",
+          "reviewAfter": "2026-11-09",
+          "automaticReleaseQualified": false,
+          "purpose": "Protected final copy, actor transfer and synthetic production verification; retire public ingress after release verification",
+          "dataLocation": "Remote production resources only; never download client data to the Mac"
+        },
+        {
+          "name": "margi-source-transfer-control-20261102",
+          "accountId": "663b85e4f509df63c1735f6e77db4370",
+          "workers": [
+            "margi-migration-admin-20261102"
+          ],
+          "releaseOwner": "usual-suspects",
+          "reviewAfter": "2026-11-09",
+          "automaticReleaseQualified": false,
+          "purpose": "Retain closed source admission and remote recovery evidence; source migration fencing credential must stay installed until old actors are retired"
+        }
+      ],
+      "deployedServices": [
+        {
+          "name": "margi",
+          "accountId": "c60c6c3daaa4fd10a7f1aa3f7301d202",
+          "workers": [
+            "margi",
+            "margi-showcase-read",
+            "margi-redirect"
+          ],
+          "origin": "https://app.margi.money",
+          "releaseOwner": "usual-suspects protected GitLab main approval and Cloudflare Builds",
+          "automaticPatchReleaseQualified": false,
+          "runtime": {
+            "provider": "Cloudflare-managed workerd",
+            "compatibilityDate": "2025-12-01",
+            "buildNode": "26.13.0",
+            "buildBun": "1.4.3",
+            "wrangler": "4.151.3"
+          },
+          "buildTrigger": "15ed4ada-fae1-4495-b9e8-f7d1f08b687e",
+          "scheduledOwner": "margi: */30 * * * *",
+          "logging": "Workers Trace Events to the existing Onestack Loki destination; source redirect logs retained",
+          "monitoringAuth": "Existing Cloudflare CLI OAuth session with silent refresh; no persisted OAuth copy",
+          "verificationCommands": [
+            "bun run test:migration-control",
+            "Required protected-main full CI and current build approval",
+            "Authenticated production login, session, document, showcase and socket probes",
+            "Verify old Workers URLs return permanent 308 redirects with paths and queries"
+          ],
+          "recovery": [
+            "Retain source D1, documents, actor state and original compiled modules as remote backups",
+            "Keep both source admission gates closed and source schedules empty",
+            "Restore a previous destination Worker version while preserving current destination data",
+            "Returning writes to the old account requires fencing the destination and transferring every newer write back first"
+          ],
+          "dataLocation": "Production-derived data and detailed receipts remain remote; no credentials or client data in this registry",
+          "monitoringCloudflareCli": {
+            "package": "cf",
+            "version": "1.0.0-beta.5",
+            "authBridge": "infrastructure/security/cloudflare-cli-auth.mjs",
+            "moduleIntegrity": "SHA256 pinned in the native operator policy"
+          }
+        }
+      ]
     },
     {
       "name": "wcs",
