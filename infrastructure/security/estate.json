@@ -47,7 +47,47 @@
       "profile": "gitlab",
       "releaseOwner": "usual-suspects",
       "automaticPatchReleaseQualified": false,
-      "nodeDownloadPins": true
+      "nodeDownloadPins": true,
+      "temporaryServices": [
+        {
+          "name": "margi-migration-rehearsal-20261102",
+          "workers": [
+            "margi-rehearsal-20261102-app",
+            "margi-rehearsal-20261102-shadow",
+            "margi-rehearsal-20261102-driver",
+            "margi-rehearsal-20261102-admin",
+            "margi-rehearsal-20261102-shadow-admin"
+          ],
+          "accountId": "c60c6c3daaa4fd10a7f1aa3f7301d202",
+          "releaseOwner": "usual-suspects",
+          "reviewAfter": "2026-11-09",
+          "automaticReleaseQualified": false,
+          "source": "GitLab MR 61; existing application security policy and frozen lockfile",
+          "runtime": {
+            "provider": "Cloudflare-managed workerd",
+            "applicationCompatibilityDate": "2025-12-01",
+            "gatewayCompatibilityDate": "2026-11-02",
+            "buildNode": "26.13.0",
+            "buildBun": "1.4.3"
+          },
+          "probes": [
+            "Verify private app ingress disabled and schedules empty",
+            "Verify authenticated gateways reject anonymous requests and expire on 9 November",
+            "Verify every DB and bucket binding uses the isolated rehearsal prefix",
+            "Run protected synthetic login/session/page/actor checks"
+          ],
+          "verificationCommands": [
+            "bun run test:migration-control",
+            "node --test scripts/migration/admin-gateway.test.mjs"
+          ],
+          "recovery": [
+            "Close only rehearsal admission and retain remote data and digest receipts",
+            "Restore previous private version and verify bindings and private ingress",
+            "Source admission, routing, DNS and scheduled ownership require George's explicit green flag"
+          ],
+          "dataLocation": "Production-derived data remains on the remote host; no credentials or client data in this registry"
+        }
+      ]
     },
     {
       "name": "wcs",
