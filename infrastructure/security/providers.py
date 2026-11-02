@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only provider drift and live runtime evidence using existing local logins."""
 import json
+import hashlib
 import os
 import shutil
 import datetime as dt
@@ -15,6 +16,7 @@ from deploy import guest_execute
 from azure_runtime import PROBE as AZURE_RUNTIME_PROBE
 
 ACCOUNT='663b85e4f509df63c1735f6e77db4370'
+USUAL_ACCOUNT='c60c6c3daaa4fd10a7f1aa3f7301d202'
 
 
 def cli(args):
@@ -129,6 +131,23 @@ def browser_build(receipt_path, account, script, owner):
             'checkedAt':receipt['checkedAt'],'verificationSource':receipt['source']}
 
 
+def cloudflare_cli_token():
+    base=Path.home()/'.local/share/security-maintenance'
+    config=json.loads((base/'bot-policy.json').read_text())
+    module=Path(config['cloudflareCliAuthModule'])
+    if not module.is_absolute() or not module.is_file() or '/lib/node_modules/cf/dist/' not in str(module) or not re.fullmatch(r'cf-[A-Za-z0-9_-]+\.mjs',module.name):
+        raise RuntimeError('Pinned Cloudflare CLI authentication module unavailable')
+    expected=config.get('cloudflareCliAuthModuleSha256','')
+    if not re.fullmatch('[a-f0-9]{64}',expected) or hashlib.sha256(module.read_bytes()).hexdigest()!=expected:
+        raise RuntimeError('Cloudflare CLI authentication module changed; review its pin')
+    result=subprocess.run([config['node'],str(Path(__file__).with_name('cloudflare-cli-auth.mjs')),str(module)],
+                          capture_output=True,text=True,timeout=90)
+    token=result.stdout.strip()
+    if result.returncode or len(token)<20 or '\n' in token:
+        raise RuntimeError('Existing Cloudflare CLI session unavailable')
+    return token
+
+
 def cloudflare_builds(credential_refs=None, browser_receipt=None):
     tokens={}
     def get(account,path):
@@ -147,12 +166,12 @@ def cloudflare_builds(credential_refs=None, browser_receipt=None):
                 tokens[account]=token
             auth={'Authorization':'Bearer '+tokens[account]}
         else:
-            auth={'Authorization':'Bearer '+cloudflare_token()}
+            auth={'Authorization':'Bearer '+(cloudflare_cli_token() if account==USUAL_ACCOUNT else cloudflare_token())}
         result=request('https://api.cloudflare.com/client/v4/accounts/'+account+path,auth)
         if not result.get('success'):raise RuntimeError('Provider API coverage incomplete')
         return result['result']
     rows=[]
-    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),(ACCOUNT,'usual-suspects','Usual Suspects')]:
+    for account,script,owner in [(ACCOUNT,'r4r-next-js','RunBuddy'),(USUAL_ACCOUNT,'margi','Usual Suspects')]:
         try:
             scripts=get(account,'/workers/scripts')
             worker=next(x for x in scripts if x['id']==script)

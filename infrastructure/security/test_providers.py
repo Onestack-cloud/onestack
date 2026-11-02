@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from providers import ACCOUNT, azure, azure_native_ssh, browser_build, cloudflare_builds, cloudflare_token, refresh_cloudflare_oauth
+from providers import ACCOUNT, USUAL_ACCOUNT, azure, azure_native_ssh, browser_build, cloudflare_builds, cloudflare_token, refresh_cloudflare_oauth
 
 
 class PagesOAuthCoverageTests(unittest.TestCase):
@@ -116,7 +116,7 @@ class BuildsAPICredentialTests(unittest.TestCase):
             self.assertEqual(headers,{'Authorization':'Bearer '+token})
             if url.endswith('/workers/scripts'):
                 return {'success':True,'result':[{'id':'r4r-next-js','tag':'runbuddy-tag'},
-                                                {'id':'usual-suspects','tag':'usual-tag'}]}
+                                                {'id':'margi','tag':'usual-tag'}]}
             if url.endswith('/triggers'):
                 return {'success':True,'result':[{'trigger_uuid':'synthetic-production-trigger'}]}
             if url.endswith('/environment_variables'):
@@ -128,11 +128,11 @@ class BuildsAPICredentialTests(unittest.TestCase):
              patch('providers.browser_build',side_effect=AssertionError('Browser must not be required')):
             secret.return_value.returncode=0
             secret.return_value.stdout=token+'\n'
-            rows=cloudflare_builds({ACCOUNT:reference})
+            rows=cloudflare_builds({ACCOUNT:reference,USUAL_ACCOUNT:reference})
         self.assertEqual(len(rows),2)
         self.assertTrue(all(row['state']=='checked' and row['node']=='24.22.1' for row in rows))
         self.assertTrue(all(row['verificationSource']=='Cloudflare Builds API' for row in rows))
-        self.assertEqual(secret.call_count,1)
+        self.assertEqual(secret.call_count,2)
         self.assertEqual(len(calls),6)
         self.assertNotIn(token,json.dumps(rows))
         self.assertNotIn('UNRELATED_SECRET',json.dumps(rows))
@@ -143,7 +143,7 @@ class BuildsAPICredentialTests(unittest.TestCase):
                    'secretName':'CLOUDFLARE_BUILDS_READ_TOKEN'}
         with patch('providers.cloudflare_token',side_effect=AssertionError('No fallback to broader credentials')),\
              patch('providers.subprocess.run') as secret,patch('providers.request') as api:
-            rows=cloudflare_builds({ACCOUNT:reference})
+            rows=cloudflare_builds({ACCOUNT:reference,USUAL_ACCOUNT:reference})
         self.assertTrue(all(row['state']=='unknown' for row in rows))
         secret.assert_not_called()
         api.assert_not_called()
@@ -174,4 +174,45 @@ class BrowserBuildCoverageTests(unittest.TestCase):
                 with self.assertRaises(ValueError):browser_build(path,ACCOUNT,'r4r-next-js','RunBuddy')
 
 
-if __name__=='__main__':unittest.main()
+
+
+
+class MigratedBuildOwnershipTests(unittest.TestCase):
+    def test_margi_uses_existing_cli_session_and_new_account(self):
+        calls=[]
+        def api(url,headers):
+            calls.append(url)
+            if url.endswith('/workers/scripts'):
+                return {'success':True,'result':[{'id':'r4r-next-js','tag':'runbuddy'},{'id':'margi','tag':'margi'}]}
+            if url.endswith('/triggers'):
+                return {'success':True,'result':[{'trigger_uuid':'production'}]}
+            return {'success':True,'result':{'NODE_VERSION':{'value':'26.13.0'}}}
+        with patch('providers.cloudflare_token',return_value='synthetic-existing-old-session'), \
+             patch('providers.cloudflare_cli_token',return_value='synthetic-existing-new-session') as current, \
+             patch('providers.request',side_effect=api):
+            rows=cloudflare_builds()
+        self.assertTrue(all(x['state']=='checked' for x in rows))
+        self.assertEqual(current.call_count,3)
+        self.assertTrue(any('/accounts/'+USUAL_ACCOUNT+'/builds/workers/margi/' in x for x in calls))
+        self.assertFalse(any('/accounts/'+ACCOUNT+'/builds/workers/margi/' in x for x in calls))
+        self.assertNotIn('synthetic-existing-new-session',json.dumps(rows))
+
+class ExistingCliSessionTests(unittest.TestCase):
+    def test_cli_bridge_uses_the_reviewed_module_and_never_persists_its_token(self):
+        import hashlib
+        import providers
+        with tempfile.TemporaryDirectory() as directory:
+            home=Path(directory);base=home/'.local/share/security-maintenance';base.mkdir(parents=True)
+            module=home/'lib/node_modules/cf/dist/cf-fixture.mjs';module.parent.mkdir(parents=True);module.write_text('synthetic fixture')
+            config={'node':'/synthetic/pinned-node','cloudflareCliAuthModule':str(module),'cloudflareCliAuthModuleSha256':hashlib.sha256(module.read_bytes()).hexdigest()}
+            (base/'bot-policy.json').write_text(json.dumps(config))
+            with patch('providers.Path.home',return_value=home),patch('providers.subprocess.run') as run:
+                run.return_value.returncode=0;run.return_value.stdout='synthetic-existing-session-token'
+                self.assertEqual(providers.cloudflare_cli_token(),'synthetic-existing-session-token')
+                self.assertEqual(run.call_args.args[0][-1],str(module))
+                self.assertTrue(run.call_args.kwargs['capture_output'])
+                self.assertEqual(sorted(p.name for p in base.iterdir()),['bot-policy.json'])
+            config['cloudflareCliAuthModuleSha256']='0'*64;(base/'bot-policy.json').write_text(json.dumps(config))
+            with patch('providers.Path.home',return_value=home),patch('providers.subprocess.run') as run:
+                with self.assertRaisesRegex(RuntimeError,'module changed'):providers.cloudflare_cli_token()
+                run.assert_not_called()
