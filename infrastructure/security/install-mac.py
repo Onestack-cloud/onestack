@@ -19,7 +19,7 @@ if __name__ == '__main__':
     state = Path.home() / '.local/state/security-maintenance'
     base.mkdir(mode=0o700, parents=True, exist_ok=True)
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
-    for name in ['monitor.py', 'runtime_updater.py', 'run-bot.py', 'mac-policy.json', 'prepare-pins.py', 'runtime-pins.py', 'providers.py', 'azure_runtime.py', 'source-monitor.py', 'deploy.py', 'browser-builds.md']:
+    for name in ['monitor.py', 'runtime_updater.py', 'run-bot.py', 'mac-policy.json', 'prepare-pins.py', 'runtime-pins.py', 'providers.py', 'cloudflare-cli-auth.mjs', 'azure_runtime.py', 'source-monitor.py', 'deploy.py', 'browser-builds.md']:
         shutil.copyfile(HERE / name, base / name)
     shutil.copytree(HERE / 'bot', base / 'bot', dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns('node_modules'))
@@ -34,7 +34,10 @@ if __name__ == '__main__':
               'automaticMaintenanceRuntime': False}
     path = base/'bot-policy.json'
     if path.exists():
-        config['cloudflareBuildsCredentialRefs']=json.loads(path.read_text()).get('cloudflareBuildsCredentialRefs',{})
+        previous=json.loads(path.read_text())
+        config['cloudflareBuildsCredentialRefs']=previous.get('cloudflareBuildsCredentialRefs',{})
+        for key in ['executionMode', 'updateRunnerHost', 'cloudflareCliAuthModule', 'cloudflareCliAuthModuleSha256']:
+            if key in previous:config[key]=previous[key]
     path.write_text(json.dumps(config, indent=2)+'\n');path.chmod(0o600)
     subprocess.run(['/usr/bin/python3', str(base/'run-bot.py'), '--config', str(path), '--state', str(state/'bot'), '--qualify-runtime-recovery'], env=environment, check=True)
     config['automaticMaintenanceRuntime']=True
