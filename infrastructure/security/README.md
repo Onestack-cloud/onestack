@@ -199,3 +199,19 @@ Use the declared supported Node and Bun versions. Job logs and summaries retain
 source reports even when GitHub artifact storage is unavailable. Keep retained
 existing findings, scan failures and vendor limitations in the operational
 register. Never remove a gate or suppress a report to make the rollout green.
+
+
+## Margi build monitoring after account handover
+
+Usual Suspects now targets the `margi` Worker in its own Cloudflare account.
+Its build monitor may use the operator's existing Cloudflare CLI OAuth session
+through `cloudflare-cli-auth.mjs`. The native policy pins the existing installed
+CLI module with `cloudflareCliAuthModule` and `cloudflareCliAuthModuleSha256`.
+Silent refresh cannot open a browser, mint a new API key or expand a grant.
+The short-lived token stays in the subprocess pipe and is never persisted by
+the bridge. A missing session or changed module is unknown coverage.
+
+The Mac installer includes the bridge and preserves both operator pin fields,
+alongside the existing dedicated credential references. Existing RunBuddy
+credential handling is unchanged. Review and refresh the integrity pin after
+an approved Cloudflare CLI update; never copy an OAuth token into Infisical.
