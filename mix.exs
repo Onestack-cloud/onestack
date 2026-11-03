@@ -65,7 +65,7 @@ defmodule Onestack.MixProject do
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.2"},
+      {:bandit, "~> 1.14"},
       {:ecto_sqlite3_extras, "~> 1.2.0"},
       {:money, "~> 1.12"},
       {:httpoison, "~> 2.0"},
