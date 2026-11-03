@@ -45,6 +45,8 @@ def enrol(root, owner, platform, package_roots, review=True):
             {'matchDatasources': ['node-version'], 'allowedVersions': '>=24 <25', 'groupName': 'Node 24 runtime',
              'minimumReleaseAge': '0 days', 'schedule': ['at any time']},
             {'matchPackageNames': ['node'], 'matchDatasources': ['docker'], 'allowedVersions': '/^24([.-]|$)/', 'minimumReleaseAge': '7 days'},
+            {'matchManagers': ['github-actions'], 'matchPackageNames': ['node', 'actions/node-versions'],
+             'allowedVersions': '>=24.22.1 <25', 'groupName': 'Node 24 runtime'},
             {'matchUpdateTypes': ['major'], 'dependencyDashboardApproval': False, 'automerge': False, 'minimumReleaseAge': '7 days'},
         ],
         'customManagers': [{
